@@ -5,12 +5,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    host: "0.0.0.0",
+    host: "::",
     port: 43123,
     strictPort: true,
   },
   preview: {
-    host: "0.0.0.0",
+    host: "::",
     port: 43123,
     strictPort: true,
   },

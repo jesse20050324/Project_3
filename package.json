@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 43123 --strictPort",
+    "dev": "vite --host :: --port 43123 --strictPort",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "preview": "vite preview --host 0.0.0.0 --port 43123 --strictPort"
+    "preview": "vite preview --host :: --port 43123 --strictPort"
   },
   "dependencies": {
     "js-yaml": "^4.1.0",
