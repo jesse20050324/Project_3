@@ -167,7 +167,10 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
           </div>
         ) : null}
         {live?.token === token && live.phase === "typing" && outgoing ? (
-          <div onClick={commit} className={outgoing.from === "ai" ? "self-end" : "self-start"}>
+          // The row spans the pane so the bubble's max width is a slice of the
+          // column, not of the text itself. A shrink-wrapped row makes each new
+          // glyph wrap, then the bubble snaps wider and that line disappears.
+          <div onClick={commit} className="flex w-full min-w-0 flex-col">
             <MessageBubble
               key={outgoing.token}
               from={outgoing.from}
@@ -182,7 +185,12 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
                 if (el) el.scrollTop = el.scrollHeight;
               }}
             />
-            <button type="button" data-testid="skip" onClick={commit} className="mt-1 px-1 text-[11px] text-[#8a8175]">
+            <button
+              type="button"
+              data-testid="skip"
+              onClick={commit}
+              className={`mt-1 px-1 text-[11px] text-[#8a8175] ${outgoing.from === "ai" ? "self-end" : "self-start"}`}
+            >
               点击跳过
             </button>
           </div>
