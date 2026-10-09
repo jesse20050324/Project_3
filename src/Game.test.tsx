@@ -35,9 +35,12 @@ describe("girl channel", () => {
     await skipUntil(left, "choice");
     fireEvent.click(within(left).getByRole("button", { name: "时光桌游吧" }));
 
+    const right = screen.getByTestId("pane-right");
     await waitFor(() => {
-      const skip = within(left).queryByTestId("skip");
-      if (skip) fireEvent.click(skip);
+      for (const pane of [left, right]) {
+        const skip = within(pane).queryByTestId("skip");
+        if (skip) fireEvent.click(skip);
+      }
       expect(screen.getByText(/叫 "时光桌游吧"/)).toBeTruthy();
     }, { timeout: 4000 });
     expect(screen.getByTestId("girl-banner").textContent).toContain("女生发来了新消息");

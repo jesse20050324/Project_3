@@ -1,15 +1,15 @@
 import type { Delivery } from "./engine/types";
 
-export const TYPE_INTERVAL_MS = 90;
+export const TYPE_INTERVAL_MS = 280;
 
 /** How long a finished typed line stays before the next one starts. */
-export const AFTER_TYPE_MS = 900;
+export const AFTER_TYPE_MS = 2800;
 
 export const INDICATOR_MS: Record<Delivery, number> = {
-  type: 1200,
-  pop: 800,
+  type: 2800,
+  pop: 2200,
   image: 0,
-  thought: 700,
+  thought: 2000,
 };
 
 export function shouldType(delivery: Delivery, reduceMotion: boolean): boolean {
