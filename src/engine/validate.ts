@@ -4,7 +4,7 @@ export type Validation =
   | { ok: true }
   | { ok: false; error: string };
 
-const DELIVERIES: Delivery[] = ["type", "pop", "image"];
+const DELIVERIES: Delivery[] = ["type", "pop", "image", "thought"];
 
 export function validateScript(script: Script): Validation {
   const errors: string[] = [];
@@ -63,6 +63,13 @@ export function validateScript(script: Script): Validation {
     for (const requireId of beat.requires ?? []) {
       if (!byId.has(requireId)) {
         errors.push(`节拍 ${beat.id} 的 requires「${requireId}」不存在。`);
+      }
+    }
+
+    if (beat.when) {
+      for (const [key, value] of Object.entries(beat.when)) {
+        if (!key.trim()) errors.push(`节拍 ${beat.id} 的 when 有一个空旗标名。`);
+        if (!isScalar(value)) errors.push(`节拍 ${beat.id} 的 when.${key} 只能是文字、数字或是否。`);
       }
     }
 

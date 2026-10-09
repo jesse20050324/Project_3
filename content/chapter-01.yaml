@@ -78,3 +78,61 @@ beats:
       - from: boy
         text: OK
         delivery: pop
+
+  # 女生第一轮。没有玩家选项。店名来自男生 L2 记下的 shop，所以必须等 L2 播完。
+  - id: R1-shiguang
+    channel: right
+    requires: [L2]
+    when:
+      shop: 时光桌游吧
+    lines:
+      - from: girl
+        text: 我朋友突然叫我去玩桌游，叫 "时光桌游吧"，你查一下在哪，我刚起床还没洗脸
+        delivery: type
+      - from: ai
+        text: 用户说朋友叫她去玩桌游，店名是时光桌游吧。她刚起床还没洗脸，想先知道店在哪。需要直接告诉她位置、简单介绍，等她的反应。不要啰嗦。
+        delivery: thought
+      - from: ai
+        text: 时光桌游吧，在小寨华旗国际 A 座，电话 029-85418760。小寨的老牌桌游吧，环境一般、价格偏高。
+        delivery: type
+      - from: girl
+        text: 这个太贵了吧，我让他换个地方
+        delivery: type
+
+  - id: R1-xindong
+    channel: right
+    requires: [L2]
+    when:
+      shop: 心动桌游俱乐部
+    lines:
+      - from: girl
+        text: 我朋友突然叫我去玩桌游，叫 "心动桌游俱乐部"，你查一下在哪，我刚起床还没洗脸
+        delivery: type
+      - from: ai
+        text: 用户说朋友叫她去玩桌游，店名是心动桌游俱乐部。她刚起床还没洗脸，想先知道店在哪。需要直接告诉她位置、简单介绍，等她的反应。不要啰嗦。
+        delivery: thought
+      - from: ai
+        text: 心动桌游俱乐部，在莱安中心 T6-21703 室，电话 029-85512345。环境新、店面大，带独立包间，适合人多一起玩。
+        delivery: type
+      - from: girl
+        text: OK，这个感觉还挺好的
+        delivery: type
+
+  - id: R1-xushi
+    channel: right
+    requires: [L2]
+    when:
+      shop: 叙事者营地桌游馆
+    lines:
+      - from: girl
+        text: 我朋友突然叫我去玩桌游，叫 "叙事者营地桌游馆"，你查一下在哪，我刚起床还没洗脸
+        delivery: type
+      - from: ai
+        text: 用户说朋友叫她去玩桌游，店名是叙事者营地桌游馆。她刚起床还没洗脸，想先知道店在哪。需要直接告诉她位置、简单介绍，等她的反应。不要啰嗦。
+        delivery: thought
+      - from: ai
+        text: 叙事者营地桌游馆，在大唐不夜城长安 C 位 10 号商铺。在景区里，公共交通相对没那么方便。
+        delivery: type
+      - from: girl
+        text: 咋这么远，过去都啥时候了，我让他换个地方
+        delivery: type

@@ -1,6 +1,6 @@
 export type Channel = "left" | "right";
 
-export type Delivery = "type" | "pop" | "image";
+export type Delivery = "type" | "pop" | "image" | "thought";
 
 export type Scalar = string | number | boolean;
 
@@ -22,6 +22,8 @@ export type Beat = {
   id: string;
   channel: Channel;
   requires?: string[];
+  /** 旗标必须等于这些值，这一拍才会出现。对不上的分支不显示。 */
+  when?: Record<string, Scalar>;
   aside?: string;
   lines: Line[];
   choices?: Choice[];

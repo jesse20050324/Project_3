@@ -50,6 +50,17 @@ export function MessageBubble({
 
   const visible = typing ? text.slice(0, shown) : text;
 
+  if (delivery === "thought") {
+    return (
+      <div className="flex max-w-[92%] flex-col gap-1 self-stretch" data-from={from} data-delivery="thought">
+        <span className="text-[11px] tracking-[0.14em] text-[#6b645b]">自言自语</span>
+        <div data-testid="bubble-text" className="border-l-2 border-[#2f5d54] pl-3 text-sm leading-relaxed text-[#3e4a45]">
+          {visible}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex max-w-[85%] flex-col gap-1 ${mine ? "items-end self-end" : "items-start self-start"}`} data-from={from} data-delivery={delivery}>
       <span className="px-1 text-[11px] text-[#6b645b]">{speakerName}</span>

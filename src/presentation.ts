@@ -6,6 +6,7 @@ export const INDICATOR_MS: Record<Delivery, number> = {
   type: 560,
   pop: 280,
   image: 0,
+  thought: 0,
 };
 
 export function shouldType(delivery: Delivery, reduceMotion: boolean): boolean {

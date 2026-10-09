@@ -29,9 +29,13 @@ describe("chapter 1", () => {
     const loaded = loadBundledScript();
     expect(loaded.error).toBeNull();
     const script = loaded.script!;
-    expect(script.beats.map((beat) => beat.id)).toEqual(["L1", "L2", "L3"]);
-    expect(script.beats.every((beat) => beat.channel === "left")).toBe(true);
-    expect(script.beats.some((beat) => beat.requires?.length)).toBe(false);
+    expect(script.beats.map((beat) => beat.id)).toEqual(["L1", "L2", "L3", "R1-shiguang", "R1-xindong", "R1-xushi"]);
+    expect(script.beats.filter((beat) => beat.channel === "right").map((beat) => beat.requires)).toEqual([
+      ["L2"],
+      ["L2"],
+      ["L2"],
+    ]);
+    expect(script.beats.filter((beat) => beat.channel === "right").every((beat) => !beat.choices)).toBe(true);
     expect(chapterSource).not.toContain("行，到了跟我说");
 
     const [l1, l2, l3] = script.beats;
@@ -84,5 +88,60 @@ describe("chapter 1", () => {
     expect(state.completed).toEqual(["L1", "L2", "L3"]);
     expect(messagesFor(state, "right")).toEqual([]);
     expect(state.pending.right).toBeNull();
+  });
+
+  it("opens the girl thread for the chosen shop only, after that choice, with no new options", () => {
+    const script = loadBundledScript().script!;
+    const beats = script.beats;
+    const before = createInitial(beats);
+    expect(messagesFor(before, "right")).toEqual([]);
+    expect(before.pending.right).toBeNull();
+
+    const cases = [
+      {
+        index: 0,
+        shop: "时光桌游吧",
+        beat: "R1-shiguang",
+        place: "小寨华旗国际 A 座",
+        reaction: "这个太贵了吧，我让他换个地方",
+        absent: "莱安中心 T6-21703",
+      },
+      {
+        index: 1,
+        shop: "心动桌游俱乐部",
+        beat: "R1-xindong",
+        place: "莱安中心 T6-21703 室",
+        reaction: "OK，这个感觉还挺好的",
+        absent: "大唐不夜城长安 C 位",
+      },
+      {
+        index: 2,
+        shop: "叙事者营地桌游馆",
+        beat: "R1-xushi",
+        place: "大唐不夜城长安 C 位 10 号商铺",
+        reaction: "咋这么远，过去都啥时候了，我让他换个地方",
+        absent: "小寨华旗国际 A 座",
+      },
+    ];
+
+    for (const item of cases) {
+      let state = drain(createInitial(beats), "left", beats);
+      state = commitReply(choose(state, "left", 0, beats), "left", beats);
+      state = drain(state, "left", beats);
+      expect(messagesFor(state, "right")).toEqual([]);
+      state = commitReply(choose(state, "left", item.index, beats), "left", beats);
+      expect(state.flags.shop).toBe(item.shop);
+      state = drain(state, "right", beats);
+      const texts = messagesFor(state, "right").map((message) => message.text);
+      expect(state.completed).toContain(item.beat);
+      expect(texts[0]).toContain(item.shop);
+      expect(texts[0]).toContain("我刚起床还没洗脸");
+      expect(texts[1]).toContain("不要啰嗦");
+      expect(messagesFor(state, "right")[1]?.delivery).toBe("thought");
+      expect(texts[2]).toContain(item.place);
+      expect(texts[3]).toBe(item.reaction);
+      expect(texts.some((text) => text.includes(item.absent))).toBe(false);
+      expect(state.pending.right).toBeNull();
+    }
   });
 });

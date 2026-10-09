@@ -1,3 +1,4 @@
+import { isRoot } from "./scheduler";
 import type { Beat, EngineState } from "./types";
 
 const KEY = "shuangxian.progress.v1";
@@ -32,8 +33,14 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       clearProgress();
       return null;
     }
+    const activated = [...state.activated];
+    for (const beat of beats) {
+      if (!isRoot(beat, beats) || state.completed.includes(beat.id) || activated.includes(beat.id)) continue;
+      activated.push(beat.id);
+    }
     return {
       ...state,
+      activated,
       pending: {
         left: state.pending.left ?? null,
         right: state.pending.right ?? null,
@@ -55,7 +62,7 @@ function isUsable(state: EngineState, beats: Beat[]): boolean {
     if (!isRecord(message)) return false;
     if (message.channel !== "left" && message.channel !== "right") return false;
     if (typeof message.text !== "string" || typeof message.id !== "string") return false;
-    if (message.delivery !== "type" && message.delivery !== "pop" && message.delivery !== "image") return false;
+    if (message.delivery !== "type" && message.delivery !== "pop" && message.delivery !== "image" && message.delivery !== "thought") return false;
   }
   for (const channel of ["left", "right"] as const) {
     const pending = state.pending[channel];

@@ -106,6 +106,43 @@ describe("scheduler", () => {
     expect(messagesFor(both, "right").every((message) => message.channel === "right")).toBe(true);
   });
 
+  it("plays only the branch whose flag matches and leaves the other lines unsent", () => {
+    const beats: Beat[] = [
+      {
+        id: "L2",
+        channel: "left",
+        lines: [{ from: "boy", text: "选店", delivery: "pop" }],
+        choices: [
+          { thought: "甲", reply: "选甲", set: { shop: "甲" } },
+          { thought: "乙", reply: "选乙", set: { shop: "乙" } },
+        ],
+      },
+      {
+        id: "Ra",
+        channel: "right",
+        requires: ["L2"],
+        when: { shop: "甲" },
+        lines: [{ from: "girl", text: "甲店太贵", delivery: "pop" }],
+      },
+      {
+        id: "Rb",
+        channel: "right",
+        requires: ["L2"],
+        when: { shop: "乙" },
+        lines: [{ from: "girl", text: "乙店挺好", delivery: "pop" }],
+      },
+    ];
+    const waiting = createInitial(beats);
+    expect(channelView(waiting, "right", beats).mode).toBe("gated");
+    expect(messagesFor(waiting, "right")).toEqual([]);
+    let state = drain(waiting, "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "right", beats);
+    expect(messagesFor(state, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
+    expect(state.completed).not.toContain("Rb");
+    expect(messagesFor(state, "right").some((message) => message.text.includes("乙店"))).toBe(false);
+  });
+
   it("holds a beat until every required beat is done and does not reveal its line", () => {
     const secret = "闸门后面的那句不该出现";
     const beats: Beat[] = [

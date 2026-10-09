@@ -52,9 +52,10 @@ function readBeats(value: unknown): Beat[] {
     const lines = readLines(item.lines, id);
     const choices = item.choices === undefined ? undefined : readChoices(item.choices, id);
     const requires = item.requires === undefined ? undefined : readIdList(item.requires, id, "requires");
+    const when = item.when === undefined ? undefined : readFlags(item.when, id);
     const aside = item.aside === undefined ? undefined : readString(item.aside, `节拍 ${id} 的自言自语无法读取`);
     const next = item.next === undefined ? undefined : readString(item.next, `节拍 ${id} 的 next 无法读取`);
-    return { id, channel, lines, choices, requires, aside, next };
+    return { id, channel, lines, choices, requires, when, aside, next };
   });
 }
 
@@ -109,8 +110,8 @@ function readChannel(value: unknown, id: string): Channel {
 }
 
 function readDelivery(value: unknown, beatId: string): Delivery {
-  if (value !== "type" && value !== "pop" && value !== "image") {
-    throw new Error(`节拍 ${beatId} 的呈现方式必须是 type、pop 或 image`);
+  if (value !== "type" && value !== "pop" && value !== "image" && value !== "thought") {
+    throw new Error(`节拍 ${beatId} 的呈现方式必须是 type、pop、image 或 thought`);
   }
   return value;
 }

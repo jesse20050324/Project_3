@@ -43,6 +43,7 @@ export function availableBeat(state: EngineState, channel: Channel, beats: Beat[
     if (beat.channel !== channel) continue;
     if (state.completed.includes(beat.id)) continue;
     if (!state.activated.includes(beat.id)) continue;
+    if (whenState(beat, state.flags) !== "ok") continue;
     if ((beat.requires ?? []).some((id) => !state.completed.includes(id))) continue;
     return beat;
   }
@@ -56,7 +57,13 @@ export function channelView(state: EngineState, channel: Channel, beats: Beat[])
     if (beat.channel !== channel) continue;
     if (state.completed.includes(beat.id)) continue;
     if (!state.activated.includes(beat.id)) continue;
+    const gate = whenState(beat, state.flags);
+    if (gate === "no") continue;
     const unmet = (beat.requires ?? []).filter((id) => !state.completed.includes(id));
+    if (gate === "wait") {
+      locked.push({ id: beat.id, unmet: unmet.length > 0 ? unmet : Object.keys(beat.when ?? {}) });
+      continue;
+    }
     if (unmet.length > 0) locked.push({ id: beat.id, unmet });
   }
   const hasBeats = beats.some((beat) => beat.channel === channel);
@@ -225,6 +232,15 @@ function completeBeat(
 
 function withPending(state: EngineState, channel: Channel, pending: EngineState["pending"][Channel]): EngineState {
   return { ...state, pending: { ...state.pending, [channel]: pending } };
+}
+
+function whenState(beat: Beat, flags: Record<string, Scalar>): "ok" | "wait" | "no" {
+  if (!beat.when) return "ok";
+  for (const [key, value] of Object.entries(beat.when)) {
+    if (!(key in flags)) return "wait";
+    if (flags[key] !== value) return "no";
+  }
+  return "ok";
 }
 
 function mustBeat(beats: Beat[], id: string): Beat {
