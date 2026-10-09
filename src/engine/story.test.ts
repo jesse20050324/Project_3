@@ -24,18 +24,40 @@ function shopReply(detail: string): string {
   ].join("\n");
 }
 
+const makeupLine = "你说我要不要化妆，现在时间有点小紧张，但是好像有不认识的人来";
+const makeupAside =
+  "用户问要不要化妆：时间有点小紧张，但好像有不认识的人来。她有点想化，又怕来不及。需要给个明确建议，别让她纠结。两个方向都合理，看时间够不够。";
+const makeupYes =
+  "化吧，时间还够。简单上个底妆加口红就行，不用搞全套，半小时内能出门。有不认识的人在，气色好点自己也自在。";
+const makeupNo = "不化也没事，桌游店光线一般，没人盯着看。洗把脸直接走，省下的时间路上还能歇会儿。";
+
 describe("chapter 1", () => {
   it("loads only the lines the draft actually wrote", () => {
     const loaded = loadBundledScript();
     expect(loaded.error).toBeNull();
     const script = loaded.script!;
-    expect(script.beats.map((beat) => beat.id)).toEqual(["L1", "L2", "L3", "R1-shiguang", "R1-xindong", "R1-xushi"]);
-    expect(script.beats.filter((beat) => beat.channel === "right").map((beat) => beat.requires)).toEqual([
-      ["L2"],
-      ["L2"],
-      ["L2"],
+    expect(script.beats.map((beat) => beat.id)).toEqual([
+      "L1",
+      "L2",
+      "L3",
+      "R1-shiguang",
+      "R1-xindong",
+      "R1-xushi",
+      "R2",
     ]);
-    expect(script.beats.filter((beat) => beat.channel === "right").every((beat) => !beat.choices)).toBe(true);
+    const right = script.beats.filter((beat) => beat.channel === "right");
+    expect(right.slice(0, 3).map((beat) => beat.requires)).toEqual([["L2"], ["L2"], ["L2"]]);
+    expect(right.slice(0, 3).every((beat) => !beat.choices)).toBe(true);
+    expect(right.slice(0, 3).map((beat) => beat.next)).toEqual(["R2", "R2", "R2"]);
+    const makeup = right[3];
+    expect(makeup.requires).toBeUndefined();
+    expect(makeup.when).toBeUndefined();
+    expect(makeup.next).toBeUndefined();
+    expect(makeup.aside).toBe(makeupAside);
+    expect(makeup.lines).toEqual([{ from: "girl", text: makeupLine, delivery: "type" }]);
+    expect(makeup.choices?.map((choice) => choice.thought)).toEqual(["化", "不化"]);
+    expect(makeup.choices?.map((choice) => choice.reply)).toEqual([makeupYes, makeupNo]);
+    expect(makeup.choices?.every((choice) => choice.next === undefined && choice.set === undefined)).toBe(true);
     expect(chapterSource).not.toContain("行，到了跟我说");
 
     const [l1, l2, l3] = script.beats;
@@ -90,7 +112,7 @@ describe("chapter 1", () => {
     expect(state.pending.right).toBeNull();
   });
 
-  it("opens the girl thread for the chosen shop only, after that choice, with no new options", () => {
+  it("opens the girl thread for the chosen shop only, then the same makeup question", () => {
     const script = loadBundledScript().script!;
     const beats = script.beats;
     const before = createInitial(beats);
@@ -140,8 +162,31 @@ describe("chapter 1", () => {
       expect(messagesFor(state, "right")[1]?.delivery).toBe("thought");
       expect(texts[2]).toContain(item.place);
       expect(texts[3]).toBe(item.reaction);
+      expect(texts[4]).toBe(makeupLine);
+      expect(texts).not.toContain(makeupAside);
       expect(texts.some((text) => text.includes(item.absent))).toBe(false);
-      expect(state.pending.right).toBeNull();
+      expect(state.pending.right).toEqual({ kind: "choices", beatId: "R2" });
+      expect(state.completed).not.toContain("R2");
+
+      const yes = commitReply(choose(state, "right", 0, beats), "right", beats);
+      const yesTexts = messagesFor(yes, "right").map((message) => message.text);
+      expect(yesTexts.at(-1)).toBe(makeupYes);
+      expect(yesTexts).not.toContain(makeupNo);
+      expect(yesTexts.some((text) => text === "化")).toBe(false);
+      expect(yesTexts.some((text) => text.includes(item.absent))).toBe(false);
+      expect(yes.pending.right).toBeNull();
+      expect(yes.completed).toContain("R2");
+      expect(yes.flags).toEqual({ shop: item.shop });
+
+      const no = commitReply(choose(state, "right", 1, beats), "right", beats);
+      const noTexts = messagesFor(no, "right").map((message) => message.text);
+      expect(noTexts.at(-1)).toBe(makeupNo);
+      expect(noTexts).not.toContain(makeupYes);
+      expect(noTexts.some((text) => text === "不化")).toBe(false);
+      expect(noTexts.some((text) => text.includes(item.absent))).toBe(false);
+      expect(no.pending.right).toBeNull();
+      expect(no.completed).toContain("R2");
+      expect(no.flags).toEqual({ shop: item.shop });
     }
   });
 });

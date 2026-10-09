@@ -174,6 +174,58 @@ describe("scheduler", () => {
     expect(messagesFor(played, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
   });
 
+  it("activates the linear next of a completed beat and leaves untaken choice branches dark", () => {
+    const beats: Beat[] = [
+      line("R1", "right", "店的反应", "R2"),
+      {
+        id: "R2",
+        channel: "right",
+        lines: [{ from: "girl", text: "要不要化妆", delivery: "pop" }],
+        choices: [
+          { thought: "化", reply: "化吧" },
+          { thought: "不化", reply: "不化也没事" },
+        ],
+      },
+      {
+        id: "L1",
+        channel: "left",
+        lines: [{ from: "boy", text: "选", delivery: "pop" }],
+        choices: [
+          { thought: "甲", reply: "甲", next: "L2" },
+          { thought: "乙", reply: "乙", next: "L3" },
+        ],
+      },
+      line("L2", "left", "甲线"),
+      line("L3", "left", "乙线"),
+    ];
+    const finished: EngineState = {
+      completed: ["R1", "L1"],
+      flags: {},
+      activated: ["R1", "L1", "L2"],
+      messages: [],
+      pending: { left: null, right: null },
+    };
+    expect(availableBeat(finished, "right", beats)).toBeNull();
+    const repaired = withMissingRoots(finished, beats);
+    expect(repaired.activated).toContain("R2");
+    expect(repaired.activated.filter((id) => id === "R2")).toHaveLength(1);
+    expect(repaired.activated).not.toContain("L3");
+    const played = drain(openChannel(repaired, "right", beats), "right", beats);
+    expect(messagesFor(played, "right").map((message) => message.text)).toEqual(["要不要化妆"]);
+    expect(played.pending.right).toEqual({ kind: "choices", beatId: "R2" });
+
+    const unfinished: EngineState = {
+      completed: ["L1"],
+      flags: {},
+      activated: ["R1", "L1", "L2"],
+      messages: [],
+      pending: { left: null, right: null },
+    };
+    const still = withMissingRoots(unfinished, beats);
+    expect(still.activated).not.toContain("R2");
+    expect(still.activated).not.toContain("L3");
+  });
+
   it("holds a beat until every required beat is done and does not reveal its line", () => {
     const secret = "闸门后面的那句不该出现";
     const beats: Beat[] = [

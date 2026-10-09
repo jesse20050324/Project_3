@@ -30,13 +30,23 @@ export function createInitial(beats: Beat[]): EngineState {
   };
 }
 
-/** Roots added after a save was written still need to enter the active set. */
+/**
+ * A save written before a beat existed never runs completeBeat for what came before it.
+ * Roots still need to enter the active set.
+ * So does a beat named by a completed beat's own linear `next`.
+ * Choice targets stay dark: finishing the choice beat must not open a branch that was not taken.
+ */
 export function withMissingRoots(state: EngineState, beats: Beat[]): EngineState {
+  const known = new Set([...state.activated, ...state.completed]);
   const extra = beats
-    .filter((beat) => isRoot(beat, beats) && !state.activated.includes(beat.id) && !state.completed.includes(beat.id))
+    .filter((beat) => !known.has(beat.id) && (isRoot(beat, beats) || reachedByCompletedNext(beat, state, beats)))
     .map((beat) => beat.id);
   if (extra.length === 0) return state;
   return { ...state, activated: [...state.activated, ...extra] };
+}
+
+function reachedByCompletedNext(beat: Beat, state: EngineState, beats: Beat[]): boolean {
+  return beats.some((other) => other.next === beat.id && state.completed.includes(other.id));
 }
 
 export function messagesFor(state: EngineState, channel: Channel): ChatMessage[] {

@@ -85,6 +85,7 @@ beats:
     requires: [L2]
     when:
       shop: 时光桌游吧
+    next: R2
     lines:
       - from: girl
         text: 我朋友突然叫我去玩桌游，叫 "时光桌游吧"，你查一下在哪，我刚起床还没洗脸
@@ -104,6 +105,7 @@ beats:
     requires: [L2]
     when:
       shop: 心动桌游俱乐部
+    next: R2
     lines:
       - from: girl
         text: 我朋友突然叫我去玩桌游，叫 "心动桌游俱乐部"，你查一下在哪，我刚起床还没洗脸
@@ -123,6 +125,7 @@ beats:
     requires: [L2]
     when:
       shop: 叙事者营地桌游馆
+    next: R2
     lines:
       - from: girl
         text: 我朋友突然叫我去玩桌游，叫 "叙事者营地桌游馆"，你查一下在哪，我刚起床还没洗脸
@@ -136,3 +139,17 @@ beats:
       - from: girl
         text: 咋这么远，过去都啥时候了，我让他换个地方
         delivery: type
+
+  # 女生第二轮。三家店都汇合到这一拍。回复说完这一侧先停。
+  - id: R2
+    channel: right
+    aside: 用户问要不要化妆：时间有点小紧张，但好像有不认识的人来。她有点想化，又怕来不及。需要给个明确建议，别让她纠结。两个方向都合理，看时间够不够。
+    lines:
+      - from: girl
+        text: 你说我要不要化妆，现在时间有点小紧张，但是好像有不认识的人来
+        delivery: type
+    choices:
+      - thought: 化
+        reply: 化吧，时间还够。简单上个底妆加口红就行，不用搞全套，半小时内能出门。有不认识的人在，气色好点自己也自在。
+      - thought: 不化
+        reply: 不化也没事，桌游店光线一般，没人盯着看。洗把脸直接走，省下的时间路上还能歇会儿。
