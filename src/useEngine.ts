@@ -9,6 +9,10 @@ export function useEngine(beats: Beat[]) {
   const [state, dispatch] = useReducer(reducer, beats, (initial) => loadProgress(initial) ?? createInitial(initial));
 
   useEffect(() => {
+    dispatch({ type: "sync-roots" });
+  }, [beats, state.activated, state.completed, dispatch]);
+
+  useEffect(() => {
     saveProgress(state);
   }, [state]);
 

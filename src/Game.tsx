@@ -22,6 +22,17 @@ export function Game({ script }: Props) {
     left: messagesFor(state, "left").length,
     right: messagesFor(state, "right").length,
   };
+  const unread = {
+    left: hasUnseen("left"),
+    right: hasUnseen("right"),
+  };
+
+  function hasUnseen(channel: Channel): boolean {
+    if (tab === channel) return false;
+    if (counts[channel] > seen[channel]) return true;
+    const pending = state.pending[channel];
+    return pending !== null && pending.kind !== "choices";
+  }
 
   useEffect(() => {
     if (!narrow) {
@@ -94,7 +105,6 @@ export function Game({ script }: Props) {
           {tabs.map((channel) => {
             const person = script.speakers.find((speaker) => speaker.channel === channel);
             const active = tab === channel;
-            const unread = counts[channel] > seen[channel] && tab !== channel;
             return (
               <button
                 key={channel}
@@ -104,17 +114,29 @@ export function Game({ script }: Props) {
                 data-testid={`tab-${channel}`}
                 onClick={() => setTab(channel)}
                 className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                  active ? "bg-white text-[#1c1915] shadow-sm" : "text-[#6b645b]"
+                  active ? "bg-white text-[#1c1915] shadow-sm" : unread[channel] ? "bg-[#e7f0ea] text-[#1c1915]" : "text-[#6b645b]"
                 }`}
               >
                 {person?.name ?? channel}
-                {unread ? (
-                  <span data-testid={`unread-${channel}`} className="inline-block h-1.5 w-1.5 rounded-full bg-[#2f5d54]" aria-label="有新消息" />
+                {unread[channel] ? (
+                  <span data-testid={`unread-${channel}`} className="text-xs text-[#2f5d54]">
+                    新消息
+                  </span>
                 ) : null}
               </button>
             );
           })}
         </div>
+        {narrow && tab === "left" && unread.right ? (
+          <button
+            type="button"
+            data-testid="girl-banner"
+            onClick={() => setTab("right")}
+            className="border-b border-[#d5e4db] bg-[#e7f0ea] px-4 py-2 text-left text-sm text-[#1c1915]"
+          >
+            女生发来了新消息，点这里查看
+          </button>
+        ) : null}
         <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-2 md:divide-x md:divide-[#e4dcd0]">
           <ChatPane
             key={`left-${epoch}`}

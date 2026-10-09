@@ -1,8 +1,9 @@
 import type { Beat, Channel, EngineState } from "./types";
-import { choose, commitLine, commitReply, createInitial, openChannel } from "./scheduler";
+import { choose, commitLine, commitReply, createInitial, openChannel, withMissingRoots } from "./scheduler";
 
 export type Action =
   | { type: "reset" }
+  | { type: "sync-roots" }
   | { type: "arm"; channel: Channel }
   | { type: "commit-line"; channel: Channel }
   | { type: "choose"; channel: Channel; index: number }
@@ -14,6 +15,8 @@ export function createReducer(beats: Beat[]) {
       switch (action.type) {
         case "reset":
           return createInitial(beats);
+        case "sync-roots":
+          return withMissingRoots(state, beats);
         case "arm":
           return openChannel(state, action.channel, beats);
         case "commit-line":

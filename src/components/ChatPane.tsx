@@ -54,11 +54,15 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
 
   const completedKey = state.completed.join("|");
   const activatedKey = state.activated.join("|");
+  const flagsKey = Object.keys(state.flags)
+    .sort()
+    .map((key) => `${key}=${String(state.flags[key])}`)
+    .join("|");
 
   useEffect(() => {
     if (state.pending[channel]) return;
     dispatch({ type: "arm", channel });
-  }, [state.pending, channel, completedKey, activatedKey, dispatch]);
+  }, [state.pending, channel, completedKey, activatedKey, flagsKey, dispatch]);
 
   useEffect(() => {
     const next = resolveOutgoing(scriptRef.current, stateRef.current, channel);
@@ -85,7 +89,7 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
   }, [messages.length, live, token]);
 
   const view = channelView(state, channel, script.beats);
-  const status = pending ? null : playerStatus(view);
+  const status = pending ? null : waitingCopy(channel, view);
   const beat = pending ? script.beats.find((item) => item.id === pending.beatId) : undefined;
   const showChoices = pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
 
@@ -177,6 +181,13 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
       ) : null}
     </section>
   );
+}
+
+function waitingCopy(channel: Channel, view: ReturnType<typeof channelView>): string | null {
+  if (channel === "right" && view.mode === "gated") {
+    return "男生还没选定店。等你在左边替他选好，女生才会发消息。";
+  }
+  return playerStatus(view);
 }
 
 function resolveOutgoing(script: Script, state: EngineState, channel: Channel): Outgoing | null {

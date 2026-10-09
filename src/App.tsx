@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from "react";
+import chapterSource from "../content/chapter-01.yaml?raw";
 import { loadBundledScript } from "./engine/loadScript";
 import { Game } from "./Game";
 
 export function App() {
-  const loaded = useMemo(() => loadBundledScript(), []);
+  const loaded = useMemo(() => loadBundledScript(), [chapterSource]);
 
   useEffect(() => {
     if (loaded.error) console.error(loaded.error);

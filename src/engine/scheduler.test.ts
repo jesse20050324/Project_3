@@ -10,6 +10,7 @@ import {
   describeChannel,
   messagesFor,
   openChannel,
+  withMissingRoots,
 } from "./scheduler";
 import type { Beat, Channel, EngineState } from "./types";
 import { validateScript } from "./validate";
@@ -141,6 +142,36 @@ describe("scheduler", () => {
     expect(messagesFor(state, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
     expect(state.completed).not.toContain("Rb");
     expect(messagesFor(state, "right").some((message) => message.text.includes("乙店"))).toBe(false);
+  });
+
+  it("picks up a girl root that was not in an older save once the shop is already chosen", () => {
+    const beats: Beat[] = [
+      {
+        id: "L2",
+        channel: "left",
+        lines: [{ from: "boy", text: "选店", delivery: "pop" }],
+        choices: [{ thought: "甲", reply: "选甲", set: { shop: "甲" } }],
+      },
+      {
+        id: "Ra",
+        channel: "right",
+        requires: ["L2"],
+        when: { shop: "甲" },
+        lines: [{ from: "girl", text: "甲店太贵", delivery: "pop" }],
+      },
+    ];
+    const stale: EngineState = {
+      completed: ["L2"],
+      flags: { shop: "甲" },
+      activated: ["L2"],
+      messages: [],
+      pending: { left: null, right: null },
+    };
+    expect(availableBeat(stale, "right", beats)).toBeNull();
+    const repaired = withMissingRoots(stale, beats);
+    expect(repaired.activated).toContain("Ra");
+    const played = drain(openChannel(repaired, "right", beats), "right", beats);
+    expect(messagesFor(played, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
   });
 
   it("holds a beat until every required beat is done and does not reveal its line", () => {

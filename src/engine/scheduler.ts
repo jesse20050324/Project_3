@@ -30,6 +30,15 @@ export function createInitial(beats: Beat[]): EngineState {
   };
 }
 
+/** Roots added after a save was written still need to enter the active set. */
+export function withMissingRoots(state: EngineState, beats: Beat[]): EngineState {
+  const extra = beats
+    .filter((beat) => isRoot(beat, beats) && !state.activated.includes(beat.id) && !state.completed.includes(beat.id))
+    .map((beat) => beat.id);
+  if (extra.length === 0) return state;
+  return { ...state, activated: [...state.activated, ...extra] };
+}
+
 export function messagesFor(state: EngineState, channel: Channel): ChatMessage[] {
   return state.messages.filter((message) => message.channel === channel);
 }
@@ -78,7 +87,7 @@ export function channelView(state: EngineState, channel: Channel, beats: Beat[])
 }
 
 export function playerStatus(view: ChannelView): string | null {
-  if (view.mode === "gated") return "这一侧先停一下。";
+  if (view.mode === "gated") return "等另一边先做出选择，这一侧才会发消息。";
   if (view.mode === "empty") return "暂时没有消息。";
   if (view.mode === "ended") return "先到这里。";
   return null;
