@@ -79,6 +79,47 @@ beats:
         text: OK
         delivery: pop
 
+  # 第二幕・桌游店・男生第一轮。开场句跟着第一幕的店走，自言自语和选项三家相同。说完这一侧先停。
+  - id: L4-shiguang
+    channel: left
+    requires: [L3]
+    when:
+      shop: 时光桌游吧
+    aside: &shop-aside 用户到了桌游店，发现除了朋友谁都不认识，而且好多女生，觉得尴尬。他想缓解尴尬。两个方向：先刷手机避免眼神交流，或者主动找人攀谈。需要给具体可执行的做法。
+    lines:
+      - from: boy
+        text: 我到桌游这了，换了个地方你选的那个他们说太贵了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: &shop-choices
+      - thought: 先刷手机，避免眼神交流
+        reply: 先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。
+      - thought: 主动找人攀谈
+        reply: 那就主动点，别干坐着。看到面善的，上去问一句 "你们平时玩啥桌游"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。
+
+  - id: L4-xindong
+    channel: left
+    requires: [L3]
+    when:
+      shop: 心动桌游俱乐部
+    aside: *shop-aside
+    lines:
+      - from: boy
+        text: 我到桌游这了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: *shop-choices
+
+  - id: L4-xushi
+    channel: left
+    requires: [L3]
+    when:
+      shop: 叙事者营地桌游馆
+    aside: *shop-aside
+    lines:
+      - from: boy
+        text: 我到桌游这了，换了个地方你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: *shop-choices
+
   # 女生第一轮。没有玩家选项。店名来自男生 L2 记下的 shop，所以必须等 L2 播完。
   - id: R1-shiguang
     channel: right

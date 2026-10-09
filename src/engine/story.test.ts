@@ -40,6 +40,9 @@ describe("chapter 1", () => {
       "L1",
       "L2",
       "L3",
+      "L4-shiguang",
+      "L4-xindong",
+      "L4-xushi",
       "R1-shiguang",
       "R1-xindong",
       "R1-xushi",
@@ -88,6 +91,30 @@ describe("chapter 1", () => {
     expect(l3.lines[0].delivery).toBe("pop");
     expect(l3.choices).toBeUndefined();
     expect(l3.next).toBeUndefined();
+
+    const arrivals = script.beats.filter((beat) => beat.id.startsWith("L4-"));
+    expect(arrivals.map((beat) => beat.requires)).toEqual([["L3"], ["L3"], ["L3"]]);
+    expect(arrivals.map((beat) => beat.when)).toEqual([
+      { shop: "时光桌游吧" },
+      { shop: "心动桌游俱乐部" },
+      { shop: "叙事者营地桌游馆" },
+    ]);
+    expect(arrivals.map((beat) => beat.lines[0].text)).toEqual([
+      "我到桌游这了，换了个地方你选的那个他们说太贵了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生",
+      "我到桌游这了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生",
+      "我到桌游这了，换了个地方你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生",
+    ]);
+    expect(new Set(arrivals.map((beat) => beat.aside)).size).toBe(1);
+    expect(arrivals[0].aside).toBe(
+      "用户到了桌游店，发现除了朋友谁都不认识，而且好多女生，觉得尴尬。他想缓解尴尬。两个方向：先刷手机避免眼神交流，或者主动找人攀谈。需要给具体可执行的做法。",
+    );
+    expect(arrivals.map((beat) => beat.choices)).toEqual([arrivals[0].choices, arrivals[0].choices, arrivals[0].choices]);
+    expect(arrivals[0].choices?.map((choice) => choice.thought)).toEqual(["先刷手机，避免眼神交流", "主动找人攀谈"]);
+    expect(arrivals[0].choices?.[0].reply).toBe(
+      "先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。",
+    );
+    expect(arrivals[0].choices?.[1].reply).toContain("你们平时玩啥桌游");
+    expect(arrivals[0].choices?.every((choice) => choice.next === undefined && choice.set === undefined)).toBe(true);
   });
 
   it("plays the boy thread without showing the other shop replies or a girl thread", () => {
@@ -106,10 +133,46 @@ describe("chapter 1", () => {
     expect(texts.some((text) => text.includes("029-85678901"))).toBe(false);
     expect(texts.some((text) => text.includes("环境新、店面大"))).toBe(false);
     state = drain(state, "left", script.beats);
-    expect(messagesFor(state, "left").at(-1)?.text).toBe("OK");
+    const leftTexts = messagesFor(state, "left").map((message) => message.text);
+    expect(leftTexts).toContain("OK");
+    expect(leftTexts.at(-1)).toContain("他们说太贵了");
+    expect(leftTexts.at(-1)).not.toContain("太远了");
+    expect(state.pending.left).toEqual({ kind: "choices", beatId: "L4-shiguang" });
     expect(state.completed).toEqual(["L1", "L2", "L3"]);
     expect(messagesFor(state, "right")).toEqual([]);
     expect(state.pending.right).toBeNull();
+  });
+
+  it("opens only the arrival line for the chosen shop, then the same two ways to handle the room", () => {
+    const beats = loadBundledScript().script!.beats;
+    const phone = "先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。";
+    const talk = "那就主动点，别干坐着。看到面善的，上去问一句 \"你们平时玩啥桌游\"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。";
+    const cases = [
+      { index: 0, beat: "L4-shiguang", mark: "太贵了", absent: "太远了" },
+      { index: 1, beat: "L4-xindong", mark: "我到桌游这了，除了我那个朋友", absent: "换了个地方" },
+      { index: 2, beat: "L4-xushi", mark: "太远了", absent: "太贵了" },
+    ];
+
+    for (const item of cases) {
+      let state = drain(createInitial(beats), "left", beats);
+      state = commitReply(choose(state, "left", 0, beats), "left", beats);
+      state = drain(state, "left", beats);
+      state = commitReply(choose(state, "left", item.index, beats), "left", beats);
+      state = drain(state, "left", beats);
+      const arrival = messagesFor(state, "left").at(-1)?.text ?? "";
+      expect(state.pending.left).toEqual({ kind: "choices", beatId: item.beat });
+      expect(arrival).toContain(item.mark);
+      expect(arrival).not.toContain(item.absent);
+      const phoneState = commitReply(choose(state, "left", 0, beats), "left", beats);
+      const phoneTexts = messagesFor(phoneState, "left").map((message) => message.text);
+      expect(phoneTexts).toContain(phone);
+      expect(phoneTexts).not.toContain(talk);
+      expect(phoneState.pending.left).toBeNull();
+      const talkState = commitReply(choose(state, "left", 1, beats), "left", beats);
+      const talkTexts = messagesFor(talkState, "left").map((message) => message.text);
+      expect(talkTexts).toContain(talk);
+      expect(talkTexts).not.toContain(phone);
+    }
   });
 
   it("opens the girl thread for the chosen shop only, then the same makeup question", () => {
