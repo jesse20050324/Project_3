@@ -79,10 +79,11 @@ beats:
         text: OK
         delivery: pop
 
-  # 第二幕・桌游店・男生第一轮。开场句跟着第一幕的店走，自言自语和选项三家相同。说完这一侧先停。
+  # 第二幕・桌游店・男生第一轮。第一幕两侧都结束后才开始：男生 OK（L3）并且女生化妆回复（R2）。
+  # 开场句跟着店走，自言自语和选项三家相同。说完这一侧先停。
   - id: L4-shiguang
     channel: left
-    requires: [L3]
+    requires: [L3, R2]
     when:
       shop: 时光桌游吧
     aside: &shop-aside 用户到了桌游店，发现除了朋友谁都不认识，而且好多女生，觉得尴尬。他想缓解尴尬。两个方向：先刷手机避免眼神交流，或者主动找人攀谈。需要给具体可执行的做法。
@@ -98,7 +99,7 @@ beats:
 
   - id: L4-xindong
     channel: left
-    requires: [L3]
+    requires: [L3, R2]
     when:
       shop: 心动桌游俱乐部
     aside: *shop-aside
@@ -110,7 +111,7 @@ beats:
 
   - id: L4-xushi
     channel: left
-    requires: [L3]
+    requires: [L3, R2]
     when:
       shop: 叙事者营地桌游馆
     aside: *shop-aside

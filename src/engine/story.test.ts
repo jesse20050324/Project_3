@@ -93,7 +93,11 @@ describe("chapter 1", () => {
     expect(l3.next).toBeUndefined();
 
     const arrivals = script.beats.filter((beat) => beat.id.startsWith("L4-"));
-    expect(arrivals.map((beat) => beat.requires)).toEqual([["L3"], ["L3"], ["L3"]]);
+    expect(arrivals.map((beat) => beat.requires)).toEqual([
+      ["L3", "R2"],
+      ["L3", "R2"],
+      ["L3", "R2"],
+    ]);
     expect(arrivals.map((beat) => beat.when)).toEqual([
       { shop: "时光桌游吧" },
       { shop: "心动桌游俱乐部" },
@@ -134,10 +138,9 @@ describe("chapter 1", () => {
     expect(texts.some((text) => text.includes("环境新、店面大"))).toBe(false);
     state = drain(state, "left", script.beats);
     const leftTexts = messagesFor(state, "left").map((message) => message.text);
-    expect(leftTexts).toContain("OK");
-    expect(leftTexts.at(-1)).toContain("他们说太贵了");
-    expect(leftTexts.at(-1)).not.toContain("太远了");
-    expect(state.pending.left).toEqual({ kind: "choices", beatId: "L4-shiguang" });
+    expect(leftTexts.at(-1)).toBe("OK");
+    expect(leftTexts.some((text) => text.includes("我到桌游这了"))).toBe(false);
+    expect(state.pending.left).toBeNull();
     expect(state.completed).toEqual(["L1", "L2", "L3"]);
     expect(messagesFor(state, "right")).toEqual([]);
     expect(state.pending.right).toBeNull();
@@ -158,6 +161,13 @@ describe("chapter 1", () => {
       state = commitReply(choose(state, "left", 0, beats), "left", beats);
       state = drain(state, "left", beats);
       state = commitReply(choose(state, "left", item.index, beats), "left", beats);
+      state = drain(state, "left", beats);
+      expect(messagesFor(state, "left").at(-1)?.text).toBe("OK");
+      expect(state.pending.left).toBeNull();
+      state = drain(state, "right", beats);
+      expect(state.pending.right?.kind).toBe("choices");
+      state = commitReply(choose(state, "right", 0, beats), "right", beats);
+      expect(state.completed).toContain("R2");
       state = drain(state, "left", beats);
       const arrival = messagesFor(state, "left").at(-1)?.text ?? "";
       expect(state.pending.left).toEqual({ kind: "choices", beatId: item.beat });
