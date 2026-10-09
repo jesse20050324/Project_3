@@ -3,7 +3,7 @@ import { nameOf } from "../engine/loadScript";
 import { channelView, messagesFor, playerStatus } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type { Channel, Delivery, EngineState, Script } from "../engine/types";
-import { INDICATOR_MS, shouldType } from "../presentation";
+import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
 import { ChoicePanel } from "./ChoicePanel";
 import { MessageBubble } from "./MessageBubble";
 
@@ -32,6 +32,7 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
   const token = outgoing?.token ?? "";
   const [live, setLive] = useState<{ token: string; phase: "indicator" | "typing" } | null>(null);
   const doneToken = useRef<string | null>(null);
+  const dwell = useRef<number | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const stateRef = useRef(state);
   const scriptRef = useRef(script);
@@ -41,6 +42,10 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
   dispatchRef.current = dispatch;
 
   const commit = useCallback(() => {
+    if (dwell.current !== null) {
+      window.clearTimeout(dwell.current);
+      dwell.current = null;
+    }
     const current = stateRef.current.pending[channel];
     if (!current || current.kind === "choices") return;
     const currentToken =
@@ -51,6 +56,22 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     doneToken.current = currentToken;
     dispatchRef.current(current.kind === "lines" ? { type: "commit-line", channel } : { type: "commit-reply", channel });
   }, [channel]);
+
+  const finishTyping = useCallback(() => {
+    if (dwell.current !== null) return;
+    dwell.current = window.setTimeout(() => {
+      dwell.current = null;
+      commit();
+    }, AFTER_TYPE_MS);
+  }, [commit]);
+
+  useEffect(() => {
+    return () => {
+      if (dwell.current === null) return;
+      window.clearTimeout(dwell.current);
+      dwell.current = null;
+    };
+  }, [token]);
 
   const completedKey = state.completed.join("|");
   const activatedKey = state.activated.join("|");
@@ -155,7 +176,7 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
               delivery={outgoing.delivery}
               caption={outgoing.caption}
               animate
-              onFinished={commit}
+              onFinished={finishTyping}
               onProgress={() => {
                 const el = scroller.current;
                 if (el) el.scrollTop = el.scrollHeight;
