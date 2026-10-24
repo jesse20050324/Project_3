@@ -1,11 +1,15 @@
 import YAML from "js-yaml";
-import chapterSource from "../../content/chapter-01.yaml?raw";
+import chapter1Source from "../../content/chapter-01.yaml?raw";
+import chapter2Source from "../../content/chapter-02.yaml?raw";
 import type { Beat, Channel, Choice, Delivery, Line, Scalar, Script, Speaker } from "./types";
 import { validateScript, type Validation } from "./validate";
 
+// 按播放顺序读入各章，合成一份再检查。后一章的 requires 仍可指向前一章，旗标也不按章清掉。
+const bundledChapters = [chapter1Source, chapter2Source];
+
 export function loadBundledScript(): { script: Script | null; error: string | null } {
   try {
-    const script = parseScript(chapterSource);
+    const script = mergeChapters(bundledChapters.map((source) => parseScript(source)));
     const result = validateScript(script);
     if (!result.ok) return { script: null, error: result.error };
     return { script, error: null };
@@ -15,13 +19,35 @@ export function loadBundledScript(): { script: Script | null; error: string | nu
   }
 }
 
+function mergeChapters(parts: Script[]): Script {
+  const beats = parts.flatMap((part, index) => {
+    const chapter = part.chapters?.[0]?.index ?? index + 1;
+    return part.beats.map((beat) => ({ ...beat, chapter: beat.chapter ?? chapter }));
+  });
+  return {
+    title: parts[0]?.title ?? "",
+    speakers: parts[0]?.speakers ?? [],
+    beats,
+    chapters: parts.map((part, index) => ({
+      index: part.chapters?.[0]?.index ?? index + 1,
+      title: part.title,
+    })),
+  };
+}
+
 export function parseScript(source: string): Script {
   const data = YAML.load(source);
   if (!isRecord(data)) throw new Error("剧本不是一个对象");
   const title = readString(data.title, "剧本缺少标题");
+  const chapter = readChapter(data.chapter);
   const speakers = readSpeakers(data.speakers);
-  const beats = readBeats(data.beats);
-  return { title, speakers, beats };
+  const beats = readBeats(data.beats).map((beat) => (chapter === undefined ? beat : { ...beat, chapter }));
+  return {
+    title,
+    speakers,
+    beats,
+    chapters: chapter === undefined ? undefined : [{ index: chapter, title }],
+  };
 }
 
 export function nameOf(script: Script, id: string): string {
@@ -112,6 +138,14 @@ function readChannel(value: unknown, id: string): Channel {
 function readDelivery(value: unknown, beatId: string): Delivery {
   if (value !== "type" && value !== "pop" && value !== "image" && value !== "thought") {
     throw new Error(`节拍 ${beatId} 的呈现方式必须是 type、pop、image 或 thought`);
+  }
+  return value;
+}
+
+function readChapter(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    throw new Error("chapter 必须是从 1 开始的整数");
   }
   return value;
 }

@@ -28,6 +28,8 @@ export type Beat = {
   lines: Line[];
   choices?: Choice[];
   next?: string;
+  /** 这一拍属于哪一章。分章文件合并时写入。 */
+  chapter?: number;
 };
 
 export type Speaker = {
@@ -36,10 +38,16 @@ export type Speaker = {
   channel?: Channel;
 };
 
+export type ScriptChapter = {
+  index: number;
+  title: string;
+};
+
 export type Script = {
   title: string;
   speakers: Speaker[];
   beats: Beat[];
+  chapters?: ScriptChapter[];
 };
 
 export type ChatMessage = {

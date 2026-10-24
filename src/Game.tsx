@@ -62,6 +62,12 @@ export function Game({ script }: Props) {
             <h1 className="truncate text-base font-medium">{script.title}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <a
+              href="#map"
+              className="rounded-full px-3 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
+            >
+              结构
+            </a>
             <button
               type="button"
               data-testid="debug-toggle"

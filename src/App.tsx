@@ -1,10 +1,19 @@
-import { useEffect, useMemo } from "react";
-import chapterSource from "../content/chapter-01.yaml?raw";
+import { useEffect, useMemo, useState } from "react";
+import chapter1Source from "../content/chapter-01.yaml?raw";
+import chapter2Source from "../content/chapter-02.yaml?raw";
 import { loadBundledScript } from "./engine/loadScript";
 import { Game } from "./Game";
+import { ScriptMap } from "./ScriptMap";
 
 export function App() {
-  const loaded = useMemo(() => loadBundledScript(), [chapterSource]);
+  const loaded = useMemo(() => loadBundledScript(), [chapter1Source, chapter2Source]);
+  const [map, setMap] = useState(() => window.location.hash === "#map");
+
+  useEffect(() => {
+    const sync = () => setMap(window.location.hash === "#map");
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
 
   useEffect(() => {
     if (loaded.error) console.error(loaded.error);
@@ -20,5 +29,6 @@ export function App() {
     );
   }
 
+  if (map) return <ScriptMap script={loaded.script} />;
   return <Game script={loaded.script} />;
 }

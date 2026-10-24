@@ -40,13 +40,27 @@ describe("chapter 1", () => {
       "L1",
       "L2",
       "L3",
-      "L4-shiguang",
-      "L4-xindong",
-      "L4-xushi",
       "R1-shiguang",
       "R1-xindong",
       "R1-xushi",
       "R2",
+      "L4-shiguang",
+      "L4-xindong",
+      "L4-xushi",
+    ]);
+    expect(script.beats.filter((beat) => beat.chapter === 1).map((beat) => beat.id)).toEqual([
+      "L1",
+      "L2",
+      "L3",
+      "R1-shiguang",
+      "R1-xindong",
+      "R1-xushi",
+      "R2",
+    ]);
+    expect(script.beats.filter((beat) => beat.chapter === 2).map((beat) => beat.id)).toEqual([
+      "L4-shiguang",
+      "L4-xindong",
+      "L4-xushi",
     ]);
     const right = script.beats.filter((beat) => beat.channel === "right");
     expect(right.slice(0, 3).map((beat) => beat.requires)).toEqual([["L2"], ["L2"], ["L2"]]);
