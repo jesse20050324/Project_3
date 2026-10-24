@@ -3,3 +3,6 @@ dist
 .DS_Store
 *.local
 .vite
+.learnings/
+tmp-map-preview/
+docs/cloud-chat.md
