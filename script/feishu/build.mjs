@@ -105,7 +105,7 @@ function buildScriptFormat() {
   lines.push('LEG["图例：◆…◆＝记忆候选"]');
 
   for (const [lane, list] of Object.entries(byLane)) {
-    lines.push(`subgraph L${lane === "男生" ? 1 : 2} ["${lane}线"]`);
+    lines.push(`subgraph SG${lane === "男生" ? "M" : "F"} ["${lane}线"]`);
     const variants = list.filter((t) => t.入场);
     if (variants.length) {
       const inId = "IN" + (lane === "男生" ? "M" : "F");
@@ -173,7 +173,7 @@ function buildEngineFormat(chapterFile, outName, prevChapterLabel) {
 
   for (const [lane, list] of Object.entries(byLane)) {
     if (!list.length) continue;
-    lines.push(`subgraph L${lane === "男生" ? 1 : 2} ["${lane}线"]`);
+    lines.push(`subgraph SG${lane === "男生" ? "M" : "F"} ["${lane}线"]`);
     for (const b of list) lines.push(node(b.id, renderBeat(b)));
     for (let i = 0; i < list.length; i++) {
       const b = list[i];
