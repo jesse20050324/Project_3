@@ -100,6 +100,8 @@ beats:
       - from: girl
         text: 这个太贵了吧，我让他换个地方
         delivery: type
+    记忆候选:
+      - { 缩略标签: 店的位置, 短句: "时光桌游吧，在小寨华旗国际 A 座", 类型: 教学, 线: 无 }
 
   - id: R1-xindong
     channel: right
@@ -120,6 +122,8 @@ beats:
       - from: girl
         text: OK，这个感觉还挺好的
         delivery: type
+    记忆候选:
+      - { 缩略标签: 店的位置, 短句: "心动桌游俱乐部，在莱安中心 T6-21703 室", 类型: 教学, 线: 无 }
 
   - id: R1-xushi
     channel: right
@@ -140,6 +144,8 @@ beats:
       - from: girl
         text: 咋这么远，过去都啥时候了，我让他换个地方
         delivery: type
+    记忆候选:
+      - { 缩略标签: 店的位置, 短句: "叙事者营地桌游馆，在大唐不夜城长安 C 位 10 号商铺", 类型: 教学, 线: 无 }
 
   # 女生第二轮。三家店都汇合到这一拍。回复说完这一侧先停。
   - id: R2

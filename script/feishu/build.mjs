@@ -1,11 +1,11 @@
 // 飞书适配版 .mmd 构建器（唯一可视化输出，直接从 yaml 生成，无中间层）
 // 用法：node script/feishu/build.mjs
-// 支持：script/ch5.yaml（轮次四条格式）→ ch5.mmd
-//       content/chapter-01.yaml、chapter-02.yaml（引擎 Beat/Choice 格式）→ ch1.mmd、ch2.mmd
-// ch3/ch4（原文/定稿双层格式）暂用早期生成的 mmd，待定稿时再接入本构建器。
-// 飞书适配规则：graph 关键字 / subgraph 分线 / br 换行 / 无花形节点 /
-//   边标签纯文本 / 无 & 语法 / 无 emoji / 无任何引号字符（定界符除外）。
-// ◆…◆ = 记忆候选（正牌与干扰项视觉等同）。
+// 支持：script/ch3.yaml、ch4.yaml、ch5.yaml（统一轮次格式）→ ch3/4/5.mmd
+//       content/chapter-01.yaml（引擎 Beat/Choice 格式，含记忆候选）→ ch1.mmd
+// 旧 chapter-02（引擎格式）已并入第三幕剧本，不再单独出图。
+// 飞书适配：graph 关键字 / subgraph 分线（SGM/SGF，防撞名）/ br 换行 /
+//   无花形节点 / 边标签纯文本 / 无 & 语法 / 无 emoji / 无任何引号字符（定界符除外）。
+// ◆…◆ = 记忆候选；选项置灰门渲染为"选项文字（需记忆：标签）"。
 
 import fs from "node:fs";
 import path from "node:path";
@@ -52,6 +52,16 @@ function findSpan(msg, phrase) {
   return null;
 }
 
+// 在一段文本里给短句加 ◆ 标记（先原文定位，再整体清洗）
+function markSpan(text, phrase) {
+  const span = findSpan(text, phrase);
+  if (!span) return { text, hit: false };
+  const safe = sanitize(span);
+  const out = sanitize(text);
+  if (out.includes(safe)) return { text: out.replace(safe, "◆" + safe + "◆"), hit: true };
+  return { text: out, hit: false };
+}
+
 // 自动换行：到宽度后遇标点断行
 function wrap(text, width = 42) {
   const chars = Array.from(text);
@@ -70,63 +80,79 @@ function wrap(text, width = 42) {
 
 const node = (id, text) => `${id}["${text}"]`;
 
-// ---------- 一、script 轮次格式（ch5） ----------
-function buildScriptFormat() {
-  const y = YAML.load(fs.readFileSync(path.join(scriptDir, "ch5.yaml"), "utf8"));
+const optText = (o) => (typeof o === "string" ? o : o.文字);
+const optGate = (o) => (typeof o === "string" ? null : o.需记忆 ?? null);
+const optLabel = (o) => optText(o) + (optGate(o) ? "（需记忆：" + optGate(o) + "）" : "");
+
+// ---------- 一、script 轮次格式（ch3/ch4/ch5） ----------
+function buildScriptFormat(srcFile, outName, header, exitLabel) {
+  const y = YAML.load(fs.readFileSync(path.join(scriptDir, srcFile), "utf8"));
   const turns = y.轮次;
   const byLane = { 男生: [], 女生: [] };
   for (const t of turns) byLane[t.所属].push(t);
-  const nid = (t) => (t.所属 === "男生" ? "M" : "F") + t.编号.replace(/\./g, "");
+  const nid = (lane, num) => (lane === "男生" ? "M" : "F") + String(num).replace(/[.\-]/g, "");
+  const find = (num) => turns.find((x) => x.编号 === num);
 
   const renderTurn = (t) => {
-    let user = sanitize(t.用户消息 || "");
-    const marks = [];
+    const parts = [sanitize(t.编号 + " " + (t.标题 || "") + (t.等待 ? " 需等" + sanitize(t.等待) : ""))];
+    parts.push("①" + sanitize(t.用户消息 || ""));
+    if (t.AI思考) parts.push("②思考：" + sanitize(t.AI思考));
+    const opts = t.选项 ?? [];
+    if (opts.length) parts.push("③选项：" + opts.map(optLabel).map(sanitize).join(" / "));
+    const replies = Array.isArray(t.AI回复) ? t.AI回复 : t.AI回复 ? [t.AI回复] : [];
+    if (replies.length === 1) parts.push("④回复：" + sanitize(replies[0]));
+    else replies.forEach((r, i) => parts.push("④" + "ABC"[i] + "：" + sanitize(r)));
+    let userText = parts[1]; // ①先暂存，候选标记累积后再写回
     for (const c of t.记忆候选 || []) {
       const span = findSpan(t.用户消息 || "", c.短句);
-      const safe = span ? sanitize(span) : null;
-      if (safe && user.includes(safe)) user = user.replace(safe, "◆" + safe + "◆");
-      marks.push(`◆记忆：${sanitize(c.缩略标签)}｜${sanitize(c.类型)}·${sanitize(c.线)}${safe && user.includes("◆" + safe) ? "" : "（未定位）"}`);
+      let hit = false;
+      if (span) {
+        const safe = sanitize(span);
+        if (userText.includes(safe)) {
+          userText = userText.replace(safe, "◆" + safe + "◆");
+          hit = true;
+        }
+      }
+      parts.push(`◆记忆：${sanitize(c.缩略标签)}｜${sanitize(c.类型)}·${sanitize(c.线)}${hit ? "" : "（未定位）"}`);
     }
-    const parts = [sanitize(t.编号 + " " + (t.标题 || "") + (t.等待 ? " 需等" + sanitize(t.等待) : ""))];
-    parts.push("①" + user);
-    if (t.AI思考) parts.push("②思考：" + sanitize(t.AI思考));
-    if (t.选项) parts.push("③选项：" + (Array.isArray(t.选项) ? t.选项.map(sanitize).join(" / ") : sanitize(t.选项)));
-    if (t.AI回复) parts.push("④回复：" + sanitize(t.AI回复));
-    marks.forEach((m) => parts.push(m));
+    if (userText !== parts[1]) parts[1] = userText;
+    if (t.备注) parts.push("备注：" + sanitize(t.备注));
     if (t.终局) parts.push("终局：" + sanitize(t.终局));
     return wrap(parts.join("<br/>"));
   };
 
   const lines = [];
-  lines.push("%% 幕5 全文轮次图 飞书画板适配版（直接生成自 script/ch5.yaml）");
-  lines.push("%% 图例：◆…◆＝记忆候选（正牌与干扰项视觉等同）；尾行记忆：缩略标签｜类型·线（开发信息，玩家UI不显示）");
+  lines.push("%% " + header);
+  lines.push("%% 提取自 script/" + srcFile + "（直接生成，无中间版本）");
   lines.push("");
   lines.push("graph TD");
-  lines.push('LEG["图例：◆…◆＝记忆候选"]');
 
   for (const [lane, list] of Object.entries(byLane)) {
+    if (!list.length) continue;
     lines.push(`subgraph SG${lane === "男生" ? "M" : "F"} ["${lane}线"]`);
     const variants = list.filter((t) => t.入场);
     if (variants.length) {
       const inId = "IN" + (lane === "男生" ? "M" : "F");
-      lines.push(`${inId}["幕4旗标"]`);
-      for (const v of variants) {
-        const label = String(v.入场).includes("双问") ? "双问" : String(v.入场).includes("仅男问") ? "仅男问" : "仅女问";
-        lines.push(`${inId} -->|${label}| ${nid(v)}`);
-      }
+      lines.push(`${inId}["入场旗标"]`);
+      for (const v of variants) lines.push(`${inId} -->|${sanitize(v.入场)}| ${nid(lane, v.编号)}`);
     }
-    for (const t of list) lines.push(node(nid(t), renderTurn(t)));
+    for (const t of list) lines.push(node(nid(lane, t.编号), renderTurn(t)));
     for (const t of list) {
-      if (t.下一 && String(t.下一).startsWith("出口")) {
-        if (t.终局) lines.push(`${nid(t)} -->|${sanitize(t.终局)}| EXIT`);
-      } else if (t.下一) {
-        const target = list.find((x) => x.编号 === t.下一);
-        if (target) lines.push(`${nid(t)} --> ${nid(target)}`);
+      const id = nid(lane, t.编号);
+      if (t.下一) {
+        const target = find(t.下一);
+        if (target) lines.push(`${id} --> ${nid(t.所属, target.编号)}`);
+      } else if (t.分叉) {
+        for (const [opt, child] of Object.entries(t.分叉)) {
+          const target = find(child);
+          if (target) lines.push(`${id} -->|${sanitize(optLabel(opt))}| ${nid(t.所属, target.编号)}`);
+        }
       }
+      if (t.终局) lines.push(`${id} -->|${sanitize(t.终局)}| EXIT`);
     }
     if (variants.length) {
       const firstMain = list.find((t) => !t.入场);
-      for (const v of variants) lines.push(`${nid(v)} --> ${nid(firstMain)}`);
+      for (const v of variants) lines.push(`${nid(lane, v.编号)} --> ${nid(lane, firstMain.编号)}`);
     }
     lines.push("end");
   }
@@ -134,14 +160,14 @@ function buildScriptFormat() {
     if (!t.等待) continue;
     const lane = String(t.等待).startsWith("男生") ? "男生" : "女生";
     const src = byLane[lane].find((x) => x.编号 === String(t.等待).replace(/^.*?生/, ""));
-    if (src) lines.push(`${nid(src)} -.->|时序| ${nid(t)}`);
+    if (src) lines.push(`${nid(lane, src.编号)} -.->|时序| ${nid(t.所属, t.编号)}`);
   }
-  lines.push('EXIT["出口 在一起 进块6+7"]');
-  return { file: path.join(feishuDir, "ch5.mmd"), lines };
+  lines.push(`EXIT["${sanitize(exitLabel)}"]`);
+  return { file: path.join(feishuDir, outName), lines };
 }
 
-// ---------- 二、引擎 Beat/Choice 格式（ch1、ch2） ----------
-function buildEngineFormat(chapterFile, outName, prevChapterLabel) {
+// ---------- 二、引擎 Beat/Choice 格式（ch1） ----------
+function buildEngineFormat(chapterFile, outName) {
   const y = YAML.load(fs.readFileSync(path.join(repoRoot, "content", chapterFile), "utf8"));
   const beats = y.beats;
   const byLane = { 男生: [], 女生: [] };
@@ -153,17 +179,32 @@ function buildEngineFormat(chapterFile, outName, prevChapterLabel) {
     for (const ln of b.lines || []) {
       const who = ln.from === "boy" ? "男" : ln.from === "girl" ? "女" : "AI";
       const kind = ln.from === "ai" && ln.delivery === "thought" ? "AI思考" : who;
-      parts.push(kind + "：" + sanitize(ln.text));
+      parts.push(kind + "：" + ln.text);
     }
     for (const ch of b.choices || []) {
-      parts.push("③选项：" + sanitize(ch.thought));
-      parts.push("④回复：" + sanitize(ch.reply));
+      parts.push("③选项：" + ch.thought);
+      parts.push("④回复：" + ch.reply);
       if (ch.set) parts.push("立旗标：" + Object.entries(ch.set).map(([k, v]) => `${k}=${v}`).join("，"));
     }
     if (b.requires) parts.push("等：" + b.requires.join("，"));
     if (b.when) parts.push("当：" + Object.entries(b.when).map(([k, v]) => `${k}=${v}`).join("，"));
-    if (b.aside) parts.push("注：" + sanitize(b.aside));
-    return wrap(parts.join("<br/>"));
+    if (b.aside) parts.push("注：" + b.aside);
+    const notes = [];
+    for (const c of b.记忆候选 || []) {
+      let hit = false;
+      for (let i = 1; i < parts.length; i++) {
+        if (parts[i].includes("：") && !hit) {
+          const { text, hit: ok } = markSpan(parts[i], c.短句);
+          if (ok) {
+            parts[i] = text;
+            hit = true;
+          }
+        }
+      }
+      notes.push(`◆记忆：${sanitize(c.缩略标签)}｜${sanitize(c.类型)}·${sanitize(c.线)}${hit ? "" : "（未定位）"}`);
+    }
+    for (const n of notes) parts.push(n);
+    return wrap(parts.map(sanitize).join("<br/>"));
   };
 
   const lines = [];
@@ -190,10 +231,9 @@ function buildEngineFormat(chapterFile, outName, prevChapterLabel) {
         }
       }
     }
-    // 变体拍无同章依赖来源时，用上一章汇合节点引入
     const needPrev = list.some((b) => b.when && !(b.requires || []).some((r) => byId[r]));
-    if (needPrev && prevChapterLabel) {
-      lines.push(`PREV["${prevChapterLabel}"]`);
+    if (needPrev) {
+      lines.push(`PREV["上一章汇合"]`);
       for (const b of list) if (b.when && !(b.requires || []).some((r) => byId[r]))
         lines.push(`PREV -->|当：${Object.entries(b.when).map(([k, v]) => `${k}=${v}`).join("，")}| ${b.id}`);
     }
@@ -204,11 +244,16 @@ function buildEngineFormat(chapterFile, outName, prevChapterLabel) {
 
 // ---------- 主流程 ----------
 const outputs = [
-  buildEngineFormat("chapter-01.yaml", "ch1.mmd", null),
-  buildEngineFormat("chapter-02.yaml", "ch2.mmd", "CH1 结束"),
-  buildScriptFormat(),
+  buildEngineFormat("chapter-01.yaml", "ch1.mmd"),
+  buildScriptFormat("ch3.yaml", "ch3.mmd", "第三幕 桌游店 全文轮次图", "第三幕收线 出口 进第四幕"),
+  buildScriptFormat("ch4.yaml", "ch4.mmd", "第四幕 结缘 全文轮次图", "终局 问或不问 出口 双问单问进幕5 双不问over"),
+  buildScriptFormat("ch5.yaml", "ch5.mmd", "幕5 全文轮次图", "出口 在一起 进块6+7"),
 ];
 for (const o of outputs) {
   fs.writeFileSync(o.file, o.lines.join("\n") + "\n", "utf8");
   console.log("written:", path.relative(repoRoot, o.file), o.lines.length, "lines");
 }
+try {
+  fs.rmSync(path.join(feishuDir, "ch2.mmd"));
+  console.log("removed: script/feishu/ch2.mmd (旧幕2已并入第三幕)");
+} catch {}
