@@ -31,7 +31,7 @@ describe("story flow", () => {
 
     const boyForks = forks(boy.rows);
     expect(boyForks).toHaveLength(1);
-    expect(boyForks[0].nodes.every((node) => node.id.startsWith("L4"))).toBe(true);
+    expect(boyForks[0].nodes.every((node) => node.id.startsWith("3.1.1"))).toBe(true);
     expect(boy.rows.some((row) => row.type === "node" && row.node.id === "L3")).toBe(true);
     expect(boyForks[0].nodes.map((node) => node.difference)).toContain("没说「换了个地方」");
     expect(boyForks[0].nodes.map((node) => node.difference).join(" ")).toMatch(/太贵/);
@@ -46,12 +46,12 @@ describe("story flow", () => {
     expect(at("L2")).toBeLessThan(at("R1-shiguang"));
     expect(at("L3")).toBe(at("R1-xindong"));
     expect(at("R1-shiguang")).toBeLessThan(at("R2"));
-    expect(at("R2")).toBeLessThan(at("L4-shiguang"));
-    expect(at("L3")).toBeLessThan(at("L4-xushi"));
+    expect(at("R2")).toBeLessThan(at("3.1.1-A"));
+    expect(at("L3")).toBeLessThan(at("3.1.1-C"));
     const boyLane = board.lanes.find((lane) => lane.channel === "left");
-    expect(boyLane?.cells.some((cell) => cell?.chapterLabel === "第二幕 · 桌游店")).toBe(true);
+    expect(boyLane?.cells.some((cell) => cell?.chapterLabel === "第三幕 · 桌游店")).toBe(true);
     const girlLane = board.lanes.find((lane) => lane.channel === "right");
-    expect(girlLane?.cells.some((cell) => cell?.chapterLabel)).toBe(false);
+    expect(girlLane?.cells.some((cell) => cell?.chapterLabel === "第三幕 · 桌游店")).toBe(true);
   });
 
   it("hides the full lines until a node is opened", () => {

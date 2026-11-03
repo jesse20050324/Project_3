@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { nameOf } from "../engine/loadScript";
 import { channelView, messagesFor, playerStatus } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
-import type { Channel, Delivery, EngineState, Script } from "../engine/types";
+import type { Channel, Delivery, EngineState, MemoryCandidate, Script } from "../engine/types";
 import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
 import { ChoicePanel } from "./ChoicePanel";
-import { MessageBubble } from "./MessageBubble";
+import { MessageBubble, type MemoryMark } from "./MessageBubble";
 
 type Props = {
   script: Script;
@@ -28,6 +28,40 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
   const title = person?.name ?? (channel === "left" ? "左侧" : "右侧");
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
+  const [showMemories, setShowMemories] = useState(false);
+  const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
+
+  // 本窗已播出的消息里可见的记忆候选（决定高亮与计数）
+  const beatOf = (beatId: string) => script.beats.find((beat) => beat.id === beatId);
+  const marksFor = (beatId: string, text: string): MemoryMark[] => {
+    const candidates: MemoryCandidate[] = beatOf(beatId)?.记忆候选 ?? [];
+    return candidates
+      .filter((candidate) => text.includes(candidate.短句))
+      .map((candidate) => ({ text: candidate.短句, saved: savedLabels.has(candidate.缩略标签) }));
+  };
+  const visibleCandidates = new Set<string>();
+  for (const message of messages) {
+    for (const candidate of beatOf(message.beatId)?.记忆候选 ?? []) {
+      if (message.text.includes(candidate.短句)) visibleCandidates.add(candidate.缩略标签);
+    }
+  }
+  const memoryTotal = visibleCandidates.size;
+  const memorySaved = state.memories[channel].length;
+
+  const saveMark = useCallback(
+    (beatId: string, text: string) => {
+      const candidate = (beatOf(beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
+      if (!candidate) return;
+      dispatch({
+        type: "save-memory",
+        channel,
+        label: candidate.缩略标签,
+        text: candidate.短句,
+        beatId,
+      });
+    },
+    [channel, dispatch, script],
+  );
   const outgoing = resolveOutgoing(script, state, channel);
   const token = outgoing?.token ?? "";
   const [live, setLive] = useState<{ token: string; phase: "indicator" | "typing" } | null>(null);
@@ -118,13 +152,21 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     <section
       data-testid={`pane-${channel}`}
       aria-label={title}
-      className={hidden ? "hidden" : "flex h-full min-h-0 min-w-0 flex-col bg-[#f7f4ee]"}
+      className={hidden ? "hidden" : "relative flex h-full min-h-0 min-w-0 flex-col bg-[#f7f4ee]"}
     >
       <header className="flex items-center gap-2 border-b border-[#efeae2] px-4 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e7eeeb] text-sm text-[#2f5d54]">
           {title.slice(0, 1)}
         </span>
         <h2 className="text-sm font-medium">{title}</h2>
+        <button
+          type="button"
+          data-testid={`memory-counter-${channel}`}
+          onClick={() => setShowMemories(true)}
+          className="ml-auto rounded-full border border-[#ddd4c6] bg-white px-3 py-1 text-xs text-[#2f5d54] hover:border-[#2f5d54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
+        >
+          记忆 {memorySaved}/{Math.max(memoryTotal, memorySaved)}
+        </button>
       </header>
       <div ref={scroller} role="log" aria-label={`${title}的对话`} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 && !outgoing && !showChoices ? (
@@ -145,6 +187,8 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
               delivery={message.delivery}
               caption={message.caption}
               animate={false}
+              marks={marksFor(message.beatId, message.text)}
+              onSaveMark={(text) => saveMark(message.beatId, text)}
             />
           ))
         )}
@@ -200,6 +244,10 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
         <ChoicePanel
           aside={beat.aside}
           choices={beat.choices ?? []}
+          gateFor={(index) => {
+            const need = beat.choices?.[index]?.需记忆;
+            return need && !savedLabels.has(need) ? need : null;
+          }}
           onPick={(index) => dispatch({ type: "choose", channel, index })}
         />
       ) : null}
@@ -207,6 +255,38 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
         <p data-testid={`status-${channel}`} className="border-t border-[#efeae2] px-4 py-3 text-center text-xs text-[#6b645b]">
           {status}
         </p>
+      ) : null}
+      {showMemories ? (
+        <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#1c1915]/20 backdrop-blur-sm" role="dialog" aria-label="记忆">
+          <div className="mt-10 w-[min(420px,92%)] rounded-2xl border border-[#ddd4c6] bg-[#f6f3ed] p-4 shadow-[0_18px_50px_rgba(60,40,20,0.25)]">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-medium">{title}窗的记忆</h3>
+              <button
+                type="button"
+                data-testid={`memory-close-${channel}`}
+                onClick={() => setShowMemories(false)}
+                className="rounded-full px-2 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2]"
+              >
+                关闭
+              </button>
+            </div>
+            <p className="mb-3 text-xs text-[#6b645b]">只存你点过的那几句。AI 的聊天记录阅后即焚，留下什么由你决定。</p>
+            {state.memories[channel].length === 0 ? (
+              <p data-testid={`memory-empty-${channel}`} className="py-6 text-center text-sm text-[#8a8175]">
+                还没存下任何记忆。聊天里的高亮句子点一下就能存。
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {state.memories[channel].map((memory) => (
+                  <li key={memory.label} data-testid="memory-entry" className="rounded-xl border border-[#ddd4c6] bg-white px-3 py-2">
+                    <p className="text-[13px] font-medium text-[#1c1915]">{memory.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[#5c564e]">「{memory.text}」</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       ) : null}
     </section>
   );

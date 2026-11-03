@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Delivery } from "../engine/types";
 import { TYPE_INTERVAL_MS } from "../presentation";
 
+/** 记忆候选高亮：候选原文片段；saved=已存（不再可点）。 */
+export type MemoryMark = { text: string; saved: boolean };
+
 type Props = {
   from: string;
   speakerName: string;
@@ -9,6 +12,8 @@ type Props = {
   delivery: Delivery;
   caption?: string;
   animate: boolean;
+  marks?: MemoryMark[];
+  onSaveMark?: (text: string) => void;
   onFinished?: () => void;
   onProgress?: () => void;
 };
@@ -20,6 +25,8 @@ export function MessageBubble({
   delivery,
   caption,
   animate,
+  marks,
+  onSaveMark,
   onFinished,
   onProgress,
 }: Props) {
@@ -50,6 +57,37 @@ export function MessageBubble({
 
   const visible = typing ? text.slice(0, shown) : text;
 
+  const renderWithMarks = (value: string) => {
+    if (!marks || marks.length === 0) return value;
+    const found = marks
+      .map((mark) => ({ mark, at: value.indexOf(mark.text) }))
+      .filter((item) => item.at >= 0)
+      .sort((a, b) => a.at - b.at);
+    if (found.length === 0) return value;
+    const nodes = [];
+    let cursor = 0;
+    for (const { mark, at } of found) {
+      if (at < cursor) continue;
+      if (at > cursor) nodes.push(value.slice(cursor, at));
+      nodes.push(
+        <span
+          key={`${at}-${mark.text}`}
+          data-testid="memory-mark"
+          data-saved={mark.saved}
+          role={mark.saved ? undefined : "button"}
+          tabIndex={mark.saved ? -1 : 0}
+          className={mark.saved ? "memory-mark memory-mark-saved" : "memory-mark"}
+          onClick={mark.saved || !onSaveMark ? undefined : () => onSaveMark(mark.text)}
+        >
+          {mark.text}
+        </span>,
+      );
+      cursor = at + mark.text.length;
+    }
+    if (cursor < value.length) nodes.push(value.slice(cursor));
+    return nodes;
+  };
+
   if (delivery === "thought") {
     return (
       <div className="flex max-w-[92%] flex-col gap-1 self-stretch" data-from={from} data-delivery="thought">
@@ -78,7 +116,7 @@ export function MessageBubble({
               : "rounded-bl-md bg-white text-[#1c1915] shadow-[0_1px_2px_rgba(40,30,10,0.05)]"
           }`}
         >
-          {visible}
+          {renderWithMarks(visible)}
         </div>
       )}
     </div>

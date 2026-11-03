@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import chapterSource from "../../content/chapter-01.yaml?raw";
 import { loadBundledScript } from "./loadScript";
-import { choose, commitReply, createInitial, messagesFor } from "./scheduler";
+import { choose, commitReply, createInitial, messagesFor, saveMemory } from "./scheduler";
 import { drain } from "./testPlayback";
+import type { Beat } from "./types";
 
 const l1Reply = [
   "帮你看了下，西安市中心的桌游店主要集中在小寨、钟楼和曲江这三个片区，选择挺多的。我按片区整理了几家口碑不错的，你们可以看哪个方便。",
@@ -44,9 +45,30 @@ describe("chapter 1", () => {
       "R1-xindong",
       "R1-xushi",
       "R2",
-      "L4-shiguang",
-      "L4-xindong",
-      "L4-xushi",
+      "3.1.1-A",
+      "3.1.1-B",
+      "3.1.1-C",
+      "3.2.1",
+      "3.2.2",
+      "3.2.3",
+      "3.2.4",
+      "3.3.1",
+      "3.3.2",
+      "3.4.1",
+      "3.4.2",
+      "3.4.3",
+      "3.4.4",
+      "4.1.1",
+      "4.2.1",
+      "4.2.2",
+      "4.2.3",
+      "4.2.4",
+      "4.2.5",
+      "4.3.1",
+      "4.3.2",
+      "4.3.3",
+      "4.3.4",
+      "4.3.5",
     ]);
     expect(script.beats.filter((beat) => beat.chapter === 1).map((beat) => beat.id)).toEqual([
       "L1",
@@ -57,10 +79,20 @@ describe("chapter 1", () => {
       "R1-xushi",
       "R2",
     ]);
-    expect(script.beats.filter((beat) => beat.chapter === 2).map((beat) => beat.id)).toEqual([
-      "L4-shiguang",
-      "L4-xindong",
-      "L4-xushi",
+    expect(script.beats.filter((beat) => beat.chapter === 3).map((beat) => beat.id)).toEqual([
+      "3.1.1-A",
+      "3.1.1-B",
+      "3.1.1-C",
+      "3.2.1",
+      "3.2.2",
+      "3.2.3",
+      "3.2.4",
+      "3.3.1",
+      "3.3.2",
+      "3.4.1",
+      "3.4.2",
+      "3.4.3",
+      "3.4.4",
     ]);
     const right = script.beats.filter((beat) => beat.channel === "right");
     expect(right.slice(0, 3).map((beat) => beat.requires)).toEqual([["L2"], ["L2"], ["L2"]]);
@@ -106,7 +138,7 @@ describe("chapter 1", () => {
     expect(l3.choices).toBeUndefined();
     expect(l3.next).toBeUndefined();
 
-    const arrivals = script.beats.filter((beat) => beat.id.startsWith("L4-"));
+    const arrivals = script.beats.filter((beat) => beat.id.startsWith("3.1.1-"));
     expect(arrivals.map((beat) => beat.requires)).toEqual([
       ["L3", "R2"],
       ["L3", "R2"],
@@ -122,17 +154,15 @@ describe("chapter 1", () => {
       "我到桌游这了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生",
       "我到桌游这了，换了个地方你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生",
     ]);
-    expect(new Set(arrivals.map((beat) => beat.aside)).size).toBe(1);
-    expect(arrivals[0].aside).toBe(
-      "用户到了桌游店，发现除了朋友谁都不认识，而且好多女生，觉得尴尬。他想缓解尴尬。两个方向：先刷手机避免眼神交流，或者主动找人攀谈。需要给具体可执行的做法。",
-    );
+    expect(arrivals.every((beat) => beat.记忆候选 === undefined && beat.aside === undefined)).toBe(true);
     expect(arrivals.map((beat) => beat.choices)).toEqual([arrivals[0].choices, arrivals[0].choices, arrivals[0].choices]);
     expect(arrivals[0].choices?.map((choice) => choice.thought)).toEqual(["先刷手机，避免眼神交流", "主动找人攀谈"]);
     expect(arrivals[0].choices?.[0].reply).toBe(
       "先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。",
     );
     expect(arrivals[0].choices?.[1].reply).toContain("你们平时玩啥桌游");
-    expect(arrivals[0].choices?.every((choice) => choice.next === undefined && choice.set === undefined)).toBe(true);
+    expect(arrivals[0].choices?.map((choice) => choice.next)).toEqual(["3.3.1", "3.2.1"]);
+    expect(arrivals[0].choices?.map((choice) => choice.set)).toEqual([{ 路线: "刷手机" }, { 路线: "攀谈" }]);
   });
 
   it("plays the boy thread without showing the other shop replies or a girl thread", () => {
@@ -165,9 +195,9 @@ describe("chapter 1", () => {
     const phone = "先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。";
     const talk = "那就主动点，别干坐着。看到面善的，上去问一句 \"你们平时玩啥桌游\"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。";
     const cases = [
-      { index: 0, beat: "L4-shiguang", mark: "太贵了", absent: "太远了" },
-      { index: 1, beat: "L4-xindong", mark: "我到桌游这了，除了我那个朋友", absent: "换了个地方" },
-      { index: 2, beat: "L4-xushi", mark: "太远了", absent: "太贵了" },
+      { index: 0, beat: "3.1.1-A", mark: "太贵了", absent: "太远了" },
+      { index: 1, beat: "3.1.1-B", mark: "我到桌游这了，除了我那个朋友", absent: "换了个地方" },
+      { index: 2, beat: "3.1.1-C", mark: "太远了", absent: "太贵了" },
     ];
 
     for (const item of cases) {
@@ -191,11 +221,14 @@ describe("chapter 1", () => {
       const phoneTexts = messagesFor(phoneState, "left").map((message) => message.text);
       expect(phoneTexts).toContain(phone);
       expect(phoneTexts).not.toContain(talk);
-      expect(phoneState.pending.left).toBeNull();
+      expect(phoneState.pending.left).toEqual({ kind: "lines", beatId: "3.3.1", lineIndex: 0 });
+      expect(phoneState.flags.路线).toBe("刷手机");
       const talkState = commitReply(choose(state, "left", 1, beats), "left", beats);
       const talkTexts = messagesFor(talkState, "left").map((message) => message.text);
       expect(talkTexts).toContain(talk);
       expect(talkTexts).not.toContain(phone);
+      expect(talkState.pending.left).toEqual({ kind: "lines", beatId: "3.2.1", lineIndex: 0 });
+      expect(talkState.flags.路线).toBe("攀谈");
     }
   });
 
@@ -261,7 +294,7 @@ describe("chapter 1", () => {
       expect(yesTexts).not.toContain(makeupNo);
       expect(yesTexts.some((text) => text === "化")).toBe(false);
       expect(yesTexts.some((text) => text.includes(item.absent))).toBe(false);
-      expect(yes.pending.right).toBeNull();
+      expect(yes.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
       expect(yes.completed).toContain("R2");
       expect(yes.flags).toEqual({ shop: item.shop });
 
@@ -271,9 +304,105 @@ describe("chapter 1", () => {
       expect(noTexts).not.toContain(makeupYes);
       expect(noTexts.some((text) => text === "不化")).toBe(false);
       expect(noTexts.some((text) => text.includes(item.absent))).toBe(false);
-      expect(no.pending.right).toBeNull();
+      expect(no.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
       expect(no.completed).toContain("R2");
       expect(no.flags).toEqual({ shop: item.shop });
     }
+  });
+});
+
+describe("memory system", () => {
+  const beats = loadBundledScript().script!.beats;
+
+  it("ships tutorial candidates and gates that reference them", () => {
+    const labels = (id: string) =>
+      (beats.find((beat) => beat.id === id)?.记忆候选 ?? []).map((candidate) => candidate.缩略标签);
+    expect(labels("R1-shiguang")).toEqual(["店的位置"]);
+    expect(labels("R1-xindong")).toEqual(["店的位置"]);
+    expect(labels("R1-xushi")).toEqual(["店的位置"]);
+    expect(labels("3.2.2")).toEqual(["我妹的同桌"]);
+    expect(labels("3.3.1")).toEqual(["我妹的同桌"]);
+    const cousin = beats.find((beat) => beat.id === "4.2.2")!.choices![0];
+    expect(cousin.需记忆).toBe("我妹的同桌");
+  });
+
+  function playToShop(shopIndex = 0) {
+    let state = drain(createInitial(beats), "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "left", beats);
+    state = commitReply(choose(state, "left", shopIndex, beats), "left", beats);
+    state = drain(state, "left", beats);
+    return state;
+  }
+
+  function playGirlToSubway(state: ReturnType<typeof createInitial>) {
+    state = drain(state, "right", beats);
+    state = commitReply(choose(state, "right", 0, beats), "right", beats);
+    return drain(state, "right", beats);
+  }
+
+  it("gates the precise-route choice until the shop memory is saved", () => {
+    const base = playGirlToSubway(playToShop(0));
+    expect(base.pending.right).toEqual({ kind: "choices", beatId: "3.4.1" });
+    expect(() => choose(base, "right", 0, beats)).toThrow(/店的位置/);
+    const guessed = commitReply(choose(base, "right", 1, beats), "right", beats);
+    expect(guessed.pending.right).toEqual({ kind: "lines", beatId: "3.4.2", lineIndex: 0 });
+    const saved = saveMemory(base, "right", {
+      label: "店的位置",
+      text: "时光桌游吧，在小寨华旗国际 A 座",
+      beatId: "R1-shiguang",
+    });
+    const precise = commitReply(choose(saved, "right", 0, beats), "right", beats);
+    expect(precise.pending.right).toEqual({ kind: "lines", beatId: "3.4.3", lineIndex: 0 });
+    const again = saveMemory(saved, "right", { label: "店的位置", text: "重复", beatId: "R1-shiguang" });
+    expect(again.memories.right).toHaveLength(1);
+  });
+
+  it("gates the cousin bridge behind the classmate memory", () => {
+    let state = playGirlToSubway(playToShop(0));
+    state = drain(state, "left", beats);
+    expect(state.pending.left).toEqual({ kind: "choices", beatId: "3.1.1-A" });
+    for (const pick of [1, 0, 0, 0, 0, 0]) {
+      state = commitReply(choose(state, "left", pick, beats), "left", beats);
+      state = drain(state, "left", beats);
+    }
+    expect(state.pending.left).toEqual({ kind: "choices", beatId: "4.2.2" });
+    expect(() => choose(state, "left", 0, beats)).toThrow(/我妹的同桌/);
+    const direct = commitReply(choose(state, "left", 1, beats), "left", beats);
+    expect(direct.flags["男生意向"]).toBe("问");
+    const dropped = commitReply(choose(state, "left", 2, beats), "left", beats);
+    expect(dropped.flags["男生意向"]).toBe("不问");
+    const withMemory = saveMemory(state, "left", {
+      label: "我妹的同桌",
+      text: "好像是我妹的同桌还是什么",
+      beatId: "3.2.2",
+    });
+    const bridged = commitReply(choose(withMemory, "left", 0, beats), "left", beats);
+    expect(bridged.flags["男生意向"]).toBe("问");
+  });
+
+  it("wipes memories when the beat says so", () => {
+    const tinyBeats: Beat[] = [
+      {
+        id: "A",
+        channel: "left",
+        lines: [{ from: "boy", text: "去", delivery: "pop" }],
+        choices: [{ thought: "走", reply: "好", next: "B" }],
+      },
+      {
+        id: "B",
+        channel: "left",
+        lines: [{ from: "boy", text: "到了", delivery: "pop" }],
+        choices: [{ thought: "回", reply: "嗯" }],
+        清空记忆: "all",
+      },
+    ];
+    let state = saveMemory(createInitial(tinyBeats), "left", { label: "旧记忆", text: "旧的", beatId: "A" });
+    state = drain(state, "left", tinyBeats);
+    state = commitReply(choose(state, "left", 0, tinyBeats), "left", tinyBeats);
+    state = drain(state, "left", tinyBeats);
+    state = commitReply(choose(state, "left", 0, tinyBeats), "left", tinyBeats);
+    expect(state.completed).toContain("B");
+    expect(state.memories).toEqual({ left: [], right: [] });
   });
 });

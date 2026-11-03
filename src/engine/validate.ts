@@ -49,6 +49,18 @@ export function validateScript(script: Script): Validation {
     );
   }
 
+  // 置灰门引用的缩略标签必须真的有候选可存，否则选项永远选不了。
+  const memoryLabels = new Set(
+    script.beats.flatMap((beat) => (beat.记忆候选 ?? []).map((candidate) => candidate.缩略标签)),
+  );
+  for (const beat of script.beats) {
+    for (const choice of beat.choices ?? []) {
+      if (choice.需记忆 && !memoryLabels.has(choice.需记忆)) {
+        errors.push(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${choice.需记忆}」，但没有任何节拍提供这条候选。`);
+      }
+    }
+  }
+
   for (const beat of script.beats) {
     if (beat.channel !== "left" && beat.channel !== "right") {
       errors.push(`节拍 ${beat.id} 的 channel 必须是 left 或 right。`);

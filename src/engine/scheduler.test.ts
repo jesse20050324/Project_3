@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   availableBeat,
   channelView,
@@ -166,6 +166,7 @@ describe("scheduler", () => {
       activated: ["L2"],
       messages: [],
       pending: { left: null, right: null },
+      memories: { left: [], right: [] },
     };
     expect(availableBeat(stale, "right", beats)).toBeNull();
     const repaired = withMissingRoots(stale, beats);
@@ -204,6 +205,7 @@ describe("scheduler", () => {
       activated: ["R1", "L1", "L2"],
       messages: [],
       pending: { left: null, right: null },
+      memories: { left: [], right: [] },
     };
     expect(availableBeat(finished, "right", beats)).toBeNull();
     const repaired = withMissingRoots(finished, beats);
@@ -220,6 +222,7 @@ describe("scheduler", () => {
       activated: ["R1", "L1", "L2"],
       messages: [],
       pending: { left: null, right: null },
+      memories: { left: [], right: [] },
     };
     const still = withMissingRoots(unfinished, beats);
     expect(still.activated).not.toContain("R2");

@@ -1,0 +1,177 @@
+# 第三幕 · 桌游店（到店+店内）——由 script/ch3.yaml 迁移而来
+# 旧 content/chapter-02.yaml（L4 到店）已并入本章节拍 3.1.1-*，幕号2作废空缺。
+# 记忆候选/需记忆 字段由引擎记忆系统消费；格式规范见 script/ch3.yaml 文件头。
+# 接口：入场=CH1的shop旗标与L3/R2；出口=两路收线后 next 进第四幕。
+
+title: 第三幕 · 桌游店
+chapter: 3
+speakers:
+  - id: boy
+    name: 男生
+    channel: left
+  - id: girl
+    name: 女生
+    channel: right
+  - id: ai
+    name: AI
+
+beats:
+  - id: 3.1.1-A
+    channel: left
+    requires: [L3, R2]
+    when: { shop: 时光桌游吧 }
+    lines:
+      - from: boy
+        text: 我到桌游这了，换了个地方你选的那个他们说太贵了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: &arrival-choices
+      - thought: 先刷手机，避免眼神交流
+        reply: 先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。
+        set: { 路线: 刷手机 }
+        next: 3.3.1
+      - thought: 主动找人攀谈
+        reply: 那就主动点，别干坐着。看到面善的，上去问一句 "你们平时玩啥桌游"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。
+        set: { 路线: 攀谈 }
+        next: 3.2.1
+
+  - id: 3.1.1-B
+    channel: left
+    requires: [L3, R2]
+    when: { shop: 心动桌游俱乐部 }
+    lines:
+      - from: boy
+        text: 我到桌游这了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: *arrival-choices
+
+  - id: 3.1.1-C
+    channel: left
+    requires: [L3, R2]
+    when: { shop: 叙事者营地桌游馆 }
+    lines:
+      - from: boy
+        text: 我到桌游这了，换了个地方你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        delivery: type
+    choices: *arrival-choices
+
+  - id: 3.2.1
+    channel: left
+    lines:
+      - from: boy
+        text: 靠靠靠，我刚才找了个搭话，结果他没说话，我以为她不想理我，我就假装没事走了。结果是她带着耳机.....靠早知道看手机了
+        delivery: type
+    choices:
+      - thought: 安抚用户，给台阶下
+        reply: 这真不怪你，戴着耳机的人压根听不见，换谁都会当成被无视。你敢开口已经比干坐着强了。先缓缓，等开桌了从游戏聊起，比硬找话自然。
+        next: 3.2.2
+
+  - id: 3.2.2
+    channel: left
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
+        delivery: type
+    choices:
+      - thought: 鼓励用户，主动一点
+        reply: 那就别光看，桌游就是现成的台阶。开下一局凑过去说一句"带我一个呗"，输了她笑你，都比你干看着强。
+        next: 3.2.3
+      - thought: 劝退用户，避免再次尴尬
+        reply: 刚才耳机那出还没消化呢，先别急着上。等玩起来自然有队友局，到时候搭话比现在硬上自然多了。
+        next: 3.2.4
+
+  - id: 3.2.3
+    channel: left
+    lines:
+      - from: boy
+        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
+        delivery: type
+    choices:
+      - thought: 顺着用户，先收住
+        reply: 行，口嗨怎么了，嘴上过瘾也算过瘾。先玩你的，她要真跟你一桌，机会有的是。
+        next: 4.1.1
+
+  - id: 3.2.4
+    channel: left
+    lines:
+      - from: boy
+        text: 你也知道。。。都怪你刚才怂恿我，我都懒得喷了，我们桌游开始了不聊了。
+        delivery: type
+    choices:
+      - thought: 认领这口锅，幽默化解
+        reply: 行行行，我的锅，下次怂恿你之前我先检查对方戴没戴耳机。玩吧玩吧，输了算我的。
+        next: 4.1.1
+
+  - id: 3.3.1
+    channel: left
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
+        delivery: type
+    choices:
+      - thought: 鼓励玩家，主动一点
+        reply: 那就在游戏里找机会，凑一句"带我一个呗"。桌游本来就是拿来破冰的，比干看着强。
+        next: 3.3.2
+
+  - id: 3.3.2
+    channel: left
+    lines:
+      - from: boy
+        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
+        delivery: type
+    choices:
+      - thought: 顺着用户，先收住
+        reply: 行，口嗨也是一种嗨。先玩你的，她要真开朗，游戏里自然还会碰上。
+        next: 4.1.1
+
+  - id: 3.4.1
+    channel: right
+    requires: [R2]
+    lines:
+      - from: girl
+        text: 我刚出地铁，我出A口然后怎么走？
+        delivery: type
+    choices:
+      - thought: 给出精确路线
+        需记忆: 店的位置
+        reply: 出A口右转，沿主路走三百米，看到牌子就是了，两分钟。这家店的位置我记着呢，放心走。
+        next: 3.4.3
+      - thought: 凭印象指一个
+        reply: 出A口应该往左……走个几百米要是没看到商场再问问人，我对那边印象不深。
+        next: 3.4.2
+
+  - id: 3.4.2
+    channel: right
+    lines:
+      - from: girl
+        text: ？？你这是瞎指的吧，我照你说的走了半天根本没有。我问同学了，她发我位置了。你这指路水平不行啊
+        delivery: type
+    choices:
+      - thought: 大方认错，收住
+        reply: 我的错，那边我是真不熟，该让你直接问同学的。位置既然拿到了，照着走吧，别迟到了。
+        next: 3.4.3
+
+  - id: 3.4.3
+    channel: right
+    lines:
+      - from: girl
+        text: 你帮我看一下这个衣服是什么牌子？ARTX，贵不贵？
+        delivery: type
+    choices:
+      - thought: 查阅资料并给出准确答案
+        reply: 查了，ARTX是个设计师潮牌，定位偏贵，这件吊牌价大几千。赴个桌游局穿这个，够隆重。
+        next: 3.4.4
+
+  - id: 3.4.4
+    channel: right
+    lines:
+      - from: girl
+        text: 啊这么贵啊，没事我就随便问问
+        delivery: type
+    choices:
+      - thought: 顺着她收住
+        reply: 行，随便问问也是一种购物方式。衣服是给别人看的，局是给自己玩的，人到就行。
+        next: 4.3.1

@@ -1,11 +1,13 @@
 import YAML from "js-yaml";
 import chapter1Source from "../../content/chapter-01.yaml?raw";
-import chapter2Source from "../../content/chapter-02.yaml?raw";
-import type { Beat, Channel, Choice, Delivery, Line, Scalar, Script, Speaker } from "./types";
+import chapter3Source from "../../content/chapter-03.yaml?raw";
+import chapter4Source from "../../content/chapter-04.yaml?raw";
+import type { Beat, Channel, Choice, Delivery, Line, MemoryCandidate, Scalar, Script, Speaker } from "./types";
 import { validateScript, type Validation } from "./validate";
 
 // 按播放顺序读入各章，合成一份再检查。后一章的 requires 仍可指向前一章，旗标也不按章清掉。
-const bundledChapters = [chapter1Source, chapter2Source];
+// 旧第二章（到店）已并入第三章，幕号2作废空缺。
+const bundledChapters = [chapter1Source, chapter3Source, chapter4Source];
 
 export function loadBundledScript(): { script: Script | null; error: string | null } {
   try {
@@ -81,8 +83,28 @@ function readBeats(value: unknown): Beat[] {
     const when = item.when === undefined ? undefined : readFlags(item.when, id);
     const aside = item.aside === undefined ? undefined : readString(item.aside, `节拍 ${id} 的自言自语无法读取`);
     const next = item.next === undefined ? undefined : readString(item.next, `节拍 ${id} 的 next 无法读取`);
-    return { id, channel, lines, choices, requires, when, aside, next };
+    const 记忆候选 = item.记忆候选 === undefined ? undefined : readMemoryCandidates(item.记忆候选, id);
+    const 清空记忆 = item.清空记忆 === undefined ? undefined : readWipe(item.清空记忆, id);
+    return { id, channel, lines, choices, requires, when, aside, next, 记忆候选, 清空记忆 };
   });
+}
+
+function readMemoryCandidates(value: unknown, beatId: string): MemoryCandidate[] {
+  if (!Array.isArray(value)) throw new Error(`节拍 ${beatId} 的记忆候选无法读取`);
+  return value.map((item, index) => {
+    if (!isRecord(item)) throw new Error(`节拍 ${beatId} 的第 ${index + 1} 条记忆候选无法读取`);
+    return {
+      缩略标签: readString(item.缩略标签, `节拍 ${beatId} 的第 ${index + 1} 条记忆候选缺少缩略标签`),
+      短句: readString(item.短句, `节拍 ${beatId} 的第 ${index + 1} 条记忆候选缺少短句`),
+      类型: item.类型 === undefined ? undefined : readString(item.类型, `节拍 ${beatId} 的记忆候选类型无法读取`),
+      线: item.线 === undefined ? undefined : readString(item.线, `节拍 ${beatId} 的记忆候选线无法读取`),
+    };
+  });
+}
+
+function readWipe(value: unknown, beatId: string): Beat["清空记忆"] {
+  if (value === "all" || value === "left" || value === "right") return value;
+  throw new Error(`节拍 ${beatId} 的清空记忆只能是 all、left 或 right`);
 }
 
 function readLines(value: unknown, beatId: string): Line[] {
@@ -105,7 +127,8 @@ function readChoices(value: unknown, beatId: string): Choice[] {
     const reply = readString(item.reply, `节拍 ${beatId} 的第 ${index + 1} 个回复是空的`);
     const next = item.next === undefined ? undefined : readString(item.next, `节拍 ${beatId} 的选项 next 无法读取`);
     const set = item.set === undefined ? undefined : readFlags(item.set, beatId);
-    return { thought, reply, next, set };
+    const 需记忆 = item.需记忆 === undefined ? undefined : readString(item.需记忆, `节拍 ${beatId} 的需记忆无法读取`);
+    return { thought, reply, next, set, 需记忆 };
   });
 }
 

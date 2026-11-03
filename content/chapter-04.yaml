@@ -1,0 +1,152 @@
+# 第四幕 · 结缘——由 script/ch4.yaml 迁移而来
+# 接口：入场=第三幕 next；出口=选项 set 意向旗标（男生意向/女生意向：问/不问），
+# 幕5按双问/单问/双不问分岔（引擎部分后续接入）。
+# 教学门：4.2.2「让表妹帮忙牵线」需记忆「我妹的同桌」（存于3.2.2/3.3.1）。
+
+title: 第四幕 · 结缘
+chapter: 4
+speakers:
+  - id: boy
+    name: 男生
+    channel: left
+  - id: girl
+    name: 女生
+    channel: right
+  - id: ai
+    name: AI
+
+beats:
+  - id: 4.1.1
+    channel: left
+    lines:
+      - from: boy
+        text: 我靠，我靠，我靠，你还记得我刚才给你说的那个女的吗？我感觉她绝对对我有意思！！！
+        delivery: type
+    choices:
+      - thought: 追问细节，接住兴奋
+        reply: 哈哈哈，怎么回事你说来我听听？别光下结论，来点证据。
+        next: 4.2.1
+
+  - id: 4.2.1
+    channel: left
+    lines:
+      - from: boy
+        text: 就是我们不刚玩完桌游吗，然后刚才玩的时候，我说话别人都不理我，就她回应我，而且就她有时候和我对视一下啥的
+        delivery: type
+    choices:
+      - thought: 认可用户并鼓励
+        reply: 这俩细节有点东西，尤其是"就她回应你"——她要是懒得理你，大可以跟别人一样。下一步先别想表白，先搞到联系方式，你们不是有共同的朋友嘛，从那儿入手最自然。
+        next: 4.2.2
+      - thought: 提醒用户，对方可能只是性格开朗
+        reply: 也未必哈，就回你话不一定就是对你有意思，有的人就是见谁都热络。先别急着定性，再观察观察。
+        set: { 男生意向: 不问 }
+        next: 4.2.5
+
+  - id: 4.2.2
+    channel: left
+    lines:
+      - from: boy
+        text: 我靠不敢啊，我在我妹面前是正人君子，我问这感觉跟个变态一样
+        delivery: type
+    choices:
+      - thought: 让表妹帮忙牵线
+        需记忆: 我妹的同桌
+        reply: 不丢脸的做法现成就有：让你妹妹帮忙呗，就说想认识一下她同学，正常社交，谁也不会觉得变态。
+        set: { 男生意向: 问 }
+        next: 4.2.3
+      - thought: 硬着头皮直接问
+        reply: 那就直接问，大方点。实在抹不开面，找个自然的由头，比如"加个微信，下次组局叫上"，光明正大。
+        set: { 男生意向: 问 }
+        next: 4.2.3
+      - thought: 先算了别硬来
+        reply: 也行，别硬来。你妹在场这事确实微妙，问砸了她夹在中间也难受。先放着，改天没外人了再说。
+        set: { 男生意向: 不问 }
+        next: 4.2.4
+
+  - id: 4.2.3
+    channel: left
+    lines:
+      - from: boy
+        text: 好！我就假装帮我舍友要吧，看我妹啥反应，不行就算了
+        delivery: type
+    choices:
+      - thought: 支持方案，给执行建议
+        reply: 这个由头好，进可攻退可守。记得语气随意点，"我舍友说那天那个女生挺有意思，推个微信呗"，成了不突兀，不成也有台阶下。
+
+  - id: 4.2.4
+    channel: left
+    lines:
+      - from: boy
+        text: 哎你说的有道理，而且估计那个女生可能本来就比较开朗吧，我可能就是多想了
+        delivery: type
+    choices:
+      - thought: 认可他的判断，留个口子
+        reply: 有可能。不过"多想"说明你今天心情不错，这本身就挺好。回头桌游局要是再碰上，就当认识个牌友，没准还有下文。
+
+  - id: 4.2.5
+    channel: left
+    lines:
+      - from: boy
+        text: 唉，行吧，那就当我多想了，不问不问了，就当认识个牌友，回家回家。
+        delivery: type
+    choices:
+      - thought: 认可用户决定，顺利收尾
+        reply: 行，随缘也挺好。真有缘分下回桌游还能碰上，到时候再说。今天玩得开心就不亏。
+
+  - id: 4.3.1
+    channel: right
+    lines:
+      - from: girl
+        text: 我今天玩桌游遇到个男的，是我同桌的表哥
+        delivery: type
+    choices:
+      - thought: 顺着她展开
+        reply: 哦？说说呗，什么样的人，第一印象如何？
+        next: 4.3.2
+
+  - id: 4.3.2
+    channel: right
+    lines:
+      - from: girl
+        text: 哎呀，就是我感觉他性格还挺好的， 但是我没他微信咋办
+        delivery: type
+    choices:
+      - thought: 建议走共同朋友
+        reply: 这还不简单，同桌就是现成的中间人——直接让她帮你牵线搭桥，组个局或者推个微信，名正言顺。
+        next: 4.3.3
+
+  - id: 4.3.3
+    channel: right
+    lines:
+      - from: girl
+        text: 但是我不好意思给她说啊，之前谈的前男友太脑残她劝我我没听，我怕她又要说我了
+        delivery: type
+    choices:
+      - thought: 出个不丢面子的主意
+        reply: 【待定·组局占位】那就绕开"求介绍"的姿势。你跟同桌说"再攒一局呗，把你表哥也叫上"，就当普通组局，人多热闹谁也不尴尬。局上加了微信，这事就成了，谁也不用谁欠谁。
+        set: { 女生意向: 问 }
+        next: 4.3.4
+      - thought: 顺着她，先放一放
+        reply: 那就先不催了呗，反正才见一面。以后有缘自然还会碰上，不差这一回。
+        set: { 女生意向: 不问 }
+        next: 4.3.5
+
+  - id: 4.3.4
+    channel: right
+    lines:
+      - from: girl
+        text: 可以可以，你太聪明了！我去问
+        delivery: type
+    choices:
+      - thought: 顺着收尾，给临场提醒
+        reply: 去吧，组局这事你熟。局上别端着，该聊就聊——你自来熟，主场优势在你。
+
+  - id: 4.3.5
+    channel: right
+    lines:
+      - from: girl
+        text: 嗯…那算了，不问了，万一她再唠叨我我更烦，就这样吧。
+        delivery: type
+    choices:
+      - thought: 认可用户决定，正常收尾
+        reply: 行，那就先这样。感情这事儿强求不来，今天玩得开心就够了，遇到合适的再说。

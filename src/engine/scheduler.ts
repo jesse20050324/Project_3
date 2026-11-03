@@ -27,7 +27,27 @@ export function createInitial(beats: Beat[]): EngineState {
     activated: beats.filter((beat) => isRoot(beat, beats)).map((beat) => beat.id),
     messages: [],
     pending: { left: null, right: null },
+    memories: { left: [], right: [] },
   };
+}
+
+/** 把一条候选存进该窗的记忆池。同一缩略标签只存一次。 */
+export function saveMemory(
+  state: EngineState,
+  channel: Channel,
+  entry: { label: string; text: string; beatId: string },
+): EngineState {
+  if (entry.label.trim() === "") return state;
+  if (state.memories[channel].some((memory) => memory.label === entry.label)) return state;
+  return {
+    ...state,
+    memories: { ...state.memories, [channel]: [...state.memories[channel], entry] },
+  };
+}
+
+/** 该窗是否已存某条记忆（置灰门判定用）。 */
+export function hasMemory(state: EngineState, channel: Channel, label: string): boolean {
+  return state.memories[channel].some((memory) => memory.label === label);
 }
 
 /**
@@ -197,6 +217,9 @@ export function choose(
   if (!choice) {
     throw new Error(`节拍 ${beat.id} 没有第 ${index + 1} 个选项`);
   }
+  if (choice.需记忆 && !hasMemory(state, channel, choice.需记忆)) {
+    throw new Error(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${choice.需记忆}」，本窗还没存`);
+  }
   return withPending(state, channel, { kind: "reply", beatId: beat.id, choiceIndex: index });
 }
 
@@ -237,16 +260,27 @@ function completeBeat(
   if (set) {
     for (const [key, value] of Object.entries(set)) flags[key] = value;
   }
+  const memories = wipeMemories(state.memories, beat.清空记忆);
   const activated =
     next && !state.activated.includes(next) ? [...state.activated, next] : state.activated;
   return {
     ...state,
     messages,
     flags,
+    memories,
     activated,
     completed: [...state.completed, beat.id],
     pending: { ...state.pending, [channel]: null },
   };
+}
+
+function wipeMemories(
+  memories: EngineState["memories"],
+  wipe: Beat["清空记忆"],
+): EngineState["memories"] {
+  if (!wipe) return memories;
+  if (wipe === "all") return { left: [], right: [] };
+  return { ...memories, [wipe]: [] };
 }
 
 function withPending(state: EngineState, channel: Channel, pending: EngineState["pending"][Channel]): EngineState {

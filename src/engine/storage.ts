@@ -45,6 +45,7 @@ export function loadProgress(beats: Beat[]): EngineState | null {
         left: state.pending.left ?? null,
         right: state.pending.right ?? null,
       },
+      memories: normalizeMemories(state.memories),
     };
   } catch {
     clearProgress();
@@ -76,4 +77,15 @@ function isUsable(state: EngineState, beats: Beat[]): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** 旧存档没有记忆池时补空池，带脏数据时清成空池。 */
+function normalizeMemories(value: unknown): EngineState["memories"] {
+  const empty = { left: [], right: [] };
+  if (!isRecord(value)) return empty;
+  const pick = (list: unknown) =>
+    Array.isArray(list) && list.every((item) => isRecord(item) && typeof item.label === "string")
+      ? list.map((item) => item as { label: string; text: string; beatId: string })
+      : [];
+  return { left: pick(value.left), right: pick(value.right) };
 }
