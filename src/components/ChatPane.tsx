@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nameOf } from "../engine/loadScript";
-import { canArm, channelView, messagesFor, playerStatus } from "../engine/scheduler";
+import { canArm, channelView, memoryNoteFor, messagesFor, playerStatus } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type { Channel, Delivery, EngineState, MemoryCandidate, Script } from "../engine/types";
 import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
@@ -213,19 +213,23 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
             ) : null}
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              from={message.from}
-              speakerName={nameOf(script, message.from)}
-              text={message.text}
-              delivery={message.delivery}
-              caption={message.caption}
-              animate={false}
-              marks={marksFor(message.beatId, message.text)}
-              onSaveMark={(text) => saveMark(message.beatId, text)}
-            />
-          ))
+          messages.map((message) => {
+            const memoryLabel = memoryNoteFor(script.beats, state, message);
+            return (
+              <MessageBubble
+                key={message.id}
+                from={message.from}
+                speakerName={nameOf(script, message.from)}
+                text={message.text}
+                delivery={message.delivery}
+                caption={message.caption}
+                animate={false}
+                marks={marksFor(message.beatId, message.text)}
+                note={memoryLabel ? `记忆可用：${memoryLabel}` : null}
+                onSaveMark={(text) => saveMark(message.beatId, text)}
+              />
+            );
+          })
         )}
         {live?.token === token && live.phase === "indicator" && outgoing ? (
           <div className={outgoing.from === "ai" ? "self-end" : "self-start"}>

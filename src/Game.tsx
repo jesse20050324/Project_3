@@ -58,7 +58,9 @@ export function Game({ script }: Props) {
       <div className="mx-auto flex h-full max-w-[1120px] flex-col overflow-hidden bg-[#f6f3ed] md:rounded-2xl md:border md:border-[#ddd4c6] md:shadow-[0_18px_50px_rgba(60,40,20,0.08)]">
         <header className="flex items-center justify-between gap-3 border-b border-[#e4dcd0] px-4 py-3">
           <div className="min-w-0">
-            <p className="text-[11px] tracking-[0.18em] text-[#6b645b]">双线</p>
+            <p className="text-[11px] tracking-[0.18em] text-[#6b645b]">
+              双线 <span data-testid="build-version" className="tracking-normal opacity-70">· v{__APP_VERSION__} · {__COMMIT__}</span>
+            </p>
             <h1 className="truncate text-base font-medium">{script.title}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-1">

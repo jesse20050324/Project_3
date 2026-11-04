@@ -1,7 +1,7 @@
 {
   "name": "dual-chat",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host :: --port 43123 --strictPort",
@@ -19,6 +19,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.2",

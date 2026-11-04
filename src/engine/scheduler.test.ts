@@ -8,8 +8,10 @@ import {
   createInitial,
   deliveryAnimates,
   describeChannel,
+  memoryNoteFor,
   messagesFor,
   openChannel,
+  saveMemory,
   withMissingRoots,
 } from "./scheduler";
 import type { Beat, Channel, EngineState } from "./types";
@@ -290,6 +292,60 @@ describe("scheduler", () => {
     expect(message.text).toBe("/cards/note.png");
     expect(message.caption).toBe("一张纸条");
     expect(deliveryAnimates("image")).toBe(false);
+  });
+});
+
+describe("chapter boundary auto-open", () => {
+  const beats: Beat[] = [
+    {
+      id: "A",
+      channel: "left",
+      chapter: 1,
+      lines: [{ from: "boy", text: "本幕收尾", delivery: "pop" }],
+      choices: [{ thought: "走", reply: "好", next: "B" }],
+    },
+    { id: "B", channel: "left", chapter: 2, lines: [{ from: "boy", text: "下一幕开场", delivery: "pop" }] },
+  ];
+
+  it("stops auto-opening at a chapter boundary so the UI reset ritual can run first", () => {
+    let state = openChannel(createInitial(beats), "left", beats);
+    state = commitLine(state, "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    // B 已被激活，但不自动开——留给 arm 流程走"上下文重置中"
+    expect(state.activated).toContain("B");
+    expect(state.pending.left).toBeNull();
+    const armed = openChannel(state, "left", beats);
+    expect(armed.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
+  });
+
+  it("still auto-opens when the next beat stays in the same chapter", () => {
+    const sameChapter: Beat[] = beats.map((beat) => ({ ...beat, chapter: 1 }));
+    let state = openChannel(createInitial(sameChapter), "left", sameChapter);
+    state = commitLine(state, "left", sameChapter);
+    state = commitReply(choose(state, "left", 0, sameChapter), "left", sameChapter);
+    expect(state.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
+  });
+});
+
+describe("memory note", () => {
+  const beats: Beat[] = [
+    {
+      id: "Q",
+      channel: "right",
+      lines: [{ from: "girl", text: "怎么走", delivery: "pop" }],
+      choices: [{ thought: "精确指路", reply: "店的位置我记着呢", 需记忆: "店的位置" }],
+    },
+  ];
+
+  it("flags the reply unlocked by a saved memory and stays quiet otherwise", () => {
+    let state = openChannel(createInitial(beats), "right", beats);
+    state = commitLine(state, "right", beats);
+    expect(() => choose(state, "right", 0, beats)).toThrow(/店的位置/);
+    state = saveMemory(state, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1" });
+    state = commitReply(choose(state, "right", 0, beats), "right", beats);
+    const messages = messagesFor(state, "right");
+    expect(memoryNoteFor(beats, state, messages[0])).toBeNull(); // 角色消息不打便签
+    expect(memoryNoteFor(beats, state, messages[1])).toBe("店的位置");
   });
 });
 

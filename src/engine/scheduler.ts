@@ -51,6 +51,23 @@ export function hasMemory(state: EngineState, channel: Channel, label: string): 
 }
 
 /**
+ * 「记忆可用」便签判定：这条消息若是被记忆门槛解锁的 AI 回复，且该记忆现在仍在池里，
+ * 返回所需记忆的标签；其余情况返回 null。UI 据此在气泡上打便签——
+ * 置灰门平时只在缺记忆时提示，存了记忆反而没反馈，便签补上"你的记忆在这里被用上了"。
+ */
+export function memoryNoteFor(beats: Beat[], state: EngineState, message: ChatMessage): string | null {
+  if (message.from !== "ai") return null;
+  const parts = message.id.split(":");
+  if (parts.length < 3 || parts[parts.length - 2] !== "reply") return null;
+  const beatId = parts.slice(0, -2).join(":");
+  const beat = beats.find((item) => item.id === beatId);
+  const choice = beat?.choices?.[Number(parts[parts.length - 1])];
+  const need = choice?.需记忆;
+  if (!need) return null;
+  return hasMemory(state, message.channel, need) ? need : null;
+}
+
+/**
  * 串行节拍：本窗现在是否可以开演。
  * 规则：自己已有 pending 不开；对面正在播出（lines/reply）不开——
  * 面停在 choices 等玩家视为"完全结束"，不挡人。
@@ -226,7 +243,26 @@ export function commitLine(state: EngineState, channel: Channel, beats: Beat[]):
       messages,
     };
   }
-  return openChannel(completeBeat(state, channel, beat, messages, undefined, beat.next), channel, beats);
+  return openNextInChapter(completeBeat(state, channel, beat, messages, undefined, beat.next), channel, beats);
+}
+
+/**
+ * commit 完一拍后的自动续播：下一拍仍在同一章就照旧接着开（"播完自动接上"的手感不变）。
+ * 跨章则不自动开，留在 pending=null 交给 UI 的 arm 流程——
+ * ChatPane 的跨章检测会先走"上下文重置中"仪式再开新章，
+ * 否则 next 衔接的换幕（如第三幕→第四幕）会绕过仪式、两幕消息连播看不出换章。
+ */
+function openNextInChapter(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
+  const next = availableBeat(state, channel, beats);
+  if (next && crossesChapterBoundary(state, channel, next, beats)) return state;
+  return openChannel(state, channel, beats);
+}
+
+function crossesChapterBoundary(state: EngineState, channel: Channel, nextBeat: Beat, beats: Beat[]): boolean {
+  const last = [...state.messages].reverse().find((message) => message.channel === channel);
+  if (!last) return false;
+  const lastBeat = beats.find((beat) => beat.id === last.beatId);
+  return lastBeat?.chapter !== undefined && nextBeat.chapter !== undefined && lastBeat.chapter !== nextBeat.chapter;
 }
 
 export function choose(
@@ -271,7 +307,7 @@ export function commitReply(state: EngineState, channel: Channel, beats: Beat[])
       delivery: "type" as const,
     },
   ];
-  return openChannel(completeBeat(state, channel, beat, messages, choice.set, choice.next), channel, beats);
+  return openNextInChapter(completeBeat(state, channel, beat, messages, choice.set, choice.next), channel, beats);
 }
 
 function completeBeat(
