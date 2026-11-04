@@ -31,11 +31,11 @@ beats:
     choices: &arrival-choices
       - thought: 先刷手机，避免眼神交流
         reply: 先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。
-        set: { 路线: 刷手机 }
+        set: { 路线: 刷手机, 到店: true }
         next: 3.3.1
       - thought: 主动找人攀谈
         reply: 那就主动点，别干坐着。看到面善的，上去问一句 "你们平时玩啥桌游"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。
-        set: { 路线: 攀谈 }
+        set: { 路线: 攀谈, 到店: true }
         next: 3.2.1
 
   - id: 3.1.1-B
@@ -80,6 +80,7 @@ beats:
 
   - id: 3.2.2
     channel: left
+    requires: [3.4.1]
     记忆候选:
       - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
     lines:
@@ -127,6 +128,7 @@ beats:
 
   - id: 3.3.1
     channel: left
+    requires: [3.4.1]
     记忆候选:
       - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
     lines:
@@ -158,6 +160,7 @@ beats:
   - id: 3.4.1
     channel: right
     requires: [R2]
+    when: { 到店: true }
     lines:
       - from: girl
         text: 我刚出地铁，我出A口然后怎么走？

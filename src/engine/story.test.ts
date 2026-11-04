@@ -166,7 +166,10 @@ describe("chapter 1", () => {
     );
     expect(arrivals[0].choices?.[1].reply).toContain("你们平时玩啥桌游");
     expect(arrivals[0].choices?.map((choice) => choice.next)).toEqual(["3.3.1", "3.2.1"]);
-    expect(arrivals[0].choices?.map((choice) => choice.set)).toEqual([{ 路线: "刷手机" }, { 路线: "攀谈" }]);
+    expect(arrivals[0].choices?.map((choice) => choice.set)).toEqual([
+      { 路线: "刷手机", 到店: true },
+      { 路线: "攀谈", 到店: true },
+    ]);
   });
 
   it("plays the boy thread without showing the other shop replies or a girl thread", () => {
@@ -226,8 +229,10 @@ describe("chapter 1", () => {
       const phoneTexts = messagesFor(phoneState, "left").map((message) => message.text);
       expect(phoneTexts).toContain(phone);
       expect(phoneTexts).not.toContain(talk);
-      expect(phoneState.pending.left).toEqual({ kind: "lines", beatId: "3.3.1", lineIndex: 0 });
+      // 玩手机线：看到女生那拍要等女生确认完地址（3.3.1 requires 3.4.1），男生先停住
+      expect(phoneState.pending.left).toBeNull();
       expect(phoneState.flags.路线).toBe("刷手机");
+      expect(phoneState.flags.到店).toBe(true);
       const talkState = commitReply(choose(state, "left", 1, beats), "left", beats);
       const talkTexts = messagesFor(talkState, "left").map((message) => message.text);
       expect(talkTexts).toContain(talk);
@@ -300,7 +305,7 @@ describe("chapter 1", () => {
       expect(yesTexts).not.toContain(makeupNo);
       expect(yesTexts.some((text) => text === "化")).toBe(false);
       expect(yesTexts.some((text) => text.includes(item.absent))).toBe(false);
-      expect(yes.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
+      expect(yes.pending.right).toBeNull();
       expect(yes.completed).toContain("R2");
       expect(yes.flags).toEqual({ shop: item.shop, 化妆: "化" });
 
@@ -310,7 +315,7 @@ describe("chapter 1", () => {
       expect(noTexts).not.toContain(makeupYes);
       expect(noTexts.some((text) => text === "不化")).toBe(false);
       expect(noTexts.some((text) => text.includes(item.absent))).toBe(false);
-      expect(no.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
+      expect(no.pending.right).toBeNull();
       expect(no.completed).toContain("R2");
       expect(no.flags).toEqual({ shop: item.shop, 化妆: "不化" });
     }
@@ -341,14 +346,29 @@ describe("memory system", () => {
     return state;
   }
 
-  function playGirlToSubway(state: ReturnType<typeof createInitial>, makeupIndex = 0) {
+  function playGirlMakeup(state: ReturnType<typeof createInitial>, makeupIndex = 0) {
     state = drain(state, "right", beats);
     state = commitReply(choose(state, "right", makeupIndex, beats), "right", beats);
-    return drain(state, "right", beats);
+    return state;
+  }
+
+  function playBoyArrivalTalk(state: ReturnType<typeof createInitial>) {
+    state = drain(state, "left", beats);
+    expect(state.pending.left?.kind).toBe("choices");
+    state = commitReply(choose(state, "left", 1, beats), "left", beats); // 主动攀谈
+    state = drain(state, "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // 安抚
+    return state; // 3.2.2 等女生确认地址，男生停住
+  }
+
+  function playGirlSubway(state: ReturnType<typeof createInitial>) {
+    state = drain(state, "right", beats); // 3.4.1 lines → choices
+    expect(state.pending.right).toEqual({ kind: "choices", beatId: "3.4.1" });
+    return state;
   }
 
   it("gates the precise-route choice until the shop memory is saved", () => {
-    const base = playGirlToSubway(playToShop(0));
+    const base = playGirlSubway(playBoyArrivalTalk(playGirlMakeup(playToShop(0))));
     expect(base.pending.right).toEqual({ kind: "choices", beatId: "3.4.1" });
     expect(() => choose(base, "right", 0, beats)).toThrow(/店的位置/);
     const guessed = commitReply(choose(base, "right", 1, beats), "right", beats);
@@ -365,13 +385,13 @@ describe("memory system", () => {
   });
 
   it("echoes the makeup advice in the ARTX beat", () => {
-    const madeUp = playGirlToSubway(playToShop(0), 0);
+    const madeUp = playGirlSubway(playBoyArrivalTalk(playGirlMakeup(playToShop(0), 0)));
     const savedUp = saveMemory(madeUp, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1-shiguang" });
     const up = drain(commitReply(choose(savedUp, "right", 0, beats), "right", beats), "right", beats);
     expect(up.pending.right).toEqual({ kind: "choices", beatId: "3.4.3-A" });
     expect(messagesFor(up, "right").some((message) => message.text.includes("最后还是化了"))).toBe(true);
 
-    const bareFaced = playGirlToSubway(playToShop(0), 1);
+    const bareFaced = playGirlSubway(playBoyArrivalTalk(playGirlMakeup(playToShop(0), 1)));
     const savedBare = saveMemory(bareFaced, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1-shiguang" });
     const bare = drain(commitReply(choose(savedBare, "right", 0, beats), "right", beats), "right", beats);
     expect(bare.pending.right).toEqual({ kind: "choices", beatId: "3.4.3-B" });
@@ -379,10 +399,12 @@ describe("memory system", () => {
   });
 
   it("gates the cousin bridge behind the classmate memory", () => {
-    let state = playGirlToSubway(playToShop(0));
-    state = drain(state, "left", beats);
-    expect(state.pending.left).toEqual({ kind: "choices", beatId: "3.1.1-A" });
-    for (const pick of [1, 0, 0, 0, 0, 0]) {
+    let state = playGirlSubway(playBoyArrivalTalk(playGirlMakeup(playToShop(0))));
+    // 女生确认地址（凭印象支线）→ 3.4.1 完成 → 男生看到女生那拍解锁
+    state = commitReply(choose(state, "right", 1, beats), "right", beats);
+    state = drain(state, "left", beats); // 3.2.2 此前被门槛挡住，现在开演到选项
+    // 男生续走：看到女生 → 收线 → 第四幕到 4.2.2
+    for (const pick of [0, 0, 0, 0]) {
       state = commitReply(choose(state, "left", pick, beats), "left", beats);
       state = drain(state, "left", beats);
     }
@@ -475,17 +497,26 @@ describe("serial pacing", () => {
     expect(canArm(state, "left", beats)).toBe(false);
   });
 
-  it("treats a pane waiting on choices as finished", () => {
-    let state = drain(createInitial(beats), "left", beats);
-    state = commitReply(choose(state, "left", 0, beats), "left", beats);
-    state = drain(state, "left", beats);
-    state = commitReply(choose(state, "left", 0, beats), "left", beats);
-    state = drain(state, "left", beats); // L3 播完
-    state = drain(state, "right", beats); // R1 → R2 停在选项
+  it("treats a pane waiting on choices as finished, and holds the boy until the girl confirms the address", () => {
+    let state = drain(createInitial(beats), "left", beats); // L1 → choices
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // L1 完成 → L2
+    state = drain(state, "left", beats); // L2 → choices
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // 选店 → L3
+    state = drain(state, "right", beats); // R1 → R2 choices
     state = commitReply(choose(state, "right", 0, beats), "right", beats); // 化
-    state = drain(state, "right", beats); // 3.4.1 停在选项
+    state = drain(state, "left", beats); // L3 OK，男生到店就绪
+    state = commitReply(choose(state, "left", 1, beats), "left", beats); // 主动攀谈 → 3.2.1
+    state = drain(state, "left", beats); // 3.2.1 → choices
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // 安抚
+    // 3.2.2 等女生确认地址 → 男生停住
+    expect(state.pending.left).toBeNull();
+    state = drain(state, "right", beats); // 3.4.1 lines → choices
     expect(state.pending.right?.kind).toBe("choices");
-    // 女生停在选项等玩家；男生 3.1.1 已就绪 → 视为女生"完全结束"，可以开演
+    // 女生还停在问路选项上：3.4.1 未完成，男生看到女生那拍开不了
+    expect(canArm(state, "left", beats)).toBe(false);
+    state = commitReply(choose(state, "right", 1, beats), "right", beats); // 凭印象 → 3.4.1 完成
+    state = drain(state, "right", beats); // 3.4.2 → choices（地址已从同学那确认）
+    // 女生停在吐槽选项等玩家 → 视为"完全结束"，男生可以开演
     expect(canArm(state, "left", beats)).toBe(true);
     expect(canArm(state, "right", beats)).toBe(false);
   });

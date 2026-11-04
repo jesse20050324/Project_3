@@ -174,9 +174,12 @@ function buildScriptFormat(srcFile, outName, header, exitLabel) {
   }
   for (const t of turns) {
     if (!t.等待) continue;
-    const lane = String(t.等待).startsWith("男生") ? "男生" : "女生";
-    const src = byLane[lane].find((x) => x.编号 === String(t.等待).replace(/^.*?生/, ""));
-    if (src) lines.push(`${nid(lane, src.编号)} -.->|时序| ${nid(t.所属, t.编号)}`);
+    const ref = String(t.等待);
+    const lane = ref.startsWith("男生") ? "男生" : "女生";
+    const num = ref.replace(/^.*?生/, "");
+    for (const src of targetsOf(lane, num)) {
+      lines.push(`${nid(lane, src.编号)} -.->|时序| ${nid(t.所属, t.编号)}`);
+    }
   }
   lines.push(`EXIT["${sanitize(exitLabel)}"]`);
   return { file: path.join(feishuDir, outName), lines };
