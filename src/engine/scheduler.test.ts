@@ -8,10 +8,8 @@ import {
   createInitial,
   deliveryAnimates,
   describeChannel,
-  memoryNoteFor,
   messagesFor,
   openChannel,
-  saveMemory,
   withMissingRoots,
 } from "./scheduler";
 import type { Beat, Channel, EngineState } from "./types";
@@ -324,28 +322,6 @@ describe("chapter boundary auto-open", () => {
     state = commitLine(state, "left", sameChapter);
     state = commitReply(choose(state, "left", 0, sameChapter), "left", sameChapter);
     expect(state.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
-  });
-});
-
-describe("memory note", () => {
-  const beats: Beat[] = [
-    {
-      id: "Q",
-      channel: "right",
-      lines: [{ from: "girl", text: "怎么走", delivery: "pop" }],
-      choices: [{ thought: "精确指路", reply: "店的位置我记着呢", 需记忆: "店的位置" }],
-    },
-  ];
-
-  it("flags the reply unlocked by a saved memory and stays quiet otherwise", () => {
-    let state = openChannel(createInitial(beats), "right", beats);
-    state = commitLine(state, "right", beats);
-    expect(() => choose(state, "right", 0, beats)).toThrow(/店的位置/);
-    state = saveMemory(state, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1" });
-    state = commitReply(choose(state, "right", 0, beats), "right", beats);
-    const messages = messagesFor(state, "right");
-    expect(memoryNoteFor(beats, state, messages[0])).toBeNull(); // 角色消息不打便签
-    expect(memoryNoteFor(beats, state, messages[1])).toBe("店的位置");
   });
 });
 

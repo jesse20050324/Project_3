@@ -384,6 +384,16 @@ function sequenceRank(beats: Beat[]): Map<string, number> {
     if (!rank.has(id)) return;
     rank.set(id, Math.max(rank.get(id) ?? 0, value));
   };
+  // 旗标是谁设的：带 when 的拍（如幕5开场变体）要排在设旗拍的后面，
+  // 否则它们是没有入边的根拍，会被排进第 0 列、顶掉别的拍。
+  const flagSetters = new Map<string, string[]>();
+  for (const beat of beats) {
+    for (const choice of beat.choices ?? []) {
+      for (const key of Object.keys(choice.set ?? {})) {
+        flagSetters.set(key, [...(flagSetters.get(key) ?? []), beat.id]);
+      }
+    }
+  }
   for (let pass = 0; pass < beats.length; pass += 1) {
     for (const beat of beats) {
       const source = rank.get(beat.id) ?? 0;
@@ -392,6 +402,9 @@ function sequenceRank(beats: Beat[]): Map<string, number> {
         if (choice.next) bump(choice.next, source + 1);
       }
       for (const required of beat.requires ?? []) bump(beat.id, (rank.get(required) ?? 0) + 1);
+      for (const key of Object.keys(beat.when ?? {})) {
+        for (const setter of flagSetters.get(key) ?? []) bump(beat.id, (rank.get(setter) ?? 0) + 1);
+      }
     }
   }
   const used = [...new Set(rank.values())].sort((a, b) => a - b);

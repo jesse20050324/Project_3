@@ -16,8 +16,8 @@ describe("story flow", () => {
 
   it("splits and rejoins by flag instead of keeping shops as columns", () => {
     const girlForks = forks(girl.rows);
-    // 三组按旗标分开的拍：R1（shop）、3.4.1（到店门槛）、3.4.3（化妆回调）
-    expect(girlForks).toHaveLength(3);
+    // 四组按旗标分开的拍：R1（shop）、3.4.1（到店门槛）、3.4.3（化妆回调）、幕5开场（意向组合）
+    expect(girlForks).toHaveLength(4);
     expect(girlForks[0].title).toContain("shop");
     expect(girlForks[0].title).toContain("L2");
     expect(girlForks[0].nodes.map((node) => node.flag)).toEqual([
@@ -34,7 +34,7 @@ describe("story flow", () => {
     expect(girl.rows.some((row) => row.type === "ends" && row.labels.some((label) => label.startsWith("化")))).toBe(true);
 
     const boyForks = forks(boy.rows);
-    expect(boyForks).toHaveLength(1);
+    expect(boyForks).toHaveLength(2);
     expect(boyForks[0].nodes.every((node) => node.id.startsWith("3.1.1"))).toBe(true);
     expect(boy.rows.some((row) => row.type === "node" && row.node.id === "L3")).toBe(true);
     expect(boyForks[0].nodes.map((node) => node.difference)).toContain("没说「换了个地方」");

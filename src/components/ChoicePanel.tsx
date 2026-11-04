@@ -5,10 +5,12 @@ type Props = {
   choices: Choice[];
   /** 返回该选项置灰所需的记忆标签；null 或缺省表示可选项。 */
   gateFor?: (index: number) => string | null;
+  /** 返回该选项已持有的记忆标签（打"记忆可用"标签）；null 或缺省表示与记忆无关。 */
+  tagFor?: (index: number) => string | null;
   onPick: (index: number) => void;
 };
 
-export function ChoicePanel({ aside, choices, gateFor, onPick }: Props) {
+export function ChoicePanel({ aside, choices, gateFor, tagFor, onPick }: Props) {
   return (
     <div className="border-t border-[#e4dcd0] bg-[#f4f1ea] px-3 py-3">
       <p className="mb-2 text-[11px] tracking-[0.14em] text-[#6b645b]">自言自语</p>
@@ -20,6 +22,7 @@ export function ChoicePanel({ aside, choices, gateFor, onPick }: Props) {
       <div role="group" aria-label="选一个想法" className="flex flex-col gap-2">
         {choices.map((choice, index) => {
           const gate = gateFor?.(index) ?? null;
+          const tag = gate === null ? tagFor?.(index) ?? null : null;
           return (
             <button
               key={`${index}-${choice.thought}`}
@@ -35,6 +38,15 @@ export function ChoicePanel({ aside, choices, gateFor, onPick }: Props) {
               }
             >
               <span>{choice.thought}</span>
+              {gate === null && tag !== null ? (
+                <span
+                  data-testid="memory-tag"
+                  title={`这条记忆来自你之前存下的「${tag}」`}
+                  className="mt-1 inline-flex items-center gap-1 rounded-[3px] border border-[#d9b64a] bg-[#f6e3a8] px-1.5 py-0.5 text-xs leading-tight text-[#6b5a1e]"
+                >
+                  记忆可用：{tag}
+                </span>
+              ) : null}
               {gate === null ? null : (
                 <span className="mt-1 block text-xs text-[#8a8175]">需要记忆：{gate}（还没存下这句）</span>
               )}

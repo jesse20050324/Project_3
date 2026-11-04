@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import chapterSource from "../../content/chapter-01.yaml?raw";
 import { loadBundledScript } from "./loadScript";
-import { canArm, choose, clearChannelMessages, commitReply, createInitial, messagesFor, openChannel, saveMemory } from "./scheduler";
+import { canArm, availableBeat, choose, clearChannelMessages, commitReply, createInitial, messagesFor, openChannel, saveMemory } from "./scheduler";
 import { drain } from "./testPlayback";
-import type { Beat } from "./types";
+import type { Beat, Channel, EngineState, Scalar } from "./types";
 import { validateScript } from "./validate";
 
 const l1Reply = [
@@ -71,6 +71,30 @@ describe("chapter 1", () => {
       "4.3.3",
       "4.3.4",
       "4.3.5",
+      "5m.1.1-A",
+      "5m.1.1-B",
+      "5m.1.1-C",
+      "5m.1.11",
+      "5m.1.111",
+      "5m.1.1111",
+      "5m.2.1",
+      "5m.2.11",
+      "5m.2.111",
+      "5m.3.1",
+      "5m.4.1",
+      "5m.4.11",
+      "5f.1.1-A",
+      "5f.1.1-B",
+      "5f.1.1-C",
+      "5f.1.11",
+      "5f.1.111",
+      "5f.1.1111",
+      "5f.2.1",
+      "5f.2.11",
+      "5f.2.111",
+      "5f.3.1",
+      "5f.4.1",
+      "5f.4.11",
     ]);
     expect(script.beats.filter((beat) => beat.chapter === 1).map((beat) => beat.id)).toEqual([
       "L1",
@@ -468,6 +492,83 @@ describe("memory system", () => {
     const result = validateScript(script);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("蓝招牌");
+  });
+});
+
+describe("chapter 5", () => {
+  const script = loadBundledScript().script!;
+  const beats = script.beats;
+
+  /** 直接站到幕5门前：幕1-4 全部完成，旗标按参数设置。 */
+  function atActFive(flags: Record<string, Scalar>): EngineState {
+    const base = createInitial(beats);
+    return {
+      ...base,
+      flags,
+      completed: beats.filter((beat) => beat.chapter !== 5).map((beat) => beat.id),
+    };
+  }
+
+  /** 一路自动走：drain 到选项就选第一个，直到这一侧没得可走。 */
+  function autoPlay(state: EngineState, channel: Channel): EngineState {
+    let cur = state;
+    for (let step = 0; step < 30; step += 1) {
+      cur = drain(cur, channel, beats);
+      const pending = cur.pending[channel];
+      if (!pending) return cur;
+      if (pending.kind !== "choices") throw new Error(`drain 停在了非选项处：${pending.kind}`);
+      cur = commitReply(choose(cur, channel, 0, beats), channel, beats);
+    }
+    throw new Error("步数过多");
+  }
+
+  it("picks the opening variant from act-4 intention flags", () => {
+    const both = atActFive({ 男生意向: "问", 女生意向: "问" });
+    expect(availableBeat(both, "left", beats)?.id).toBe("5m.1.1-A");
+    expect(availableBeat(both, "right", beats)?.id).toBe("5f.1.1-A");
+    const boyOnly = atActFive({ 男生意向: "问", 女生意向: "不问" });
+    expect(availableBeat(boyOnly, "left", beats)?.id).toBe("5m.1.1-B");
+    expect(availableBeat(boyOnly, "right", beats)?.id).toBe("5f.1.1-C");
+    const girlOnly = atActFive({ 男生意向: "不问", 女生意向: "问" });
+    expect(availableBeat(girlOnly, "left", beats)?.id).toBe("5m.1.1-C");
+    expect(availableBeat(girlOnly, "right", beats)?.id).toBe("5f.1.1-B");
+    // 双不问：没有任何变体可放行，游戏止于幕4
+    const neither = atActFive({ 男生意向: "不问", 女生意向: "不问" });
+    expect(availableBeat(neither, "left", beats)).toBeNull();
+    expect(availableBeat(neither, "right", beats)).toBeNull();
+  });
+
+  it("wipes this window's teaching memories when act 5 opens", () => {
+    let state = saveMemory(atActFive({ 男生意向: "问", 女生意向: "问" }), "left", {
+      label: "我妹的同桌",
+      text: "好像是我妹的同桌还是什么",
+      beatId: "3.2.2",
+    });
+    state = saveMemory(state, "right", {
+      label: "店的位置",
+      text: "小寨华旗国际A座",
+      beatId: "R1-shiguang",
+    });
+    state = autoPlay(state, "left");
+    expect(state.completed).toContain("5m.1.1-A");
+    expect(state.memories.left).toEqual([]);
+    expect(state.memories.right).toHaveLength(1); // 女窗还没入场，教学记忆不动
+  });
+
+  it("runs both windows to the end across the cross-lane waits and sets 在一起", () => {
+    let state = atActFive({ 男生意向: "问", 女生意向: "问" });
+    // 女窗先走：停在 5f.2.1 前，等男生先开口约局
+    state = autoPlay(state, "right");
+    expect(state.completed).toContain("5f.1.1111");
+    expect(state.completed).not.toContain("5f.2.1");
+    // 男窗一路走完
+    state = autoPlay(state, "left");
+    expect(state.completed).toContain("5m.4.11");
+    expect(state.flags["在一起"]).toBe(true);
+    // 女窗接着走完
+    state = autoPlay(state, "right");
+    expect(state.completed).toContain("5f.4.11");
+    expect(state.flags["在一起"]).toBe(true);
   });
 });
 

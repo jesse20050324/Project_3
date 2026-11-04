@@ -1,6 +1,6 @@
 import type { Delivery } from "./engine/types";
 
-export const TYPE_INTERVAL_MS = 120;
+export const TYPE_INTERVAL_MS = 100;
 
 /** How long a finished typed line stays before the next one starts. */
 export const AFTER_TYPE_MS = 900;

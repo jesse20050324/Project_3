@@ -51,21 +51,8 @@ export function hasMemory(state: EngineState, channel: Channel, label: string): 
 }
 
 /**
- * 「记忆可用」便签判定：这条消息若是被记忆门槛解锁的 AI 回复，且该记忆现在仍在池里，
- * 返回所需记忆的标签；其余情况返回 null。UI 据此在气泡上打便签——
- * 置灰门平时只在缺记忆时提示，存了记忆反而没反馈，便签补上"你的记忆在这里被用上了"。
+ *「记忆可用」便签判定——已按用户要求移到选项上（见 ChoicePanel tagFor）。
  */
-export function memoryNoteFor(beats: Beat[], state: EngineState, message: ChatMessage): string | null {
-  if (message.from !== "ai") return null;
-  const parts = message.id.split(":");
-  if (parts.length < 3 || parts[parts.length - 2] !== "reply") return null;
-  const beatId = parts.slice(0, -2).join(":");
-  const beat = beats.find((item) => item.id === beatId);
-  const choice = beat?.choices?.[Number(parts[parts.length - 1])];
-  const need = choice?.需记忆;
-  if (!need) return null;
-  return hasMemory(state, message.channel, need) ? need : null;
-}
 
 /**
  * 串行节拍：本窗现在是否可以开演。

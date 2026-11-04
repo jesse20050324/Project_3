@@ -2,12 +2,13 @@ import YAML from "js-yaml";
 import chapter1Source from "../../content/chapter-01.yaml?raw";
 import chapter3Source from "../../content/chapter-03.yaml?raw";
 import chapter4Source from "../../content/chapter-04.yaml?raw";
+import chapter5Source from "../../content/chapter-05.yaml?raw";
 import type { Beat, Channel, Choice, Delivery, Line, MemoryCandidate, Scalar, Script, Speaker } from "./types";
 import { validateScript, type Validation } from "./validate";
 
 // 按播放顺序读入各章，合成一份再检查。后一章的 requires 仍可指向前一章，旗标也不按章清掉。
 // 旧第二章（到店）已并入第三章，幕号2作废空缺。
-const bundledChapters = [chapter1Source, chapter3Source, chapter4Source];
+const bundledChapters = [chapter1Source, chapter3Source, chapter4Source, chapter5Source];
 
 export function loadBundledScript(): { script: Script | null; error: string | null } {
   try {

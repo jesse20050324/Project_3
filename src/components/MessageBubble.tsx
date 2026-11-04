@@ -13,8 +13,6 @@ type Props = {
   caption?: string;
   animate: boolean;
   marks?: MemoryMark[];
-  /** 气泡上打的便签（如「记忆可用」）；缺省不打。 */
-  note?: string | null;
   onSaveMark?: (text: string) => void;
   onFinished?: () => void;
   onProgress?: () => void;
@@ -28,7 +26,6 @@ export function MessageBubble({
   caption,
   animate,
   marks,
-  note,
   onSaveMark,
   onFinished,
   onProgress,
@@ -103,19 +100,7 @@ export function MessageBubble({
   }
 
   return (
-    <div
-      className={`relative flex max-w-[85%] flex-col gap-1 ${mine ? "items-end self-end" : "items-start self-start"}`}
-      data-from={from}
-      data-delivery={delivery}
-    >
-      {note ? (
-        <span
-          data-testid="memory-note"
-          className="absolute -top-3 right-2 z-10 rotate-3 rounded-[3px] border border-[#d9b64a] bg-[#f6e3a8] px-2 py-0.5 text-[11px] leading-tight text-[#6b5a1e] shadow-[0_1px_2px_rgba(40,30,10,0.15)]"
-        >
-          {note}
-        </span>
-      ) : null}
+    <div className={`flex max-w-[85%] flex-col gap-1 ${mine ? "items-end self-end" : "items-start self-start"}`} data-from={from} data-delivery={delivery}>
       <span className="px-1 text-[11px] text-[#6b645b]">{speakerName}</span>
       {delivery === "image" ? (
         <figure className="bubble-in overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(40,30,10,0.06)]">
