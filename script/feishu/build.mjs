@@ -152,7 +152,10 @@ function buildScriptFormat(srcFile, outName, header, exitLabel) {
     }
     if (variants.length) {
       const firstMain = list.find((t) => !t.入场);
-      for (const v of variants) lines.push(`${nid(lane, v.编号)} --> ${nid(lane, firstMain.编号)}`);
+      for (const v of variants) {
+        // 变体已有出边（下一/分叉）时不再补汇合边，否则同一对节点会出现重复线
+        if (!v.下一 && !v.分叉) lines.push(`${nid(lane, v.编号)} --> ${nid(lane, firstMain.编号)}`);
+      }
     }
     lines.push("end");
   }
