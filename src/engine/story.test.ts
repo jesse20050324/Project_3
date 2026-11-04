@@ -57,7 +57,8 @@ describe("chapter 1", () => {
       "3.3.2",
       "3.4.1",
       "3.4.2",
-      "3.4.3",
+      "3.4.3-A",
+      "3.4.3-B",
       "3.4.4",
       "4.1.1",
       "4.2.1",
@@ -92,7 +93,8 @@ describe("chapter 1", () => {
       "3.3.2",
       "3.4.1",
       "3.4.2",
-      "3.4.3",
+      "3.4.3-A",
+      "3.4.3-B",
       "3.4.4",
     ]);
     const right = script.beats.filter((beat) => beat.channel === "right");
@@ -107,7 +109,8 @@ describe("chapter 1", () => {
     expect(makeup.lines).toEqual([{ from: "girl", text: makeupLine, delivery: "type" }]);
     expect(makeup.choices?.map((choice) => choice.thought)).toEqual(["化", "不化"]);
     expect(makeup.choices?.map((choice) => choice.reply)).toEqual([makeupYes, makeupNo]);
-    expect(makeup.choices?.every((choice) => choice.next === undefined && choice.set === undefined)).toBe(true);
+    expect(makeup.choices?.every((choice) => choice.next === undefined)).toBe(true);
+    expect(makeup.choices?.map((choice) => choice.set)).toEqual([{ 化妆: "化" }, { 化妆: "不化" }]);
     expect(chapterSource).not.toContain("行，到了跟我说");
 
     const [l1, l2, l3] = script.beats;
@@ -214,7 +217,8 @@ describe("chapter 1", () => {
       state = commitReply(choose(state, "right", 0, beats), "right", beats);
       expect(state.completed).toContain("R2");
       state = drain(state, "left", beats);
-      const arrival = messagesFor(state, "left").at(-1)?.text ?? "";
+      // 到店拍现在是两行：①男生台词 + ②AI思考，台词在倒数第二行
+      const arrival = messagesFor(state, "left").at(-2)?.text ?? "";
       expect(state.pending.left).toEqual({ kind: "choices", beatId: item.beat });
       expect(arrival).toContain(item.mark);
       expect(arrival).not.toContain(item.absent);
@@ -282,8 +286,9 @@ describe("chapter 1", () => {
       expect(texts[1]).toContain("不要啰嗦");
       expect(messagesFor(state, "right")[1]?.delivery).toBe("thought");
       expect(texts[2]).toContain(item.place);
-      expect(texts[3]).toBe(item.reaction);
-      expect(texts[4]).toBe(makeupLine);
+      expect(texts[3]).toContain("你帮我记一下");
+      expect(texts[4]).toBe(item.reaction);
+      expect(texts[5]).toBe(makeupLine);
       expect(texts).not.toContain(makeupAside);
       expect(texts.some((text) => text.includes(item.absent))).toBe(false);
       expect(state.pending.right).toEqual({ kind: "choices", beatId: "R2" });
@@ -297,7 +302,7 @@ describe("chapter 1", () => {
       expect(yesTexts.some((text) => text.includes(item.absent))).toBe(false);
       expect(yes.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
       expect(yes.completed).toContain("R2");
-      expect(yes.flags).toEqual({ shop: item.shop });
+      expect(yes.flags).toEqual({ shop: item.shop, 化妆: "化" });
 
       const no = commitReply(choose(state, "right", 1, beats), "right", beats);
       const noTexts = messagesFor(no, "right").map((message) => message.text);
@@ -307,7 +312,7 @@ describe("chapter 1", () => {
       expect(noTexts.some((text) => text.includes(item.absent))).toBe(false);
       expect(no.pending.right).toEqual({ kind: "lines", beatId: "3.4.1", lineIndex: 0 });
       expect(no.completed).toContain("R2");
-      expect(no.flags).toEqual({ shop: item.shop });
+      expect(no.flags).toEqual({ shop: item.shop, 化妆: "不化" });
     }
   });
 });
@@ -336,9 +341,9 @@ describe("memory system", () => {
     return state;
   }
 
-  function playGirlToSubway(state: ReturnType<typeof createInitial>) {
+  function playGirlToSubway(state: ReturnType<typeof createInitial>, makeupIndex = 0) {
     state = drain(state, "right", beats);
-    state = commitReply(choose(state, "right", 0, beats), "right", beats);
+    state = commitReply(choose(state, "right", makeupIndex, beats), "right", beats);
     return drain(state, "right", beats);
   }
 
@@ -350,13 +355,27 @@ describe("memory system", () => {
     expect(guessed.pending.right).toEqual({ kind: "lines", beatId: "3.4.2", lineIndex: 0 });
     const saved = saveMemory(base, "right", {
       label: "店的位置",
-      text: "时光桌游吧，在小寨华旗国际 A 座",
+      text: "小寨华旗国际A座",
       beatId: "R1-shiguang",
     });
     const precise = commitReply(choose(saved, "right", 0, beats), "right", beats);
-    expect(precise.pending.right).toEqual({ kind: "lines", beatId: "3.4.3", lineIndex: 0 });
+    expect(precise.pending.right).toEqual({ kind: "lines", beatId: "3.4.3-A", lineIndex: 0 });
     const again = saveMemory(saved, "right", { label: "店的位置", text: "重复", beatId: "R1-shiguang" });
     expect(again.memories.right).toHaveLength(1);
+  });
+
+  it("echoes the makeup advice in the ARTX beat", () => {
+    const madeUp = playGirlToSubway(playToShop(0), 0);
+    const savedUp = saveMemory(madeUp, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1-shiguang" });
+    const up = drain(commitReply(choose(savedUp, "right", 0, beats), "right", beats), "right", beats);
+    expect(up.pending.right).toEqual({ kind: "choices", beatId: "3.4.3-A" });
+    expect(messagesFor(up, "right").some((message) => message.text.includes("最后还是化了"))).toBe(true);
+
+    const bareFaced = playGirlToSubway(playToShop(0), 1);
+    const savedBare = saveMemory(bareFaced, "right", { label: "店的位置", text: "小寨华旗国际A座", beatId: "R1-shiguang" });
+    const bare = drain(commitReply(choose(savedBare, "right", 0, beats), "right", beats), "right", beats);
+    expect(bare.pending.right).toEqual({ kind: "choices", beatId: "3.4.3-B" });
+    expect(messagesFor(bare, "right").some((message) => message.text.includes("光线暗"))).toBe(true);
   });
 
   it("gates the cousin bridge behind the classmate memory", () => {

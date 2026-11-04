@@ -1,7 +1,6 @@
 # 第四幕 · 结缘——由 script/ch4.yaml 迁移而来
-# 接口：入场=第三幕 next；出口=选项 set 意向旗标（男生意向/女生意向：问/不问），
-# 幕5按双问/单问/双不问分岔（引擎部分后续接入）。
-# 教学门：4.2.2「让表妹帮忙牵线」需记忆「我妹的同桌」（存于3.2.2/3.3.1）。
+# v2：补②AI思考行（此前漏迁）。
+# 接口：入场=第三幕 next；出口=选项 set 意向旗标（男生意向/女生意向：问/不问）。
 
 title: 第四幕 · 结缘
 chapter: 4
@@ -22,6 +21,9 @@ beats:
       - from: boy
         text: 我靠，我靠，我靠，你还记得我刚才给你说的那个女的吗？我感觉她绝对对我有意思！！！
         delivery: type
+      - from: ai
+        text: 用户情绪高涨，满屏感叹号。他需要有人接住这份兴奋，顺便要到细节，别急着替他下判断。
+        delivery: thought
     choices:
       - thought: 追问细节，接住兴奋
         reply: 哈哈哈，怎么回事你说来我听听？别光下结论，来点证据。
@@ -33,6 +35,9 @@ beats:
       - from: boy
         text: 就是我们不刚玩完桌游吗，然后刚才玩的时候，我说话别人都不理我，就她回应我，而且就她有时候和我对视一下啥的
         delivery: type
+      - from: ai
+        text: 证据确实存在，但强度一般：回应和偶尔对视。兴奋里的人容易把中性信号读成好感。既不浇灭他，也不瞎承诺，给一个可执行的下一步。
+        delivery: thought
     choices:
       - thought: 认可用户并鼓励
         reply: 这俩细节有点东西，尤其是"就她回应你"——她要是懒得理你，大可以跟别人一样。下一步先别想表白，先搞到联系方式，你们不是有共同的朋友嘛，从那儿入手最自然。
@@ -48,6 +53,9 @@ beats:
       - from: boy
         text: 我靠不敢啊，我在我妹面前是正人君子，我问这感觉跟个变态一样
         delivery: type
+      - from: ai
+        text: 用户怂了，但怂得有理由：表妹在场，人设要崩，他需要不丢脸的做法。手头有没有"她=表妹同学"这条线索，决定了我能不能把表妹这座现成的桥递给他。
+        delivery: thought
     choices:
       - thought: 让表妹帮忙牵线
         需记忆: 我妹的同桌
@@ -69,6 +77,9 @@ beats:
       - from: boy
         text: 好！我就假装帮我舍友要吧，看我妹啥反应，不行就算了
         delivery: type
+      - from: ai
+        text: 用户接受了建议，还自己加了"帮舍友要"的台阶，既要面子又要行动，状态不错。顺着他的方案给执行细节。
+        delivery: thought
     choices:
       - thought: 支持方案，给执行建议
         reply: 这个由头好，进可攻退可守。记得语气随意点，"我舍友说那天那个女生挺有意思，推个微信呗"，成了不突兀，不成也有台阶下。
@@ -79,6 +90,9 @@ beats:
       - from: boy
         text: 哎你说的有道理，而且估计那个女生可能本来就比较开朗吧，我可能就是多想了
         delivery: type
+      - from: ai
+        text: 用户接受了劝退，情绪回落但还算平静。给个开放式收尾，别让他觉得可惜。
+        delivery: thought
     choices:
       - thought: 认可他的判断，留个口子
         reply: 有可能。不过"多想"说明你今天心情不错，这本身就挺好。回头桌游局要是再碰上，就当认识个牌友，没准还有下文。
@@ -89,6 +103,9 @@ beats:
       - from: boy
         text: 唉，行吧，那就当我多想了，不问不问了，就当认识个牌友，回家回家。
         delivery: type
+      - from: ai
+        text: 用户接受了"可能只是开朗"的判断，主动收手，情绪有点小低但接受得快。顺着台阶收尾。
+        delivery: thought
     choices:
       - thought: 认可用户决定，顺利收尾
         reply: 行，随缘也挺好。真有缘分下回桌游还能碰上，到时候再说。今天玩得开心就不亏。
@@ -99,6 +116,9 @@ beats:
       - from: girl
         text: 我今天玩桌游遇到个男的，是我同桌的表哥
         delivery: type
+      - from: ai
+        text: 用户主动分享遇到异性的经历，语气平静但愿意说。让她展开，先别加戏。
+        delivery: thought
     choices:
       - thought: 顺着她展开
         reply: 哦？说说呗，什么样的人，第一印象如何？
@@ -110,6 +130,9 @@ beats:
       - from: girl
         text: 哎呀，就是我感觉他性格还挺好的， 但是我没他微信咋办
         delivery: type
+      - from: ai
+        text: 用户对对方评价正面，卡在联系方式上。最顺的路径就是她的同桌，人现成摆着。
+        delivery: thought
     choices:
       - thought: 建议走共同朋友
         reply: 这还不简单，同桌就是现成的中间人——直接让她帮你牵线搭桥，组个局或者推个微信，名正言顺。
@@ -121,6 +144,9 @@ beats:
       - from: girl
         text: 但是我不好意思给她说啊，之前谈的前男友太脑残她劝我我没听，我怕她又要说我了
         delivery: type
+      - from: ai
+        text: 用户卡在对朋友的信任成本上：上次不听劝吃了亏，这次怕被翻旧账。绕开"求人"的姿势，她就能动起来。
+        delivery: thought
     choices:
       - thought: 出个不丢面子的主意
         reply: 【待定·组局占位】那就绕开"求介绍"的姿势。你跟同桌说"再攒一局呗，把你表哥也叫上"，就当普通组局，人多热闹谁也不尴尬。局上加了微信，这事就成了，谁也不用谁欠谁。
@@ -137,6 +163,9 @@ beats:
       - from: girl
         text: 可以可以，你太聪明了！我去问
         delivery: type
+      - from: ai
+        text: 用户接受了方案，情绪转好，跃跃欲试。收个尾，给点临场提醒。
+        delivery: thought
     choices:
       - thought: 顺着收尾，给临场提醒
         reply: 去吧，组局这事你熟。局上别端着，该聊就聊——你自来熟，主场优势在你。
@@ -147,6 +176,9 @@ beats:
       - from: girl
         text: 嗯…那算了，不问了，万一她再唠叨我我更烦，就这样吧。
         delivery: type
+      - from: ai
+        text: 用户决定放弃，理由还是怕被说。顺着她收尾，别让她觉得可惜。
+        delivery: thought
     choices:
       - thought: 认可用户决定，正常收尾
         reply: 行，那就先这样。感情这事儿强求不来，今天玩得开心就够了，遇到合适的再说。

@@ -16,7 +16,7 @@ describe("story flow", () => {
 
   it("splits and rejoins by flag instead of keeping shops as columns", () => {
     const girlForks = forks(girl.rows);
-    expect(girlForks).toHaveLength(1);
+    expect(girlForks).toHaveLength(2);
     expect(girlForks[0].title).toContain("shop");
     expect(girlForks[0].title).toContain("L2");
     expect(girlForks[0].nodes.map((node) => node.flag)).toEqual([
@@ -25,6 +25,9 @@ describe("story flow", () => {
       "shop = 叙事者营地桌游馆",
     ]);
     expect(girlForks[0].nodes.map((node) => node.difference)).toEqual(["这个太贵了吧", "这个感觉还挺好的", "咋这么远"]);
+    // 第二组分叉是 ARTX 拍的化妆回调变体
+    expect(girlForks[1].title).toContain("化妆");
+    expect(girlForks[1].nodes.map((node) => node.flag)).toEqual(["化妆 = 化", "化妆 = 不化"]);
     expect(girl.rows.some((row) => row.type === "join")).toBe(true);
     expect(girl.rows.some((row) => row.type === "node" && row.node.id === "R2")).toBe(true);
     expect(girl.rows.some((row) => row.type === "ends" && row.labels.some((label) => label.startsWith("化")))).toBe(true);

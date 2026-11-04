@@ -91,7 +91,19 @@ function buildScriptFormat(srcFile, outName, header, exitLabel) {
   const byLane = { 男生: [], 女生: [] };
   for (const t of turns) byLane[t.所属].push(t);
   const nid = (lane, num) => (lane === "男生" ? "M" : "F") + String(num).replace(/[.\-]/g, "");
-  const find = (num) => turns.find((x) => x.编号 === num);
+  // 变体组：分叉/下一指向的基编号（如 3.4.3）会展开为 3.4.3-A/B，各带当条件标签
+  const baseOf = (num) => String(num).replace(/-[A-C]$/, "");
+  const referenced = new Set();
+  for (const t of turns) {
+    if (t.下一) referenced.add(baseOf(t.下一));
+    for (const child of t.分叉 ? Object.values(t.分叉) : []) referenced.add(baseOf(child));
+  }
+  const targetsOf = (lane, num) => {
+    const exact = byLane[lane].find((x) => x.编号 === num);
+    if (exact) return [exact];
+    return byLane[lane].filter((x) => x.编号.startsWith(String(num) + "-"));
+  };
+  const isEntryVariant = (t) => t.入场 && !referenced.has(baseOf(t.编号));
 
   const renderTurn = (t) => {
     const parts = [sanitize(t.编号 + " " + (t.标题 || "") + (t.等待 ? " 需等" + sanitize(t.等待) : ""))];
@@ -130,29 +142,30 @@ function buildScriptFormat(srcFile, outName, header, exitLabel) {
   for (const [lane, list] of Object.entries(byLane)) {
     if (!list.length) continue;
     lines.push(`subgraph SG${lane === "男生" ? "M" : "F"} ["${lane}线"]`);
-    const variants = list.filter((t) => t.入场);
-    if (variants.length) {
+    const entryVariants = list.filter((t) => isEntryVariant(t));
+    if (entryVariants.length) {
       const inId = "IN" + (lane === "男生" ? "M" : "F");
       lines.push(`${inId}["入场旗标"]`);
-      for (const v of variants) lines.push(`${inId} -->|${sanitize(v.入场)}| ${nid(lane, v.编号)}`);
+      for (const v of entryVariants) lines.push(`${inId} -->|${sanitize(v.入场)}| ${nid(lane, v.编号)}`);
     }
     for (const t of list) lines.push(node(nid(lane, t.编号), renderTurn(t)));
     for (const t of list) {
       const id = nid(lane, t.编号);
-      if (t.下一) {
-        const target = find(t.下一);
-        if (target) lines.push(`${id} --> ${nid(t.所属, target.编号)}`);
-      } else if (t.分叉) {
-        for (const [opt, child] of Object.entries(t.分叉)) {
-          const target = find(child);
-          if (target) lines.push(`${id} -->|${sanitize(optLabel(opt))}| ${nid(t.所属, target.编号)}`);
+      const draw = (label, num) => {
+        for (const target of targetsOf(lane, num)) {
+          if (!target) continue;
+          const gate = target.入场 ? `（当${sanitize(target.入场)}）` : "";
+          const edgeLabel = label ? `|${label}${gate}|` : gate ? `|当${sanitize(target.入场)}|` : "";
+          lines.push(`${id} -->${edgeLabel} ${nid(lane, target.编号)}`);
         }
-      }
+      };
+      if (t.下一) draw(null, t.下一);
+      else if (t.分叉) for (const [opt, child] of Object.entries(t.分叉)) draw(sanitize(optLabel(opt)), child);
       if (t.终局) lines.push(`${id} -->|${sanitize(t.终局)}| EXIT`);
     }
-    if (variants.length) {
+    if (entryVariants.length) {
       const firstMain = list.find((t) => !t.入场);
-      for (const v of variants) {
+      for (const v of entryVariants) {
         // 变体已有出边（下一/分叉）时不再补汇合边，否则同一对节点会出现重复线
         if (!v.下一 && !v.分叉) lines.push(`${nid(lane, v.编号)} --> ${nid(lane, firstMain.编号)}`);
       }
