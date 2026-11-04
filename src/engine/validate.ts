@@ -119,6 +119,22 @@ export function validateScript(script: Script): Validation {
       checkLink(errors, byId, beat, choice.next, "选项");
     }
 
+    // 记忆候选的短句必须一字不差出现在本拍的台词或回复里，
+    // 否则高亮不会出现、候选存不进、引用它的置灰门会永远锁死。
+    for (const candidate of beat.记忆候选 ?? []) {
+      if (!candidate.短句.trim()) {
+        errors.push(`节拍 ${beat.id} 的记忆候选「${candidate.缩略标签}」缺少短句。`);
+        continue;
+      }
+      const corpus = [
+        ...beat.lines.map((line) => line.text),
+        ...(beat.choices ?? []).map((choice) => choice.reply),
+      ].join("\n");
+      if (!corpus.includes(candidate.短句)) {
+        errors.push(`节拍 ${beat.id} 的记忆候选「${candidate.缩略标签}」的短句没有出现在本拍的台词或回复里，玩家存不进这条记忆。`);
+      }
+    }
+
     if (!beat.choices?.length) {
       checkLink(errors, byId, beat, beat.next, "next");
     }

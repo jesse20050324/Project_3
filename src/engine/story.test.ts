@@ -4,6 +4,7 @@ import { loadBundledScript } from "./loadScript";
 import { choose, commitReply, createInitial, messagesFor, saveMemory } from "./scheduler";
 import { drain } from "./testPlayback";
 import type { Beat } from "./types";
+import { validateScript } from "./validate";
 
 const l1Reply = [
   "帮你看了下，西安市中心的桌游店主要集中在小寨、钟楼和曲江这三个片区，选择挺多的。我按片区整理了几家口碑不错的，你们可以看哪个方便。",
@@ -404,5 +405,27 @@ describe("memory system", () => {
     state = commitReply(choose(state, "left", 0, tinyBeats), "left", tinyBeats);
     expect(state.completed).toContain("B");
     expect(state.memories).toEqual({ left: [], right: [] });
+  });
+
+  it("rejects candidates whose phrase is missing from the beat text", () => {
+    const beats: Beat[] = [
+      {
+        id: "A",
+        channel: "left",
+        lines: [{ from: "boy", text: "我今天路过一家店，招牌是蓝色的", delivery: "type" }],
+        记忆候选: [{ 缩略标签: "蓝招牌", 短句: "招牌是绿色", 类型: "教学", 线: "无" }],
+      },
+    ];
+    const script = {
+      title: "校验用",
+      speakers: [
+        { id: "boy", name: "男生", channel: "left" as const },
+        { id: "girl", name: "女生", channel: "right" as const },
+      ],
+      beats,
+    };
+    const result = validateScript(script);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("蓝招牌");
   });
 });
