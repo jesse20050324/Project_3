@@ -68,3 +68,20 @@ button {
   box-shadow: none;
   cursor: default;
 }
+
+/* 跨章"上下文重置中"的转圈 */
+.reset-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 3px solid rgba(246, 243, 236, 0.35);
+  border-top-color: #f6f3ec;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

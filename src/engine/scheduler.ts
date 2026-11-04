@@ -51,6 +51,33 @@ export function hasMemory(state: EngineState, channel: Channel, label: string): 
 }
 
 /**
+ * 串行节拍：本窗现在是否可以开演。
+ * 规则：自己已有 pending 不开；对面正在播出（lines/reply）不开——
+ * 面停在 choices 等玩家视为"完全结束"，不挡人。
+ * 双方同时就绪时，上一条消息所在的一侧优先（无消息开局左侧优先），
+ * 形成一来一回的节奏，两窗消息不会并行冒出。
+ */
+export function canArm(state: EngineState, channel: Channel, beats: Beat[]): boolean {
+  if (state.pending[channel]) return false;
+  const other: Channel = channel === "left" ? "right" : "left";
+  const otherPending = state.pending[other];
+  if (otherPending && otherPending.kind !== "choices") return false;
+  if (channelView(state, channel, beats).mode !== "available") return false;
+  // 对面停在选项上不算"还有货要播"，只有它真的有下一拍可开才抢优先权
+  const otherReady = otherPending?.kind !== "choices" && channelView(state, other, beats).mode === "available";
+  if (!otherReady) return true;
+  const last = state.messages[state.messages.length - 1];
+  if (!last) return channel === "left";
+  return last.channel === channel;
+}
+
+/** 阅后即焚：清掉本窗全部聊天记录（按窗，另一窗不动，已存记忆不动）。 */
+export function clearChannelMessages(state: EngineState, channel: Channel): EngineState {
+  if (!state.messages.some((message) => message.channel === channel)) return state;
+  return { ...state, messages: state.messages.filter((message) => message.channel !== channel) };
+}
+
+/**
  * A save written before a beat existed never runs completeBeat for what came before it.
  * Roots still need to enter the active set.
  * So does a beat named by a completed beat's own linear `next`.

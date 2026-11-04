@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import chapterSource from "../../content/chapter-01.yaml?raw";
 import { loadBundledScript } from "./loadScript";
-import { choose, commitReply, createInitial, messagesFor, saveMemory } from "./scheduler";
+import { canArm, choose, clearChannelMessages, commitReply, createInitial, messagesFor, openChannel, saveMemory } from "./scheduler";
 import { drain } from "./testPlayback";
 import type { Beat } from "./types";
 import { validateScript } from "./validate";
@@ -446,5 +446,69 @@ describe("memory system", () => {
     const result = validateScript(script);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("蓝招牌");
+  });
+});
+
+describe("serial pacing", () => {
+  const beats = loadBundledScript().script!.beats;
+
+  it("starts on the left and blocks the peer while playback is running", () => {
+    const state = createInitial(beats);
+    expect(canArm(state, "left", beats)).toBe(true);
+    expect(canArm(state, "right", beats)).toBe(false);
+    const playing = openChannel(state, "left", beats);
+    expect(playing.pending.left?.kind).toBe("lines");
+    expect(canArm(playing, "right", beats)).toBe(false);
+  });
+
+  it("holds the girl back while the boy's beat is still playing, then lets her in", () => {
+    let state = drain(createInitial(beats), "left", beats); // L1 → choices
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // L1 完成，自动接 L2
+    state = drain(state, "left", beats); // L2 → choices
+    state = commitReply(choose(state, "left", 0, beats), "left", beats); // 选店，L2 完成，自动接 L3
+    // 男生 L3 还在播（引擎自动接上）→ 女生虽已就绪（requires L2 满足）但被串行门挡住
+    expect(state.pending.left?.kind).toBe("lines");
+    expect(canArm(state, "right", beats)).toBe(false);
+    state = drain(state, "left", beats); // L3 OK 播完，男生下一拍被 R2 挡住 → 女生放行
+    expect(state.pending.left).toBeNull();
+    expect(canArm(state, "right", beats)).toBe(true);
+    expect(canArm(state, "left", beats)).toBe(false);
+  });
+
+  it("treats a pane waiting on choices as finished", () => {
+    let state = drain(createInitial(beats), "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "left", beats); // L3 播完
+    state = drain(state, "right", beats); // R1 → R2 停在选项
+    state = commitReply(choose(state, "right", 0, beats), "right", beats); // 化
+    state = drain(state, "right", beats); // 3.4.1 停在选项
+    expect(state.pending.right?.kind).toBe("choices");
+    // 女生停在选项等玩家；男生 3.1.1 已就绪 → 视为女生"完全结束"，可以开演
+    expect(canArm(state, "left", beats)).toBe(true);
+    expect(canArm(state, "right", beats)).toBe(false);
+  });
+});
+
+describe("context reset", () => {
+  const beats = loadBundledScript().script!.beats;
+
+  it("clears one window's messages but keeps the other side and saved memories", () => {
+    let state = drain(createInitial(beats), "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "left", beats);
+    state = commitReply(choose(state, "left", 0, beats), "left", beats);
+    state = drain(state, "right", beats); // R1 播完、R2 停在选项
+    const withMemory = saveMemory(state, "right", {
+      label: "店的位置",
+      text: "小寨华旗国际A座",
+      beatId: "R1-shiguang",
+    });
+    const cleared = clearChannelMessages(withMemory, "right");
+    expect(messagesFor(cleared, "right")).toEqual([]);
+    expect(messagesFor(cleared, "left").length).toBeGreaterThan(0);
+    expect(cleared.memories.right).toHaveLength(1);
+    expect(clearChannelMessages(cleared, "right")).toBe(cleared);
   });
 });

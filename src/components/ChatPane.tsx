@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nameOf } from "../engine/loadScript";
-import { channelView, messagesFor, playerStatus } from "../engine/scheduler";
+import { canArm, channelView, messagesFor, playerStatus } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type { Channel, Delivery, EngineState, MemoryCandidate, Script } from "../engine/types";
 import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
 import { ChoicePanel } from "./ChoicePanel";
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
+
+/** 跨章"上下文重置中"仪式的节奏：先盖蒙版让玩家看清，再清空，再留白一会儿。 */
+const RESET_MASK_MS = 2200;
+const RESET_PAUSE_MS = 2000;
 
 type Props = {
   script: Script;
@@ -29,7 +33,20 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
   const [showMemories, setShowMemories] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
+
+  // 跨章检测：本窗下一拍与已播出的最后一拍不在同一章 → 先走"上下文重置"仪式
+  const view = channelView(state, channel, script.beats);
+  const nextBeat = view.availableId ? script.beats.find((beat) => beat.id === view.availableId) : undefined;
+  const lastMessage = messages[messages.length - 1];
+  const lastBeat = lastMessage ? script.beats.find((beat) => beat.id === lastMessage.beatId) : undefined;
+  const crossesChapter = Boolean(
+    !resetting &&
+      nextBeat?.chapter !== undefined &&
+      lastBeat?.chapter !== undefined &&
+      nextBeat.chapter !== lastBeat.chapter,
+  );
 
   // 本窗已播出的消息里可见的记忆候选（决定高亮与计数）
   const beatOf = (beatId: string) => script.beats.find((beat) => beat.id === beatId);
@@ -115,9 +132,28 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     .join("|");
 
   useEffect(() => {
+    if (resetting) return;
     if (state.pending[channel]) return;
+    if (!canArm(state, channel, script.beats)) return;
+    if (crossesChapter) {
+      // 阅后即焚：跨章先走"上下文重置中"，仪式结束（resetting 变回 false）后本 effect 重跑再开演
+      setResetting(true);
+      return;
+    }
     dispatch({ type: "arm", channel });
-  }, [state.pending, channel, completedKey, activatedKey, flagsKey, dispatch]);
+  }, [state.pending, channel, completedKey, activatedKey, flagsKey, resetting, crossesChapter, dispatch, script]);
+
+  useEffect(() => {
+    if (!resetting) return;
+    const clearTimer = window.setTimeout(() => {
+      dispatchRef.current({ type: "clear-messages", channel });
+    }, RESET_MASK_MS);
+    const endTimer = window.setTimeout(() => setResetting(false), RESET_MASK_MS + RESET_PAUSE_MS);
+    return () => {
+      window.clearTimeout(clearTimer);
+      window.clearTimeout(endTimer);
+    };
+  }, [resetting, channel]);
 
   useEffect(() => {
     const next = resolveOutgoing(scriptRef.current, stateRef.current, channel);
@@ -143,7 +179,6 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     el.scrollTop = el.scrollHeight;
   }, [messages.length, live, token]);
 
-  const view = channelView(state, channel, script.beats);
   const status = pending ? null : waitingCopy(channel, view);
   const beat = pending ? script.beats.find((item) => item.id === pending.beatId) : undefined;
   const showChoices = pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
@@ -255,6 +290,16 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
         <p data-testid={`status-${channel}`} className="border-t border-[#efeae2] px-4 py-3 text-center text-xs text-[#6b645b]">
           {status}
         </p>
+      ) : null}
+      {resetting ? (
+        <div
+          data-testid={`resetting-${channel}`}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#1c1915]/30 backdrop-blur-sm"
+          role="status"
+        >
+          <span className="reset-spinner" aria-hidden="true" />
+          <p className="text-sm tracking-[0.14em] text-[#f6f3ec]">上下文重置中…</p>
+        </div>
       ) : null}
       {showMemories ? (
         <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#1c1915]/20 backdrop-blur-sm" role="dialog" aria-label="记忆">
