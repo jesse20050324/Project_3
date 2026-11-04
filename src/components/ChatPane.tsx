@@ -130,6 +130,9 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     .sort()
     .map((key) => `${key}=${String(state.flags[key])}`)
     .join("|");
+  // 最后一条消息是谁，决定 canArm 的"轮到谁"判定；另一窗的章间重置会清空它的消息，
+  // 把开演权还回来——不盯住这条，清空后谁都不会重跑 arm，两边互相谦让就死锁了。
+  const tailKey = `${state.messages.length}:${state.messages[state.messages.length - 1]?.id ?? ""}`;
 
   useEffect(() => {
     if (resetting) return;
@@ -141,7 +144,7 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
       return;
     }
     dispatch({ type: "arm", channel });
-  }, [state.pending, channel, completedKey, activatedKey, flagsKey, resetting, crossesChapter, dispatch, script]);
+  }, [state.pending, channel, completedKey, activatedKey, flagsKey, tailKey, resetting, crossesChapter, dispatch, script]);
 
   useEffect(() => {
     if (!resetting) return;
