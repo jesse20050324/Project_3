@@ -75,6 +75,31 @@ export function canArm(state: EngineState, channel: Channel, beats: Beat[]): boo
   return last.channel === channel;
 }
 
+export type PlaybackStep = { type: "arm" | "reset"; channel: Channel };
+
+/**
+ * 下一件播控动作。两窗共用这一处判断，避免各窗自己的定时器把开演权交出去后没人再喊。
+ * 正在重置的窗跳过；轮到且下一拍跨章的窗先重置，否则直接开演。
+ * 没有轮到的窗返回不了动作，调用方在状态再变时（对方仪式结束、记录被清空）重问一次。
+ */
+export function playbackStep(
+  state: EngineState,
+  beats: Beat[],
+  resetting: Record<Channel, boolean>,
+): PlaybackStep | null {
+  for (const channel of ["left", "right"] as const) {
+    if (resetting[channel]) continue;
+    if (state.pending[channel]) continue;
+    if (!canArm(state, channel, beats)) continue;
+    const next = availableBeat(state, channel, beats);
+    if (next && crossesChapterBoundary(state, channel, next, beats)) {
+      return { type: "reset", channel };
+    }
+    return { type: "arm", channel };
+  }
+  return null;
+}
+
 /** 阅后即焚：清掉本窗全部聊天记录（按窗，另一窗不动，已存记忆不动）。 */
 export function clearChannelMessages(state: EngineState, channel: Channel): EngineState {
   if (!state.messages.some((message) => message.channel === channel)) return state;
@@ -235,9 +260,9 @@ export function commitLine(state: EngineState, channel: Channel, beats: Beat[]):
 
 /**
  * commit 完一拍后的自动续播：下一拍仍在同一章就照旧接着开（"播完自动接上"的手感不变）。
- * 跨章则不自动开，留在 pending=null 交给 UI 的 arm 流程——
- * ChatPane 的跨章检测会先走"上下文重置中"仪式再开新章，
- * 否则 next 衔接的换幕（如第三幕→第四幕）会绕过仪式、两幕消息连播看不出换章。
+ * 跨章则不自动开，留在 pending=null 交给 playbackStep：
+ * 先走「上下文重置中」，仪式结束再开新章。
+ * 否则 next 衔接的换幕会两幕消息连播，看不出换章。
  */
 function openNextInChapter(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
   const next = availableBeat(state, channel, beats);

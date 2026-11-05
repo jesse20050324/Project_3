@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nameOf } from "../engine/loadScript";
-import { canArm, channelView, messagesFor, playerStatus } from "../engine/scheduler";
+import { channelView, messagesFor, playerStatus } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type { Channel, Delivery, EngineState, MemoryCandidate, Script } from "../engine/types";
 import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
@@ -17,6 +17,9 @@ type Props = {
   state: EngineState;
   dispatch: (action: Action) => void;
   hidden: boolean;
+  /** 本窗正在走跨章重置。由 Game 统一置位，不在窗内自己决定开演。 */
+  resetting: boolean;
+  onRitualEnd: (channel: Channel) => void;
 };
 
 type Outgoing = {
@@ -27,26 +30,14 @@ type Outgoing = {
   caption?: string;
 };
 
-export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
+export function ChatPane({ script, channel, state, dispatch, hidden, resetting, onRitualEnd }: Props) {
   const person = script.speakers.find((speaker) => speaker.channel === channel);
   const title = person?.name ?? (channel === "left" ? "左侧" : "右侧");
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
   const [showMemories, setShowMemories] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
-
-  // 跨章检测：本窗下一拍与已播出的最后一拍不在同一章 → 先走"上下文重置"仪式
   const view = channelView(state, channel, script.beats);
-  const nextBeat = view.availableId ? script.beats.find((beat) => beat.id === view.availableId) : undefined;
-  const lastMessage = messages[messages.length - 1];
-  const lastBeat = lastMessage ? script.beats.find((beat) => beat.id === lastMessage.beatId) : undefined;
-  const crossesChapter = Boolean(
-    !resetting &&
-      nextBeat?.chapter !== undefined &&
-      lastBeat?.chapter !== undefined &&
-      nextBeat.chapter !== lastBeat.chapter,
-  );
 
   // 本窗已播出的消息里可见的记忆候选（决定高亮与计数）
   const beatOf = (beatId: string) => script.beats.find((beat) => beat.id === beatId);
@@ -124,39 +115,17 @@ export function ChatPane({ script, channel, state, dispatch, hidden }: Props) {
     };
   }, [token]);
 
-  const completedKey = state.completed.join("|");
-  const activatedKey = state.activated.join("|");
-  const flagsKey = Object.keys(state.flags)
-    .sort()
-    .map((key) => `${key}=${String(state.flags[key])}`)
-    .join("|");
-  // 最后一条消息是谁，决定 canArm 的"轮到谁"判定；另一窗的章间重置会清空它的消息，
-  // 把开演权还回来——不盯住这条，清空后谁都不会重跑 arm，两边互相谦让就死锁了。
-  const tailKey = `${state.messages.length}:${state.messages[state.messages.length - 1]?.id ?? ""}`;
-
-  useEffect(() => {
-    if (resetting) return;
-    if (state.pending[channel]) return;
-    if (!canArm(state, channel, script.beats)) return;
-    if (crossesChapter) {
-      // 阅后即焚：跨章先走"上下文重置中"，仪式结束（resetting 变回 false）后本 effect 重跑再开演
-      setResetting(true);
-      return;
-    }
-    dispatch({ type: "arm", channel });
-  }, [state.pending, channel, completedKey, activatedKey, flagsKey, tailKey, resetting, crossesChapter, dispatch, script]);
-
   useEffect(() => {
     if (!resetting) return;
     const clearTimer = window.setTimeout(() => {
       dispatchRef.current({ type: "clear-messages", channel });
     }, RESET_MASK_MS);
-    const endTimer = window.setTimeout(() => setResetting(false), RESET_MASK_MS + RESET_PAUSE_MS);
+    const endTimer = window.setTimeout(() => onRitualEnd(channel), RESET_MASK_MS + RESET_PAUSE_MS);
     return () => {
       window.clearTimeout(clearTimer);
       window.clearTimeout(endTimer);
     };
-  }, [resetting, channel]);
+  }, [resetting, channel, onRitualEnd]);
 
   useEffect(() => {
     const next = resolveOutgoing(scriptRef.current, stateRef.current, channel);

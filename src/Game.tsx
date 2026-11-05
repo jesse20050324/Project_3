@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
 import { DebugStrip } from "./components/DebugStrip";
-import { messagesFor } from "./engine/scheduler";
+import { messagesFor, playbackStep } from "./engine/scheduler";
 import { clearProgress } from "./engine/storage";
 import type { Channel, Script } from "./engine/types";
 import { useEngine } from "./useEngine";
@@ -12,6 +12,7 @@ type Props = {
 
 export function Game({ script }: Props) {
   const { state, dispatch } = useEngine(script.beats);
+  const [resetting, setResetting] = useState<Record<Channel, boolean>>({ left: false, right: false });
   const [debug, setDebug] = useState(false);
   const [askRestart, setAskRestart] = useState(false);
   const [epoch, setEpoch] = useState(0);
@@ -42,9 +43,25 @@ export function Game({ script }: Props) {
     setSeen((prev) => ({ ...prev, [tab]: counts[tab] }));
   }, [narrow, tab, counts.left, counts.right]);
 
+  const endRitual = useCallback((channel: Channel) => {
+    setResetting((prev) => ({ ...prev, [channel]: false }));
+  }, []);
+
+  // 开演只在这里决定一次。任一窗仪式结束、或记录被清空，都会带着新状态再问 playbackStep。
+  useEffect(() => {
+    const step = playbackStep(state, script.beats, resetting);
+    if (!step) return;
+    if (step.type === "reset") {
+      setResetting((prev) => (prev[step.channel] ? prev : { ...prev, [step.channel]: true }));
+      return;
+    }
+    dispatch({ type: "arm", channel: step.channel });
+  }, [state, resetting, script, dispatch]);
+
   function restart() {
     clearProgress();
     dispatch({ type: "reset" });
+    setResetting({ left: false, right: false });
     setEpoch((value) => value + 1);
     setAskRestart(false);
     setTab("left");
@@ -153,6 +170,8 @@ export function Game({ script }: Props) {
             state={state}
             dispatch={dispatch}
             hidden={narrow && tab !== "left"}
+            resetting={resetting.left}
+            onRitualEnd={endRitual}
           />
           <ChatPane
             key={`right-${epoch}`}
@@ -161,6 +180,8 @@ export function Game({ script }: Props) {
             state={state}
             dispatch={dispatch}
             hidden={narrow && tab !== "right"}
+            resetting={resetting.right}
+            onRitualEnd={endRitual}
           />
         </div>
         {debug ? <DebugStrip script={script} state={state} /> : null}

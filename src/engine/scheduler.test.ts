@@ -10,6 +10,7 @@ import {
   describeChannel,
   messagesFor,
   openChannel,
+  playbackStep,
   withMissingRoots,
 } from "./scheduler";
 import type { Beat, Channel, EngineState } from "./types";
@@ -322,6 +323,68 @@ describe("chapter boundary auto-open", () => {
     state = commitLine(state, "left", sameChapter);
     state = commitReply(choose(state, "left", 0, sameChapter), "left", sameChapter);
     expect(state.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
+  });
+});
+
+describe("playbackStep", () => {
+  const idle = { left: false, right: false };
+  const beats: Beat[] = [
+    {
+      id: "L-end",
+      channel: "left",
+      chapter: 3,
+      lines: [{ from: "boy", text: "口嗨也是一种嗨", delivery: "pop" }],
+    },
+    { id: "L-next", channel: "left", chapter: 4, lines: [{ from: "boy", text: "第四幕", delivery: "pop" }] },
+    {
+      id: "R-end",
+      channel: "right",
+      chapter: 3,
+      lines: [{ from: "girl", text: "女窗收尾", delivery: "pop" }],
+    },
+    { id: "R-next", channel: "right", chapter: 4, lines: [{ from: "girl", text: "女第四幕", delivery: "pop" }] },
+  ];
+
+  function ready(messages: EngineState["messages"]): EngineState {
+    return {
+      ...createInitial(beats),
+      completed: ["L-end", "R-end"],
+      messages,
+      pending: { left: null, right: null },
+    };
+  }
+
+  const boyLine: EngineState["messages"][number] = {
+    id: "L-end:0",
+    channel: "left",
+    beatId: "L-end",
+    from: "boy",
+    text: "口嗨也是一种嗨",
+    delivery: "pop",
+  };
+  const girlLine: EngineState["messages"][number] = {
+    id: "R-end:0",
+    channel: "right",
+    beatId: "R-end",
+    from: "girl",
+    text: "女窗收尾",
+    delivery: "pop",
+  };
+
+  it("starts the reset on the side that spoke last", () => {
+    const state = ready([boyLine, girlLine]);
+    expect(playbackStep(state, beats, idle)).toEqual({ type: "reset", channel: "right" });
+  });
+
+  it("hands the reset to the other side after the speaker's messages are cleared", () => {
+    const cleared = ready([boyLine]);
+    expect(playbackStep(cleared, beats, { left: false, right: true })).toEqual({ type: "reset", channel: "left" });
+  });
+
+  it("arms the side that still holds the turn once its own ritual ends", () => {
+    const bothCleared = ready([]);
+    expect(playbackStep(bothCleared, beats, { left: true, right: false })).toBeNull();
+    expect(playbackStep(bothCleared, beats, idle)).toEqual({ type: "arm", channel: "left" });
   });
 });
 
