@@ -6,6 +6,9 @@
 // 飞书适配：graph 关键字 / subgraph 分线（SGM/SGF，防撞名）/ br 换行 /
 //   无花形节点 / 边标签纯文本 / 无 & 语法 / 无 emoji / 无任何引号字符（定界符除外）。
 // ◆…◆ = 记忆候选；选项置灰门渲染为"选项文字（需记忆：标签）"。
+// 手写 .mmd（如 script/act5-8-structure.mmd）用户是整文件粘贴进飞书，文件必须是纯 mermaid：
+//   以 graph TD 开头，禁止 # 注释、``` 围栏、flowchart、菱形 {}；节点与边分行写；
+//   分叉要汇回主线（真结局除外）。踩坑记录见 .learnings/LEARNINGS.md LRN-20261107-005。
 
 import fs from "node:fs";
 import path from "node:path";
