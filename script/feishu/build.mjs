@@ -264,6 +264,86 @@ function buildEngineFormat(chapterFile, outName) {
   return { file: path.join(feishuDir, outName), lines };
 }
 
+// ---------- 三、时间轴图（yaml 顶层含 时间轴 时启用，纵向=游戏世界时间） ----------
+function buildTimelineFormat(srcFile, outName) {
+  const y = YAML.load(fs.readFileSync(path.join(scriptDir, srcFile), "utf8"));
+  const axis = (y.时间轴 || []).map(String);
+  if (!axis.length) return null;
+  const turns = y.轮次 || [];
+  const byLane = { 男生: [], 女生: [] };
+  for (const t of turns) byLane[t.所属].push(t);
+  const baseOf = (num) => String(num).replace(/-[A-C]$/, "");
+  // 入场变体折叠：同基编号的变体在时间轴上共用一个节点（yaml 中首个为代表）
+  const variantRepIds = new Set();
+  const seenGroup = new Set();
+  for (const t of turns) {
+    if (!t.入场) continue;
+    const key = t.所属 + baseOf(t.编号);
+    if (!seenGroup.has(key)) {
+      seenGroup.add(key);
+      variantRepIds.add(t.编号);
+    }
+  }
+  const isCollapsedSibling = (t) => !!t.入场 && !variantRepIds.has(t.编号);
+  const tlId = (t) => "TL" + (t.所属 === "男生" ? "M" : "F") + baseOf(t.编号).replace(/[.]/g, "");
+  const turnById = Object.fromEntries(turns.map((t) => [t.编号, t]));
+  const resolveTarget = (lane, num) => {
+    const exact = byLane[lane].find((x) => x.编号 === num);
+    if (exact) return exact;
+    const first = byLane[lane].find((x) => x.编号.startsWith(String(num) + "-"));
+    return first || null;
+  };
+
+  const lines = [];
+  lines.push("%% 双窗时间轴（纵向=游戏世界时间，越靠上越早）");
+  lines.push("%% 提取自 script/" + srcFile + "（直接生成，无中间版本）");
+  lines.push("");
+  lines.push("graph TD");
+  lines.push('TLEG["图例：纵向=游戏世界时间，越靠上越早；同一时间块内的拍无严格先后（虚线门除外）；男=男生窗，女=女生窗；实线=本窗拍序；虚线=本拍需等对侧该拍发生后才出现；分叉=拍内有真选项分出；存◆=该拍有记忆候选"]');
+  axis.forEach((a, i) => {
+    const list = turns.filter((t) => String(t.时间) === a);
+    if (!list.length) return;
+    lines.push(`subgraph TB${i} ["${sanitize(a)}"]`);
+    for (const t of list) {
+      if (isCollapsedSibling(t)) continue;
+      const label =
+        (t.入场
+          ? `${t.所属} ${baseOf(t.编号)} 开场三变体`
+          : `${t.所属} ${t.编号} ` + sanitize(String(t.标题 || "").replace(/（[^）]*）/g, ""))) +
+        (t.分叉 ? "｜分叉" : "") +
+        (t.记忆候选 ? "｜存◆" : "") +
+        (t.等待 ? "｜需等" + sanitize(t.等待) : "");
+      lines.push(node(tlId(t), label));
+    }
+    lines.push("end");
+  });
+  // 本窗拍序边（含跨时间块）＋等待门虚线
+  const emitted = new Set();
+  for (const t of turns) {
+    if (isCollapsedSibling(t)) continue;
+    const id = tlId(t);
+    const drawSeq = (num) => {
+      const target = resolveTarget(t.所属, num);
+      if (!target) return;
+      const tid = tlId(target);
+      const key = id + ">" + tid;
+      if (emitted.has(key)) return;
+      emitted.add(key);
+      lines.push(`${id} --> ${tid}`);
+    };
+    if (t.分叉) for (const child of Object.values(t.分叉)) drawSeq(child);
+    else if (t.下一 && String(t.下一).startsWith("出口") === false) drawSeq(t.下一);
+    if (t.等待) {
+      const ref = String(t.等待);
+      const lane = ref.startsWith("男生") ? "男生" : "女生";
+      const num = ref.replace(/^.*?生/, "");
+      const src = resolveTarget(lane, num);
+      if (src) lines.push(`${tlId(src)} -.->|时序门| ${id}`);
+    }
+  }
+  return { file: path.join(feishuDir, outName), lines };
+}
+
 // ---------- 主流程 ----------
 const outputs = [
   buildEngineFormat("chapter-01.yaml", "ch1.mmd"),
@@ -274,6 +354,13 @@ const outputs = [
 for (const o of outputs) {
   fs.writeFileSync(o.file, o.lines.join("\n") + "\n", "utf8");
   console.log("written:", path.relative(repoRoot, o.file), o.lines.length, "lines");
+}
+for (const src of ["ch3.yaml", "ch4.yaml", "ch5.yaml"]) {
+  const tl = buildTimelineFormat(src, src.replace(".yaml", "-timeline.mmd"));
+  if (tl) {
+    fs.writeFileSync(tl.file, tl.lines.join("\n") + "\n", "utf8");
+    console.log("written:", path.relative(repoRoot, tl.file), tl.lines.length, "lines");
+  }
 }
 try {
   fs.rmSync(path.join(feishuDir, "ch2.mmd"));
