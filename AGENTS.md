@@ -105,7 +105,7 @@ node script/feishu/build.mjs         # 重生成全部飞书图（剧本轮）
 6. **严格校验**：`loadScript` 遇未知字段直接报错并列文件名/拍 id/字段名；`validate` 校验时间轴一致性、区间端点、终局声明、节拍数值范围、孤立拍与成环；reducer 异常写入 `state.error` 并在控制台输出，不再静默吞错。
 7. **文档与记忆同步**：本文件、`README.md`、`docs/引擎实现说明.md`、`docs/记忆系统实现方案.md`、`docs/界面设计背景.md`、`content/GAPS.md`、`.learnings/*`、工作区 `项目入口_新窗口必读.md` 全部更新。
 8. **v0.4.1 移除调试设计（废案）**：删除 `src/ScriptMap.tsx`、`src/ScriptMap.test.tsx`、`src/components/DebugStrip.tsx`；`App.tsx` 移除 `#map` hash 路由；`Game.tsx` 顶栏只留「重新开始」；`ChatPane.tsx` 去掉倍率参数；`index.css` 把 `.debug-strip` 改为中性的 `.script-error` 并删 `.debug-error`；清理只服务调试条的孤儿导出与全部注释；`Game.test.tsx` 改为断言界面无调试 UI；`useEngine.ts` 用 `console.error` 保留运行时错误可观测性。剧本加载失败的错误页保留（不是调试 UI）。
-9. 验证：`--check` 通过、测试全绿、`tsc --noEmit` 通过、`npm run build` 通过。是否 push 由用户决定。
+9. 验证：`--check` 通过、测试全绿、`tsc --noEmit` 通过、`npm run build` 通过；v0.4.1 已按用户要求推送 `origin/main`（`4fdbf9e`），GitHub Pages 部署需一两分钟。后续是否 push 仍由用户决定。
 
 **设计定稿（剧本侧，未变）**：记忆矩阵体系＋5-8 章新结构在 `script/outline.md`；`script/act5-8-structure.mmd` 是 5-8 章手写骨架图。ch5 v5.1 已审定，v4/v5/v5.1 的迭代脉络留在 `script/设计流程.md` 与 `.learnings/`。
 
