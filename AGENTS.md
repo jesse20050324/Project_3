@@ -2,9 +2,11 @@
 
 > 本文件是项目唯一入口：新窗口打开本仓库，读完这里就能接着干活。
 > 每次大的改动落地后，请更新「当前状态」一节再收尾。
-> 最后更新：2026-11-08（v0.4.1 移除调试设计）
+> 最后更新：2026-11-09（v0.4.2 游戏名与单窗蒙版）
 
 ## 项目是什么（30秒）
+
+**游戏名：He said, she said**（宏观定稿见 `script/outline.md`；旧称「双线」只用于外部 UI 模板文件名 `双线UI-最终版.html`，不再作为游戏名）。
 
 网页文字冒险游戏（React 19 + Vite 6 + TypeScript + js-yaml，无后端）。玩家扮演一个 AI 助手，**同时出现在男生、女生两部手机里**（左右双聊天窗，对话互相隔离）。玩家不能自由输入，只能选一条 AI 内心的想法，AI 把对应回复说出口。主题：恋爱初期的滤镜=投射，熟悉后滤镜褪去；玩家引导两人「认识到真实对方」或「外归因指责对方变了」，游戏不评判。用途：游戏设计留学作品集。push main 自动部署 GitHub Pages。
 
@@ -106,6 +108,7 @@ node script/feishu/build.mjs         # 重生成全部飞书图（剧本轮）
 7. **文档与记忆同步**：本文件、`README.md`、`docs/引擎实现说明.md`、`docs/记忆系统实现方案.md`、`docs/界面设计背景.md`、`content/GAPS.md`、`.learnings/*`、工作区 `项目入口_新窗口必读.md` 全部更新。
 8. **v0.4.1 移除调试设计（废案）**：删除 `src/ScriptMap.tsx`、`src/ScriptMap.test.tsx`、`src/components/DebugStrip.tsx`；`App.tsx` 移除 `#map` hash 路由；`Game.tsx` 顶栏只留「重新开始」；`ChatPane.tsx` 去掉倍率参数；`index.css` 把 `.debug-strip` 改为中性的 `.script-error` 并删 `.debug-error`；清理只服务调试条的孤儿导出与全部注释；`Game.test.tsx` 改为断言界面无调试 UI；`useEngine.ts` 用 `console.error` 保留运行时错误可观测性。剧本加载失败的错误页保留（不是调试 UI）。
 9. 验证：`--check` 通过、测试全绿、`tsc --noEmit` 通过、`npm run build` 通过；v0.4.1 已按用户要求推送 `origin/main`（`4fdbf9e`），GitHub Pages 部署需一两分钟。后续是否 push 仍由用户决定。
+10. **v0.4.2 游戏名与单窗蒙版**：正式游戏名 `He said, she said`（宏观定稿 `script/outline.md`）同步到顶栏、`index.html` 的 `<title>`、README 与全部约束文档；修掉「上下文重置」蒙版全局铺满的问题——`.pane` 加 `position: relative`，让 `.ritual-mask` 与 `.memory-dialog` 只盖住本窗（`.game-canvas` 带 `transform`，缺定位上下文时 `absolute; inset:0` 会以整块画布为基准）。`Game.test.tsx` 新增 DOM 分侧断言与 CSS 定位契约断言。
 
 **设计定稿（剧本侧，未变）**：记忆矩阵体系＋5-8 章新结构在 `script/outline.md`；`script/act5-8-structure.mmd` 是 5-8 章手写骨架图。ch5 v5.1 已审定，v4/v5/v5.1 的迭代脉络留在 `script/设计流程.md` 与 `.learnings/`。
 

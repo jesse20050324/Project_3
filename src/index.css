@@ -131,6 +131,8 @@ button {
 }
 
 .pane {
+  /* 单窗浮层的定位上下文：缺了它，absolute 蒙版会以带 transform 的画布为基准铺满全局 */
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;

@@ -46,7 +46,7 @@ export function Game({ script }: Props) {
           data-testid="game-canvas"
         >
           <header className="topbar">
-            <span className="topbar-title" data-testid="chapter-title">双线 · 第{chapterLabel}幕</span>
+            <span className="topbar-title" data-testid="chapter-title">He said, she said · 第{chapterLabel}幕</span>
             <span className="topbar-tag">助手 · 双会话</span>
             <span className="topbar-build" data-testid="build-version">v{__APP_VERSION__} · {__COMMIT__}</span>
             <div className="topbar-actions">
