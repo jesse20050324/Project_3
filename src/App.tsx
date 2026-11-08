@@ -1,17 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { loadBundledScript } from "./engine/loadScript";
 import { Game } from "./Game";
-import { ScriptMap } from "./ScriptMap";
 
 export function App() {
   const loaded = useMemo(() => loadBundledScript(), []);
-  const [map, setMap] = useState(() => window.location.hash === "#map");
-
-  useEffect(() => {
-    const sync = () => setMap(window.location.hash === "#map");
-    window.addEventListener("hashchange", sync);
-    return () => window.removeEventListener("hashchange", sync);
-  }, []);
 
   useEffect(() => {
     if (loaded.error) console.error(loaded.error);
@@ -19,14 +11,21 @@ export function App() {
 
   if (!loaded.script) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center bg-[#e6e0d6] px-6 text-[#1c1915]">
-        <p className="text-xs tracking-[0.16em] text-[#6b645b]">剧本不能开始</p>
-        <h1 className="mt-2 text-xl">这份剧本还过不了检查</h1>
-        <pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-[#f7f4ee] p-4 text-sm leading-relaxed">{loaded.error}</pre>
+      <main className="stage">
+        <div className="dialog" style={{ width: 560 }}>
+          <h2>这份剧本还过不了检查</h2>
+          <p>引擎按字段契约逐项校验，下面是要修的地方：</p>
+          <pre
+            className="script-error"
+            style={{ maxHeight: 420, whiteSpace: "pre-wrap", borderRadius: 12 }}
+            data-testid="script-error"
+          >
+            {loaded.error}
+          </pre>
+        </div>
       </main>
     );
   }
 
-  if (map) return <ScriptMap script={loaded.script} />;
   return <Game script={loaded.script} />;
 }

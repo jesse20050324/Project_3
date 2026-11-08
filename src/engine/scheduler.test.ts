@@ -1,431 +1,176 @@
 ﻿import { describe, expect, it } from "vitest";
 import {
-  availableBeat,
-  channelView,
-  choose,
-  commitLine,
-  commitReply,
-  createInitial,
-  deliveryAnimates,
-  describeChannel,
-  messagesFor,
-  openChannel,
-  playbackStep,
-  withMissingRoots,
+  availableBeat, canArm, choose, commitLine, commitReply, createInitial,
+  detectWindowViolation, hasMemory, openChannel, playbackStep, ritualTick, saveMemory,
 } from "./scheduler";
-import type { Beat, Channel, EngineState } from "./types";
-import { validateScript } from "./validate";
-import type { Script } from "./types";
+import { assignSchedule } from "./timeline";
+import type { Beat, EngineState, Script } from "./types";
 
-const cast = [
-  { id: "boy", name: "男生", channel: "left" as const },
-  { id: "girl", name: "女生", channel: "right" as const },
-  { id: "ai", name: "AI" },
-];
-
-function line(id: string, channel: Channel, text: string, next?: string, delivery: Beat["lines"][number]["delivery"] = "pop"): Beat {
-  return {
-    id,
-    channel,
-    next,
-    lines: [{ from: channel === "left" ? "boy" : "girl", text, delivery }],
-  };
+function line(text: string) {
+  return [{ from: "boy", text, delivery: "pop" as const }];
 }
 
-function drain(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
-  let current = openChannel(state, channel, beats);
-  for (let step = 0; step < 40; step += 1) {
-    const pending = current.pending[channel];
-    if (!pending || pending.kind === "choices") return current;
-    current = pending.kind === "reply" ? commitReply(current, channel, beats) : commitLine(current, channel, beats);
-    if (!current.pending[channel]) {
-      const opened = openChannel(current, channel, beats);
-      if (opened === current) return current;
-      current = opened;
-    }
-  }
-  throw new Error("步数过多，可能有环");
+function mk(id: string, channel: "left" | "right", extra: Partial<Beat> = {}): Beat {
+  return { id, channel, lines: line(id), ...extra };
 }
 
-describe("scheduler", () => {
-  it("keeps type and pop as different deliveries and stores the full line", () => {
-    const beats: Beat[] = [
-      {
-        id: "L1",
-        channel: "left",
-        lines: [
-          { from: "boy", text: "慢慢说完", delivery: "type" },
-          { from: "boy", text: "一下子出现", delivery: "pop" },
-        ],
-      },
-    ];
-    const state = drain(createInitial(beats), "left", beats);
-    const messages = messagesFor(state, "left");
-    expect(messages.map((message) => message.delivery)).toEqual(["type", "pop"]);
-    expect(messages.map((message) => message.text)).toEqual(["慢慢说完", "一下子出现"]);
-    expect(deliveryAnimates("type")).toBe(true);
-    expect(deliveryAnimates("pop")).toBe(false);
+function prepare(beats: Beat[]): { script: Script; beats: Beat[]; initial: EngineState } {
+  const script = assignSchedule({ title: "测试", speakers: [], beats });
+  return { script, beats: script.beats, initial: createInitial(script.beats) };
+}
+
+const fork = (id: string, next: string) => ({ thought: `想${id}`, reply: `回${id}`, next });
+
+describe("全局时序调度", () => {
+  it("按剧本排序键选下一拍，而不是固定左窗优先", () => {
+    const { beats, initial } = prepare([
+      mk("m2", "left", { order: 20, choices: [fork("m2", "m3")] }),
+      mk("f1", "right", { order: 5, choices: [fork("f1", "f2")] }),
+      mk("m3", "left", { order: 30 }),
+      mk("f2", "right", { order: 40 }),
+    ]);
+    expect(playbackStep(initial, beats)?.channel).toBe("right");
   });
 
-  it("sends the fixed reply instead of the thought and sets a flag", () => {
-    const beats: Beat[] = [
-      {
-        id: "L1",
-        channel: "left",
-        lines: [{ from: "boy", text: "他是不是喜欢我", delivery: "pop" }],
+  it("对面正在播出时本窗不放行（一活一锁）", () => {
+    const { beats, initial } = prepare([
+      mk("m1", "left", { order: 1, choices: [fork("m1", "m2")] }),
+      mk("f1", "right", { order: 2, choices: [fork("f1", "f2")] }),
+      mk("m2", "left", { order: 3 }),
+      mk("f2", "right", { order: 4 }),
+    ]);
+    const playing: EngineState = {
+      ...initial,
+      pending: { left: { kind: "lines", beatId: "m1", lineIndex: 0 }, right: null },
+    };
+    expect(canArm(playing, "right", beats)).toBe(false);
+    expect(playbackStep(playing, beats)).toBeNull();
+  });
+
+  it("播完一拍不再自动接下一拍（这正是女线 16 拍播不到的旧根因）", () => {
+    const { beats, initial } = prepare([
+      mk("m1", "left", { order: 1, next: "m2" }),
+      mk("f1", "right", { order: 2 }),
+      mk("m2", "left", { order: 3 }),
+    ]);
+    const armed = openChannel(initial, "left", beats, 0);
+    const done = commitLine(armed, "left", beats);
+    expect(done.pending.left).toBeNull();
+    expect(done.completed).toEqual(["m1"]);
+    // 下一拍由 playbackStep 全局裁决，而不是在本窗里偷偷接上
+    expect(playbackStep(done, beats)).toEqual({ type: "arm", channel: "right" });
+  });
+
+  it("等待门未满足时该侧 locked 且没有可播拍", () => {
+    const { beats, initial } = prepare([
+      mk("m1", "left", { order: 1, choices: [fork("m1", "m2")] }),
+      mk("f1", "right", { order: 2, requires: ["m1"], choices: [fork("f1", "f2")] }),
+      mk("m2", "left", { order: 3 }),
+      mk("f2", "right", { order: 4 }),
+    ]);
+    expect(availableBeat(initial, "right", beats)).toBeNull();
+    expect(playbackStep(initial, beats)?.channel).toBe("left");
+  });
+});
+
+describe("区间门", () => {
+  const gated = mk("f6", "right", {
+    order: 6,
+    window: { channel: "left", 下界: ["m3"], 上界: ["m10"] },
+    choices: [fork("f6", "f7")],
+  });
+
+  it("下界未到、区间内、超界分别对应不放行／放行／报错", () => {
+    const { beats, initial } = prepare([
+      mk("m3", "left", { order: 3 }),
+      mk("m10", "left", { order: 10 }),
+      gated,
+      mk("f7", "right", { order: 7 }),
+    ]);
+    expect(availableBeat(initial, "right", beats)).toBeNull();
+
+    const inRange: EngineState = { ...initial, completed: ["m3"], activated: [...initial.activated, "f6"] };
+    expect(availableBeat(inRange, "right", beats)?.id).toBe("f6");
+
+    const tooLate: EngineState = { ...inRange, completed: ["m3", "m10"] };
+    expect(availableBeat(tooLate, "right", beats)).toBeNull();
+    expect(detectWindowViolation(tooLate, beats)).toContain("区间越界");
+  });
+});
+
+describe("跨章仪式：状态持久化，刷新可恢复", () => {
+  it("跨章先进入 mask，tick 清记录并切章，再 tick 结束；全程不需要刷新", () => {
+    const { beats, initial } = prepare([
+      mk("a1", "left", { chapter: 1, order: 1, choices: [fork("a1", "b1")] }),
+      mk("b1", "left", { chapter: 2, order: 2, choices: [fork("b1", "b2")] }),
+      mk("b2", "left", { chapter: 2, order: 3 }),
+    ]);
+    const withMessage: EngineState = {
+      ...initial,
+      chapter: { left: 1, right: 1 },
+      completed: ["a1"],
+      activated: [...initial.activated, "b1"],
+      messages: [{ id: "old", channel: "left", beatId: "a1", from: "boy", text: "旧章消息", delivery: "pop" }],
+    };
+    const masked = openChannel(withMessage, "left", beats, 1000);
+    expect(masked.ritual.left).toEqual({ from: 1, to: 2, phase: "mask", until: 1000 + 2200 });
+    expect(masked.pending.left).toBeNull();
+
+    const paused = ritualTick(masked, "left", 1000 + 2200);
+    expect(paused.ritual.left?.phase).toBe("pause");
+    expect(paused.chapter.left).toBe(2);
+    expect(paused.messages.filter((message) => message.channel === "left")).toHaveLength(0);
+
+    const cleared = ritualTick(paused, "left", 1000 + 2200 + 2000);
+    expect(cleared.ritual.left).toBeNull();
+    expect(openChannel(cleared, "left", beats, 0).pending.left?.beatId).toBe("b1");
+  });
+
+  it("到期之前 tick 是幂等的", () => {
+    const state = createInitial([]);
+    const withRitual: EngineState = {
+      ...state,
+      ritual: { left: { from: 1, to: 2, phase: "mask", until: 5000 }, right: null },
+    };
+    expect(ritualTick(withRitual, "left", 1000)).toBe(withRitual);
+  });
+});
+
+describe("选项、记忆与终局", () => {
+  it("置灰门要求本窗已存记忆", () => {
+    const { beats, initial } = prepare([
+      mk("a1", "left", {
+        order: 1,
         choices: [
-          { thought: "客观分析", reply: "从你描述的互动来看，他还在观察。", set: { tone: "objective", trust: 1 }, next: "L2" },
-          { thought: "顺着他说", reply: "听起来他挺在意你的。", set: { tone: "agree" }, next: "L2" },
+          { thought: "有记忆才行", reply: "回A", next: "a2", 需记忆: "店的位置" },
+          { thought: "随便走", reply: "回B", next: "a2" },
         ],
-      },
-      line("L2", "left", "下一句"),
-    ];
-    let state = drain(createInitial(beats), "left", beats);
-    expect(state.pending.left?.kind).toBe("choices");
-    expect(() => choose(openChannel(createInitial(beats), "left", beats), "left", 0, beats)).toThrow(/还不能选/);
-    expect(messagesFor(state, "left").some((message) => message.text === "客观分析")).toBe(false);
+      }),
+      mk("a2", "left", { order: 2 }),
+    ]);
+    const atChoice: EngineState = { ...initial, pending: { left: { kind: "choices", beatId: "a1" }, right: null } };
+    expect(() => choose(atChoice, "left", 0, beats)).toThrow(/需要记忆/);
+    const saved = saveMemory(atChoice, "left", { label: "店的位置", text: "老位置", beatId: "a1" });
+    expect(hasMemory(saved, "left", "店的位置")).toBe(true);
+    expect(() => choose(saved, "left", 0, beats)).not.toThrow();
+  });
+
+  it("选项回复按自己的 Timing 播出，双窗共同终局才达成", () => {
+    const { beats, initial } = prepare([
+      mk("mEnd", "left", { order: 1, ending: "在一起", choices: [{ thought: "好", reply: "回复" }] }),
+      mk("fEnd", "right", { order: 2, ending: "在一起", choices: [{ thought: "好", reply: "回复" }] }),
+    ]);
+    let state: EngineState = { ...initial, activated: ["mEnd", "fEnd"] };
+    state = openChannel(state, "left", beats, 0);
+    state = commitLine(state, "left", beats);
     state = choose(state, "left", 0, beats);
     state = commitReply(state, "left", beats);
-    const sent = messagesFor(state, "left").at(-1);
-    expect(sent?.from).toBe("ai");
-    expect(sent?.text).toBe("从你描述的互动来看，他还在观察。");
-    expect(sent?.text).not.toBe("客观分析");
-    expect(state.flags).toEqual({ tone: "objective", trust: 1 });
-  });
+    expect(state.endings).toEqual([]);
 
-  it("lets one channel move through several beats while the other stays put", () => {
-    const beats = [line("L1", "left", "一", "L2"), line("L2", "left", "二", "L3"), line("L3", "left", "三"), line("R1", "right", "右一")];
-    const state = drain(createInitial(beats), "left", beats);
-    expect(state.completed).toEqual(["L1", "L2", "L3"]);
-    expect(messagesFor(state, "left").map((message) => message.text)).toEqual(["一", "二", "三"]);
-    expect(messagesFor(state, "right")).toEqual([]);
-    expect(state.completed).not.toContain("R1");
-    expect(state.pending.right).toBeNull();
-    expect(availableBeat(state, "right", beats)?.id).toBe("R1");
-    const both = drain(state, "right", beats);
-    expect(messagesFor(both, "right").map((message) => message.text)).toEqual(["右一"]);
-    expect(messagesFor(both, "left").every((message) => message.channel === "left")).toBe(true);
-    expect(messagesFor(both, "right").every((message) => message.channel === "right")).toBe(true);
-  });
-
-  it("plays only the branch whose flag matches and leaves the other lines unsent", () => {
-    const beats: Beat[] = [
-      {
-        id: "L2",
-        channel: "left",
-        lines: [{ from: "boy", text: "选店", delivery: "pop" }],
-        choices: [
-          { thought: "甲", reply: "选甲", set: { shop: "甲" } },
-          { thought: "乙", reply: "选乙", set: { shop: "乙" } },
-        ],
-      },
-      {
-        id: "Ra",
-        channel: "right",
-        requires: ["L2"],
-        when: { shop: "甲" },
-        lines: [{ from: "girl", text: "甲店太贵", delivery: "pop" }],
-      },
-      {
-        id: "Rb",
-        channel: "right",
-        requires: ["L2"],
-        when: { shop: "乙" },
-        lines: [{ from: "girl", text: "乙店挺好", delivery: "pop" }],
-      },
-    ];
-    const waiting = createInitial(beats);
-    expect(channelView(waiting, "right", beats).mode).toBe("gated");
-    expect(messagesFor(waiting, "right")).toEqual([]);
-    let state = drain(waiting, "left", beats);
-    state = commitReply(choose(state, "left", 0, beats), "left", beats);
-    state = drain(state, "right", beats);
-    expect(messagesFor(state, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
-    expect(state.completed).not.toContain("Rb");
-    expect(messagesFor(state, "right").some((message) => message.text.includes("乙店"))).toBe(false);
-  });
-
-  it("picks up a girl root that was not in an older save once the shop is already chosen", () => {
-    const beats: Beat[] = [
-      {
-        id: "L2",
-        channel: "left",
-        lines: [{ from: "boy", text: "选店", delivery: "pop" }],
-        choices: [{ thought: "甲", reply: "选甲", set: { shop: "甲" } }],
-      },
-      {
-        id: "Ra",
-        channel: "right",
-        requires: ["L2"],
-        when: { shop: "甲" },
-        lines: [{ from: "girl", text: "甲店太贵", delivery: "pop" }],
-      },
-    ];
-    const stale: EngineState = {
-      completed: ["L2"],
-      flags: { shop: "甲" },
-      activated: ["L2"],
-      messages: [],
-      pending: { left: null, right: null },
-      memories: { left: [], right: [] },
-    };
-    expect(availableBeat(stale, "right", beats)).toBeNull();
-    const repaired = withMissingRoots(stale, beats);
-    expect(repaired.activated).toContain("Ra");
-    const played = drain(openChannel(repaired, "right", beats), "right", beats);
-    expect(messagesFor(played, "right").map((message) => message.text)).toEqual(["甲店太贵"]);
-  });
-
-  it("activates the linear next of a completed beat and leaves untaken choice branches dark", () => {
-    const beats: Beat[] = [
-      line("R1", "right", "店的反应", "R2"),
-      {
-        id: "R2",
-        channel: "right",
-        lines: [{ from: "girl", text: "要不要化妆", delivery: "pop" }],
-        choices: [
-          { thought: "化", reply: "化吧" },
-          { thought: "不化", reply: "不化也没事" },
-        ],
-      },
-      {
-        id: "L1",
-        channel: "left",
-        lines: [{ from: "boy", text: "选", delivery: "pop" }],
-        choices: [
-          { thought: "甲", reply: "甲", next: "L2" },
-          { thought: "乙", reply: "乙", next: "L3" },
-        ],
-      },
-      line("L2", "left", "甲线"),
-      line("L3", "left", "乙线"),
-    ];
-    const finished: EngineState = {
-      completed: ["R1", "L1"],
-      flags: {},
-      activated: ["R1", "L1", "L2"],
-      messages: [],
-      pending: { left: null, right: null },
-      memories: { left: [], right: [] },
-    };
-    expect(availableBeat(finished, "right", beats)).toBeNull();
-    const repaired = withMissingRoots(finished, beats);
-    expect(repaired.activated).toContain("R2");
-    expect(repaired.activated.filter((id) => id === "R2")).toHaveLength(1);
-    expect(repaired.activated).not.toContain("L3");
-    const played = drain(openChannel(repaired, "right", beats), "right", beats);
-    expect(messagesFor(played, "right").map((message) => message.text)).toEqual(["要不要化妆"]);
-    expect(played.pending.right).toEqual({ kind: "choices", beatId: "R2" });
-
-    const unfinished: EngineState = {
-      completed: ["L1"],
-      flags: {},
-      activated: ["R1", "L1", "L2"],
-      messages: [],
-      pending: { left: null, right: null },
-      memories: { left: [], right: [] },
-    };
-    const still = withMissingRoots(unfinished, beats);
-    expect(still.activated).not.toContain("R2");
-    expect(still.activated).not.toContain("L3");
-  });
-
-  it("holds a beat until every required beat is done and does not reveal its line", () => {
-    const secret = "闸门后面的那句不该出现";
-    const beats: Beat[] = [
-      line("L1", "left", "先说完这边"),
-      { id: "R1", channel: "right", requires: ["L1"], lines: [{ from: "girl", text: secret, delivery: "type" }] },
-    ];
-    const initial = createInitial(beats);
-    expect(availableBeat(initial, "right", beats)).toBeNull();
-    expect(channelView(initial, "right", beats).mode).toBe("gated");
-    expect(messagesFor(initial, "right")).toEqual([]);
-    const described = describeChannel(initial, "right", beats);
-    expect(described).toContain("R1");
-    expect(described).toContain("L1");
-    expect(described).not.toContain(secret);
-    const afterLeft = drain(initial, "left", beats);
-    expect(messagesFor(afterLeft, "right")).toEqual([]);
-    expect(availableBeat(afterLeft, "right", beats)?.id).toBe("R1");
-    const afterRight = drain(afterLeft, "right", beats);
-    expect(messagesFor(afterRight, "right").map((message) => message.text)).toEqual([secret]);
-  });
-
-  it("sends one choice down one next beat and the other choice down another", () => {
-    const beats: Beat[] = [
-      {
-        id: "L1",
-        channel: "left",
-        lines: [{ from: "boy", text: "问", delivery: "pop" }],
-        choices: [
-          { thought: "冷一点", reply: "冷回复", set: { mood: "cold" }, next: "L2" },
-          { thought: "热一点", reply: "热回复", set: { mood: "warm" }, next: "L3" },
-        ],
-      },
-      line("L2", "left", "冷线"),
-      line("L3", "left", "热线"),
-    ];
-    const cold = continueAfter(beats, 0);
-    expect(messagesFor(cold, "left").map((message) => message.text)).toEqual(["问", "冷回复", "冷线"]);
-    expect(cold.completed).toEqual(["L1", "L2"]);
-    expect(cold.flags.mood).toBe("cold");
-    expect(cold.activated).not.toContain("L3");
-
-    const warm = continueAfter(beats, 1);
-    expect(messagesFor(warm, "left").map((message) => message.text)).toEqual(["问", "热回复", "热线"]);
-    expect(warm.completed).toEqual(["L1", "L3"]);
-    expect(warm.activated).not.toContain("L2");
-  });
-
-  it("keeps an image line intact for the bubble to render", () => {
-    const beats: Beat[] = [
-      {
-        id: "L1",
-        channel: "left",
-        lines: [{ from: "boy", text: "/cards/note.png", delivery: "image", caption: "一张纸条" }],
-      },
-    ];
-    const state = drain(createInitial(beats), "left", beats);
-    const message = messagesFor(state, "left")[0];
-    expect(message.delivery).toBe("image");
-    expect(message.text).toBe("/cards/note.png");
-    expect(message.caption).toBe("一张纸条");
-    expect(deliveryAnimates("image")).toBe(false);
+    state = openChannel(state, "right", beats, 0);
+    state = commitLine(state, "right", beats);
+    state = choose(state, "right", 0, beats);
+    state = commitReply(state, "right", beats);
+    expect(state.endings).toEqual(["在一起"]);
   });
 });
-
-describe("chapter boundary auto-open", () => {
-  const beats: Beat[] = [
-    {
-      id: "A",
-      channel: "left",
-      chapter: 1,
-      lines: [{ from: "boy", text: "本幕收尾", delivery: "pop" }],
-      choices: [{ thought: "走", reply: "好", next: "B" }],
-    },
-    { id: "B", channel: "left", chapter: 2, lines: [{ from: "boy", text: "下一幕开场", delivery: "pop" }] },
-  ];
-
-  it("stops auto-opening at a chapter boundary so the UI reset ritual can run first", () => {
-    let state = openChannel(createInitial(beats), "left", beats);
-    state = commitLine(state, "left", beats);
-    state = commitReply(choose(state, "left", 0, beats), "left", beats);
-    // B 已被激活，但不自动开——留给 arm 流程走"上下文重置中"
-    expect(state.activated).toContain("B");
-    expect(state.pending.left).toBeNull();
-    const armed = openChannel(state, "left", beats);
-    expect(armed.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
-  });
-
-  it("still auto-opens when the next beat stays in the same chapter", () => {
-    const sameChapter: Beat[] = beats.map((beat) => ({ ...beat, chapter: 1 }));
-    let state = openChannel(createInitial(sameChapter), "left", sameChapter);
-    state = commitLine(state, "left", sameChapter);
-    state = commitReply(choose(state, "left", 0, sameChapter), "left", sameChapter);
-    expect(state.pending.left).toEqual({ kind: "lines", beatId: "B", lineIndex: 0 });
-  });
-});
-
-describe("playbackStep", () => {
-  const idle = { left: false, right: false };
-  const beats: Beat[] = [
-    {
-      id: "L-end",
-      channel: "left",
-      chapter: 3,
-      lines: [{ from: "boy", text: "口嗨也是一种嗨", delivery: "pop" }],
-    },
-    { id: "L-next", channel: "left", chapter: 4, lines: [{ from: "boy", text: "第四幕", delivery: "pop" }] },
-    {
-      id: "R-end",
-      channel: "right",
-      chapter: 3,
-      lines: [{ from: "girl", text: "女窗收尾", delivery: "pop" }],
-    },
-    { id: "R-next", channel: "right", chapter: 4, lines: [{ from: "girl", text: "女第四幕", delivery: "pop" }] },
-  ];
-
-  function ready(messages: EngineState["messages"]): EngineState {
-    return {
-      ...createInitial(beats),
-      completed: ["L-end", "R-end"],
-      messages,
-      pending: { left: null, right: null },
-    };
-  }
-
-  const boyLine: EngineState["messages"][number] = {
-    id: "L-end:0",
-    channel: "left",
-    beatId: "L-end",
-    from: "boy",
-    text: "口嗨也是一种嗨",
-    delivery: "pop",
-  };
-  const girlLine: EngineState["messages"][number] = {
-    id: "R-end:0",
-    channel: "right",
-    beatId: "R-end",
-    from: "girl",
-    text: "女窗收尾",
-    delivery: "pop",
-  };
-
-  it("starts the reset on the side that spoke last", () => {
-    const state = ready([boyLine, girlLine]);
-    expect(playbackStep(state, beats, idle)).toEqual({ type: "reset", channel: "right" });
-  });
-
-  it("hands the reset to the other side after the speaker's messages are cleared", () => {
-    const cleared = ready([boyLine]);
-    expect(playbackStep(cleared, beats, { left: false, right: true })).toEqual({ type: "reset", channel: "left" });
-  });
-
-  it("arms the side that still holds the turn once its own ritual ends", () => {
-    const bothCleared = ready([]);
-    expect(playbackStep(bothCleared, beats, { left: true, right: false })).toBeNull();
-    expect(playbackStep(bothCleared, beats, idle)).toEqual({ type: "arm", channel: "left" });
-  });
-});
-
-describe("validateScript", () => {
-  it("fails a cyclic requires graph with a clear error", () => {
-    const script: Script = {
-      title: "环",
-      speakers: cast,
-      beats: [
-        { id: "A", channel: "left", requires: ["B"], lines: [{ from: "boy", text: "甲", delivery: "pop" }] },
-        { id: "B", channel: "left", requires: ["A"], lines: [{ from: "boy", text: "乙", delivery: "pop" }] },
-      ],
-    };
-    const result = validateScript(script);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("成环");
-      expect(result.error).toContain("A");
-      expect(result.error).toContain("B");
-      expect(result.error).toContain("不能开始");
-    }
-  });
-
-  it("rejects a next pointer that jumps to the other channel", () => {
-    const script: Script = {
-      title: "串侧",
-      speakers: cast,
-      beats: [
-        { id: "L1", channel: "left", next: "R1", lines: [{ from: "boy", text: "左", delivery: "pop" }] },
-        { id: "R1", channel: "right", lines: [{ from: "girl", text: "右", delivery: "pop" }] },
-      ],
-    };
-    const result = validateScript(script);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("另一侧");
-  });
-});
-
-function continueAfter(beats: Beat[], index: number): EngineState {
-  let state = drain(createInitial(beats), "left", beats);
-  state = choose(state, "left", index, beats);
-  state = commitReply(state, "left", beats);
-  return drain(state, "left", beats);
-}

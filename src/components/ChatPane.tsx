@@ -1,25 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { nameOf } from "../engine/loadScript";
-import { channelView, messagesFor, playerStatus } from "../engine/scheduler";
+import { AVATAR_BOY, AVATAR_GIRL } from "../assets/avatars";
+import { channelView, messagesFor } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
-import type { Channel, Delivery, EngineState, MemoryCandidate, Script } from "../engine/types";
-import { AFTER_TYPE_MS, INDICATOR_MS, shouldType } from "../presentation";
-import { ChoicePanel } from "./ChoicePanel";
+import type {
+  Channel, Delivery, EngineState, MemoryCandidate, Script, Timing,
+} from "../engine/types";
+import { resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
+import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
+import { BookmarkIcon, CloseIcon } from "./icons";
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
-
-/** 跨章"上下文重置中"仪式的节奏：先盖蒙版让玩家看清，再清空，再留白一会儿。 */
-const RESET_MASK_MS = 2200;
-const RESET_PAUSE_MS = 2000;
 
 type Props = {
   script: Script;
   channel: Channel;
   state: EngineState;
   dispatch: (action: Action) => void;
-  hidden: boolean;
-  /** 本窗正在走跨章重置。由 Game 统一置位，不在窗内自己决定开演。 */
-  resetting: boolean;
-  onRitualEnd: (channel: Channel) => void;
 };
 
 type Outgoing = {
@@ -28,19 +23,23 @@ type Outgoing = {
   text: string;
   delivery: Delivery;
   caption?: string;
+  timing: Timing;
 };
 
-export function ChatPane({ script, channel, state, dispatch, hidden, resetting, onRitualEnd }: Props) {
+type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
+
+export function ChatPane({ script, channel, state, dispatch }: Props) {
   const person = script.speakers.find((speaker) => speaker.channel === channel);
-  const title = person?.name ?? (channel === "left" ? "左侧" : "右侧");
+  const title = person?.name ?? (channel === "left" ? "男生" : "女生");
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
-  const [showMemories, setShowMemories] = useState(false);
-  const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
+  const visibleMessages = messages.filter((message) => message.delivery !== "thought");
+  const thought = [...messages].reverse().find((message) => message.delivery === "thought");
   const view = channelView(state, channel, script.beats);
+  const ritual = state.ritual[channel];
 
-  // 本窗已播出的消息里可见的记忆候选（决定高亮与计数）
-  const beatOf = (beatId: string) => script.beats.find((beat) => beat.id === beatId);
+  const beatOf = (beatId: string) => script.beatById?.get(beatId) ?? script.beats.find((beat) => beat.id === beatId);
+  const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
   const marksFor = (beatId: string, text: string): MemoryMark[] => {
     const candidates: MemoryCandidate[] = beatOf(beatId)?.记忆候选 ?? [];
     return candidates
@@ -56,252 +55,220 @@ export function ChatPane({ script, channel, state, dispatch, hidden, resetting, 
   const memoryTotal = visibleCandidates.size;
   const memorySaved = state.memories[channel].length;
 
-  const saveMark = useCallback(
-    (beatId: string, text: string) => {
-      const candidate = (beatOf(beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
-      if (!candidate) return;
-      dispatch({
-        type: "save-memory",
-        channel,
-        label: candidate.缩略标签,
-        text: candidate.短句,
-        beatId,
-      });
-    },
-    [channel, dispatch, script],
-  );
+  const [showMemories, setShowMemories] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
   const outgoing = resolveOutgoing(script, state, channel);
   const token = outgoing?.token ?? "";
-  const [live, setLive] = useState<{ token: string; phase: "indicator" | "typing" } | null>(null);
-  const doneToken = useRef<string | null>(null);
-  const dwell = useRef<number | null>(null);
-  const scroller = useRef<HTMLDivElement>(null);
+  const commitRef = useRef<() => void>(() => {});
   const stateRef = useRef(state);
-  const scriptRef = useRef(script);
-  const dispatchRef = useRef(dispatch);
+  const doneToken = useRef<string | null>(null);
+  const timers = useRef<number[]>([]);
+  const afterMsRef = useRef(0);
+  const scroller = useRef<HTMLDivElement>(null);
   stateRef.current = state;
-  scriptRef.current = script;
-  dispatchRef.current = dispatch;
 
-  const commit = useCallback(() => {
-    if (dwell.current !== null) {
-      window.clearTimeout(dwell.current);
-      dwell.current = null;
-    }
-    const current = stateRef.current.pending[channel];
-    if (!current || current.kind === "choices") return;
-    const currentToken =
-      current.kind === "lines"
-        ? `${current.beatId}:line:${current.lineIndex}`
-        : `${current.beatId}:reply:${current.choiceIndex}`;
-    if (doneToken.current === currentToken) return;
-    doneToken.current = currentToken;
-    dispatchRef.current(current.kind === "lines" ? { type: "commit-line", channel } : { type: "commit-reply", channel });
-  }, [channel]);
+  const clearTimers = useCallback(() => {
+    for (const timer of timers.current) window.clearTimeout(timer);
+    timers.current = [];
+  }, []);
 
-  const finishTyping = useCallback(() => {
-    if (dwell.current !== null) return;
-    dwell.current = window.setTimeout(() => {
-      dwell.current = null;
-      commit();
-    }, AFTER_TYPE_MS);
-  }, [commit]);
-
-  useEffect(() => {
-    return () => {
-      if (dwell.current === null) return;
-      window.clearTimeout(dwell.current);
-      dwell.current = null;
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (!resetting) return;
-    const clearTimer = window.setTimeout(() => {
-      dispatchRef.current({ type: "clear-messages", channel });
-    }, RESET_MASK_MS);
-    const endTimer = window.setTimeout(() => onRitualEnd(channel), RESET_MASK_MS + RESET_PAUSE_MS);
-    return () => {
-      window.clearTimeout(clearTimer);
-      window.clearTimeout(endTimer);
-    };
-  }, [resetting, channel, onRitualEnd]);
-
-  useEffect(() => {
-    const next = resolveOutgoing(scriptRef.current, stateRef.current, channel);
-    if (!next) {
-      setLive(null);
+  const later = useCallback((fn: () => void, ms: number) => {
+    if (ms <= 0) {
+      fn();
       return;
     }
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!shouldType(next.delivery, reduced)) {
-      const wait = next.delivery === "image" || reduced ? 0 : INDICATOR_MS[next.delivery];
-      setLive(wait === 0 ? null : { token: next.token, phase: "indicator" });
-      const timer = window.setTimeout(commit, wait);
-      return () => window.clearTimeout(timer);
+    timers.current.push(window.setTimeout(fn, ms));
+  }, []);
+
+  const commit = useCallback(() => {
+    clearTimers();
+    const current = stateRef.current.pending[channel];
+    if (!current || current.kind === "choices") return;
+    const currentToken = `${stateRef.current.runId}|${current.beatId}:${current.kind}:${"lineIndex" in current ? current.lineIndex : "choiceIndex" in current ? current.choiceIndex : 0}`;
+    if (doneToken.current === currentToken) return;
+    doneToken.current = currentToken;
+    dispatch(current.kind === "lines" ? { type: "commit-line", channel } : { type: "commit-reply", channel });
+  }, [channel, clearTimers, dispatch]);
+  commitRef.current = commit;
+
+  const finishTyping = useCallback(() => {
+    later(() => commitRef.current(), afterMsRef.current);
+  }, [later]);
+
+  const skip = useCallback(() => commitRef.current(), []);
+
+  // 一次消息 = pauseBefore（停顿感）→ indicator（三点）→ 逐字/整条 → afterMs（留白）→ commit。
+  // 所有时长都来自该条消息解析后的定值 Timing，不再是全局常量匀速蹦。
+  useEffect(() => {
+    clearTimers();
+    if (!outgoing) {
+      setPhase("idle");
+      return clearTimers;
     }
-    setLive({ token: next.token, phase: "indicator" });
-    const timer = window.setTimeout(() => setLive({ token: next.token, phase: "typing" }), INDICATOR_MS.type);
-    return () => window.clearTimeout(timer);
-  }, [token, channel, commit]);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timing = reduced ? { ...ZERO_TIMING } : outgoing.timing;
+    afterMsRef.current = timing.afterMs;
+    setPhase("pause");
+    later(() => {
+      setPhase("indicator");
+      later(() => {
+        if (shouldType(outgoing.delivery, reduced)) {
+          setPhase("typing");
+        } else {
+          setPhase("shown");
+          later(() => commitRef.current(), timing.afterMs);
+        }
+      }, timing.indicatorMs);
+    }, timing.pauseBeforeMs);
+    return clearTimers;
+  }, [token, clearTimers, later, outgoing?.delivery]);
 
   useEffect(() => {
     const el = scroller.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages.length, live, token]);
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [visibleMessages.length, phase, token]);
 
-  const status = pending ? null : waitingCopy(channel, view);
-  const beat = pending ? script.beats.find((item) => item.id === pending.beatId) : undefined;
+  const beat = pending ? beatOf(pending.beatId) : undefined;
   const showChoices = pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
+  const composerMode: ComposerMode = showChoices
+    ? "active"
+    : pending?.kind === "lines" || pending?.kind === "reply" || view.mode === "gated" || ritual
+      ? "locked"
+      : "empty";
+  const liveThought = outgoing?.delivery === "thought" && phase !== "idle" && phase !== "pause"
+    ? outgoing
+    : null;
+  const thinkTiming = (liveThought ?? thought)?.timing ?? resolveTiming([]);
+  const thoughtSeconds = Math.max(1, Math.round(
+    (thinkTiming.pauseBeforeMs + thinkTiming.indicatorMs + thinkTiming.afterMs) / 1000,
+  ));
+  const timeLabel = beat?.time ?? beat?.label ?? null;
 
   return (
-    <section
-      data-testid={`pane-${channel}`}
-      aria-label={title}
-      className={hidden ? "hidden" : "relative flex h-full min-h-0 min-w-0 flex-col bg-[#f7f4ee]"}
-    >
-      <header className="flex items-center gap-2 border-b border-[#efeae2] px-4 py-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e7eeeb] text-sm text-[#2f5d54]">
-          {title.slice(0, 1)}
-        </span>
-        <h2 className="text-sm font-medium">{title}</h2>
-        <button
-          type="button"
-          data-testid={`memory-counter-${channel}`}
-          onClick={() => setShowMemories(true)}
-          className="ml-auto rounded-full border border-[#ddd4c6] bg-white px-3 py-1 text-xs text-[#2f5d54] hover:border-[#2f5d54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
-        >
-          记忆 {memorySaved}/{Math.max(memoryTotal, memorySaved)}
-        </button>
+    <section className="pane" data-testid={`pane-${channel}`} aria-label={title}>
+      <header className="pane-head">
+        <img className="pane-avatar" src={channel === "left" ? AVATAR_BOY : AVATAR_GIRL} alt="" />
+        <span className="pane-name">{title}</span>
+        <div className="pane-head-right">
+          {timeLabel ? <span className="pane-meta" data-testid={`time-${channel}`}>{timeLabel}</span> : null}
+          <button
+            type="button"
+            className="memory-entry"
+            data-testid={`memory-counter-${channel}`}
+            onClick={() => setShowMemories(true)}
+            aria-label={`已存 ${memorySaved} 条记忆`}
+          >
+            <BookmarkIcon size={13} /> {memorySaved}/{Math.max(memoryTotal, memorySaved)}
+          </button>
+        </div>
       </header>
-      <div ref={scroller} role="log" aria-label={`${title}的对话`} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-        {messages.length === 0 && !outgoing && !showChoices ? (
-          <div className="flex flex-1 items-center justify-center">
-            {status ? (
-              <p data-testid={`status-${channel}`} className="text-sm text-[#6b645b]">
-                {status}
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              from={message.from}
-              speakerName={nameOf(script, message.from)}
-              text={message.text}
-              delivery={message.delivery}
-              caption={message.caption}
-              animate={false}
-              marks={marksFor(message.beatId, message.text)}
-              onSaveMark={(text) => saveMark(message.beatId, text)}
-            />
-          ))
-        )}
-        {live?.token === token && live.phase === "indicator" && outgoing ? (
-          <div className={outgoing.from === "ai" ? "self-end" : "self-start"}>
-            <button
-              type="button"
-              data-testid="skip"
-              onClick={commit}
-              className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm text-[#5c564e] shadow-[0_1px_2px_rgba(40,30,10,0.05)]"
-            >
-              <span className="flex gap-1" aria-hidden="true">
-                <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full bg-[#2f5d54]" />
-                <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full bg-[#2f5d54] [animation-delay:150ms]" />
-                <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full bg-[#2f5d54] [animation-delay:300ms]" />
-              </span>
+
+      <div ref={scroller} className="messages" role="log" aria-label={`${title}的对话`}>
+        {visibleMessages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            from={message.from}
+            text={message.text}
+            delivery={message.delivery}
+            caption={message.caption}
+            marks={marksFor(message.beatId, message.text)}
+            onSaveMark={(text) => {
+              const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
+              if (!candidate) return;
+              dispatch({ type: "save-memory", channel, label: candidate.缩略标签, text: candidate.短句, beatId: message.beatId });
+            }}
+          />
+        ))}
+
+        {phase === "indicator" && outgoing && outgoing.delivery !== "thought" ? (
+          <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"}`}>
+            <button type="button" className="typing" data-testid="skip" onClick={skip} aria-label="正在输入，点击跳过">
+              <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
               正在输入
-              <span className="text-[11px] text-[#8a8175]">点击跳过</span>
             </button>
           </div>
         ) : null}
-        {live?.token === token && live.phase === "typing" && outgoing ? (
-          // The row spans the pane so the bubble's max width is a slice of the
-          // column, not of the text itself. A shrink-wrapped row makes each new
-          // glyph wrap, then the bubble snaps wider and that line disappears.
-          <div onClick={commit} className="flex w-full min-w-0 flex-col">
-            <MessageBubble
-              key={outgoing.token}
-              from={outgoing.from}
-              speakerName={nameOf(script, outgoing.from)}
-              text={outgoing.text}
-              delivery={outgoing.delivery}
-              caption={outgoing.caption}
-              animate
-              onFinished={finishTyping}
-              onProgress={() => {
-                const el = scroller.current;
-                if (el) el.scrollTop = el.scrollHeight;
-              }}
-            />
-            <button
-              type="button"
-              data-testid="skip"
-              onClick={commit}
-              className={`mt-1 px-1 text-[11px] text-[#8a8175] ${outgoing.from === "ai" ? "self-end" : "self-start"}`}
-            >
-              点击跳过
-            </button>
-          </div>
+
+        {(phase === "typing" || phase === "shown") && outgoing && outgoing.delivery !== "thought" ? (
+          <MessageBubble
+            key={outgoing.token}
+            from={outgoing.from}
+            text={outgoing.text}
+            delivery={outgoing.delivery}
+            caption={outgoing.caption}
+            animate={phase === "typing"}
+            typeIntervalMs={outgoing.timing.typeIntervalMs}
+            onFinished={phase === "typing" ? finishTyping : undefined}
+            onProgress={() => {
+              const el = scroller.current;
+              if (el) el.scrollTop = el.scrollHeight;
+            }}
+            onSkip={skip}
+          />
         ) : null}
       </div>
-      {showChoices && beat ? (
+
+      <div className="composer">
+        {thought || liveThought ? (
+          <div className="think-block" data-testid={`think-${channel}`}>
+            <div className="think-block-head">已思考 {thoughtSeconds} 秒</div>
+            {liveThought && phase === "indicator" ? (
+              <button type="button" className="typing" data-testid="skip" onClick={skip} aria-label="正在思考，点击跳过">
+                <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
+                正在输入
+              </button>
+            ) : (
+              (liveThought ?? thought)?.text
+            )}
+          </div>
+        ) : null}
         <ChoicePanel
-          aside={beat.aside}
-          choices={beat.choices ?? []}
+          mode={composerMode}
+          choices={showChoices ? beat?.choices ?? [] : []}
           gateFor={(index) => {
-            const need = beat.choices?.[index]?.需记忆;
+            const need = beat?.choices?.[index]?.需记忆;
             return need && !savedLabels.has(need) ? need : null;
           }}
           tagFor={(index) => {
-            const need = beat.choices?.[index]?.需记忆;
+            const need = beat?.choices?.[index]?.需记忆;
             return need && savedLabels.has(need) ? need : null;
           }}
           onPick={(index) => dispatch({ type: "choose", channel, index })}
         />
-      ) : null}
-      {!showChoices && status && messages.length > 0 ? (
-        <p data-testid={`status-${channel}`} className="border-t border-[#efeae2] px-4 py-3 text-center text-xs text-[#6b645b]">
-          {status}
-        </p>
-      ) : null}
-      {resetting ? (
-        <div
-          data-testid={`resetting-${channel}`}
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#1c1915]/30 backdrop-blur-sm"
-          role="status"
-        >
-          <span className="reset-spinner" aria-hidden="true" />
-          <p className="text-sm tracking-[0.14em] text-[#f6f3ec]">上下文重置中…</p>
+      </div>
+
+      {ritual ? (
+        <div className="ritual-mask" data-testid={`resetting-${channel}`} role="status">
+          <span className="typing">
+            <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
+            上下文重置中
+          </span>
         </div>
       ) : null}
+
       {showMemories ? (
-        <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#1c1915]/20 backdrop-blur-sm" role="dialog" aria-label="记忆">
-          <div className="mt-10 w-[min(420px,92%)] rounded-2xl border border-[#ddd4c6] bg-[#f6f3ed] p-4 shadow-[0_18px_50px_rgba(60,40,20,0.25)]">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-medium">{title}窗的记忆</h3>
+        <div className="memory-dialog" role="dialog" aria-label="记忆">
+          <div className="memory-card">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3>{title}窗的记忆</h3>
               <button
                 type="button"
+                className="memory-entry"
                 data-testid={`memory-close-${channel}`}
                 onClick={() => setShowMemories(false)}
-                className="rounded-full px-2 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2]"
+                aria-label="关闭"
               >
-                关闭
+                <CloseIcon size={15} />
               </button>
             </div>
-            <p className="mb-3 text-xs text-[#6b645b]">只存你点过的那几句。AI 的聊天记录阅后即焚，留下什么由你决定。</p>
             {state.memories[channel].length === 0 ? (
-              <p data-testid={`memory-empty-${channel}`} className="py-6 text-center text-sm text-[#8a8175]">
-                还没存下任何记忆。聊天里的高亮句子点一下就能存。
-              </p>
+              <p className="memory-empty" data-testid={`memory-empty-${channel}`}>还没存下任何记忆。</p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="memory-list">
                 {state.memories[channel].map((memory) => (
-                  <li key={memory.label} data-testid="memory-entry" className="rounded-xl border border-[#ddd4c6] bg-white px-3 py-2">
-                    <p className="text-[13px] font-medium text-[#1c1915]">{memory.label}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-[#5c564e]">「{memory.text}」</p>
+                  <li key={memory.label} data-testid="memory-entry">
+                    <b>{memory.label}</b>
+                    <span>「{memory.text}」</span>
                   </li>
                 ))}
               </ul>
@@ -313,35 +280,31 @@ export function ChatPane({ script, channel, state, dispatch, hidden, resetting, 
   );
 }
 
-function waitingCopy(channel: Channel, view: ReturnType<typeof channelView>): string | null {
-  if (channel === "right" && view.mode === "gated") {
-    return "男生还没选定店。等你在左边替他选好，女生才会发消息。";
-  }
-  return playerStatus(view);
-}
-
 function resolveOutgoing(script: Script, state: EngineState, channel: Channel): Outgoing | null {
   const pending = state.pending[channel];
   if (!pending || pending.kind === "choices") return null;
-  const beat = script.beats.find((item) => item.id === pending.beatId);
+  const beat = script.beatById?.get(pending.beatId) ?? script.beats.find((item) => item.id === pending.beatId);
   if (!beat) return null;
   if (pending.kind === "lines") {
     const line = beat.lines[pending.lineIndex];
     if (!line) return null;
     return {
-      token: `${beat.id}:line:${pending.lineIndex}`,
+      token: `${state.runId}|${beat.id}:line:${pending.lineIndex}`,
       from: line.from,
       text: line.text,
       delivery: line.delivery,
       caption: line.caption,
+      timing: line.timing ?? resolveTiming([]),
     };
   }
   const choice = beat.choices?.[pending.choiceIndex];
   if (!choice) return null;
   return {
-    token: `${beat.id}:reply:${pending.choiceIndex}`,
+    token: `${state.runId}|${beat.id}:reply:${pending.choiceIndex}`,
     from: "ai",
     text: choice.reply,
     delivery: "type",
+    timing: choice.timing ?? resolveTiming([]),
   };
 }
+

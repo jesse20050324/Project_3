@@ -1,4 +1,6 @@
-import type { Beat, Channel, Delivery, Scalar, Script } from "./types";
+import { pacingError } from "../presentation";
+import { scheduleOf } from "./timeline";
+import type { Beat, Channel, Delivery, PacingValue, Scalar, Script } from "./types";
 
 export type Validation =
   | { ok: true }
@@ -61,6 +63,29 @@ export function validateScript(script: Script): Validation {
     }
   }
 
+  // 显式写了 order 的章，序号必须唯一：排序键是唯一真相，重复会让「谁先谁后」不确定。
+  // 旧章 / 合成测试剧本没有 order，交给 timeline 按文件顺序补，不参与这项检查。
+  const orderOwner = new Map<string, string>();
+  for (const beat of script.beats) {
+    if (beat.order === undefined) continue;
+    const key = `${beat.chapter ?? 0}:${beat.order}`;
+    if (orderOwner.has(key)) {
+      errors.push(`节拍 ${orderOwner.get(key)} 与 ${beat.id} 的章内序号重复（${key}），播出顺序会不确定。`);
+    } else {
+      orderOwner.set(key, beat.id);
+    }
+  }
+
+  const endingIds = new Set((script.endings ?? []).map((ending) => ending.id));
+  for (const ending of script.endings ?? []) {
+    for (const need of ending.requires) {
+      if (!byId.has(need)) errors.push(`终局「${ending.id}」要求的拍「${need}」不存在。`);
+    }
+    if (ending.requires.length === 0) {
+      errors.push(`终局「${ending.id}」没有写 requires，永远无法判定达成。`);
+    }
+  }
+
   for (const beat of script.beats) {
     if (beat.channel !== "left" && beat.channel !== "right") {
       errors.push(`节拍 ${beat.id} 的 channel 必须是 left 或 right。`);
@@ -70,6 +95,14 @@ export function validateScript(script: Script): Validation {
     }
     if (beat.choices && beat.choices.length > 0 && beat.next) {
       errors.push(`节拍 ${beat.id} 已经有选项，就不能再写节拍上的 next。`);
+    }
+
+    validateTiming(errors, beat.节拍, `节拍 ${beat.id} 的 节拍`);
+    for (const line of beat.lines) {
+      validateTiming(errors, line.节拍, `节拍 ${beat.id} 的台词 节拍`);
+    }
+    for (const choice of beat.choices ?? []) {
+      validateTiming(errors, choice.节拍, `节拍 ${beat.id} 的选项 节拍`);
     }
 
     for (const requireId of beat.requires ?? []) {
@@ -84,6 +117,9 @@ export function validateScript(script: Script): Validation {
         if (!isScalar(value)) errors.push(`节拍 ${beat.id} 的 when.${key} 只能是文字、数字或是否。`);
       }
     }
+
+    validateTime(errors, beat, script);
+    validateWindow(errors, beat, byId);
 
     for (const line of beat.lines) {
       if (!line.text.trim()) {
@@ -135,6 +171,10 @@ export function validateScript(script: Script): Validation {
       }
     }
 
+    if (beat.ending !== undefined && !endingIds.has(beat.ending)) {
+      errors.push(`节拍 ${beat.id} 声明终局「${beat.ending}」，但剧本没有在 endings 里声明它。`);
+    }
+
     if (!beat.choices?.length) {
       checkLink(errors, byId, beat, beat.next, "next");
     }
@@ -144,6 +184,57 @@ export function validateScript(script: Script): Validation {
     return { ok: false, error: errors.join("\n") };
   }
   return { ok: true };
+}
+
+function validateTiming(errors: string[], value: PacingValue | undefined, where: string): void {
+  if (value === undefined) return;
+  const problem = pacingError(value);
+  if (problem) errors.push(`${where}：${problem}`);
+}
+
+function validateTime(errors: string[], beat: Beat, script: Script): void {
+  if (beat.time === undefined) return;
+  const axis = script.axes?.[beat.chapter ?? 0];
+  if (!axis) {
+    errors.push(`节拍 ${beat.id} 写了 time「${beat.time}」，但第 ${beat.chapter ?? 0} 章没有顶层 时间轴。`);
+    return;
+  }
+  const rank = axis.indexOf(beat.time);
+  if (rank < 0) {
+    errors.push(`节拍 ${beat.id} 的 time「${beat.time}」不在第 ${beat.chapter ?? 0} 章的时间轴里（必须一字不差）。`);
+  } else if (beat.timeRank !== undefined && beat.timeRank !== rank) {
+    errors.push(`节拍 ${beat.id} 的 timeRank=${beat.timeRank} 与时间轴下标 ${rank} 不一致。`);
+  }
+}
+
+function validateWindow(errors: string[], beat: Beat, byId: Map<string, Beat>): void {
+  const gate = beat.window;
+  if (!gate) return;
+  if (gate.上界.length === 0) {
+    errors.push(`节拍 ${beat.id} 的区间门没有上界，「超出区间就出错」无从判定。`);
+  }
+  const other: Channel = beat.channel === "left" ? "right" : "left";
+  if (gate.channel !== other) {
+    errors.push(`节拍 ${beat.id} 在${channelName(beat.channel)}，区间门却度量了同侧（${gate.channel}）。`);
+  }
+  for (const [label, bounds] of [["下界", gate.下界], ["上界", gate.上界]] as const) {
+    for (const id of bounds) {
+      const target = byId.get(id);
+      if (!target) {
+        errors.push(`节拍 ${beat.id} 的区间${label}「${id}」不存在。`);
+        continue;
+      }
+      if (target.channel !== gate.channel) {
+        errors.push(`节拍 ${beat.id} 的区间${label}「${id}」不在被度量的对侧 ${gate.channel}。`);
+      }
+      if (label === "下界" && scheduleOf(target) >= scheduleOf(beat)) {
+        errors.push(`节拍 ${beat.id} 的区间下界「${id}」不早于本拍，区间永远无法成立。`);
+      }
+      if (label === "上界" && scheduleOf(target) <= scheduleOf(beat)) {
+        errors.push(`节拍 ${beat.id} 的区间上界「${id}」不晚于本拍，区间会被提前关闭。`);
+      }
+    }
+  }
 }
 
 function checkLink(

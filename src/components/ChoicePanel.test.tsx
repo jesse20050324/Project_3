@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChoicePanel } from "./ChoicePanel";
 
 const choices = [
@@ -11,37 +11,57 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("ChoicePanel memory feedback", () => {
-  it("tags a choice unlocked by a saved memory with 记忆可用", () => {
+describe("输入卡三态与置灰门", () => {
+  it("active：横排胶囊、选中即发送、有记忆时打小标签", () => {
+    const onPick = vi.fn();
     render(
       <ChoicePanel
+        mode="active"
         choices={choices}
         gateFor={() => null}
         tagFor={(index) => (index === 0 ? "店的位置" : null)}
-        onPick={() => {}}
+        onPick={onPick}
       />,
     );
+    expect(screen.getByTestId("composer").getAttribute("data-mode")).toBe("active");
     const buttons = screen.getAllByTestId("choice");
-    expect(buttons[0].textContent).toContain("记忆可用：店的位置");
-    expect(buttons[0].textContent).not.toContain("还没存下这句");
-    expect(buttons[1].textContent).not.toContain("记忆可用");
-    expect(within(buttons[0] as HTMLElement).getByTestId("memory-tag").textContent).toContain("店的位置");
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toContain("记忆可用");
+    expect(screen.getByText("点选一个想法")).toBeTruthy();
+    expect(document.querySelector(".send")?.className).not.toContain("off");
+    fireEvent.click(buttons[1]);
+    expect(onPick).toHaveBeenCalledWith(1);
   });
 
-  it("keeps the gated hint when the memory is missing", () => {
+  it("缺记忆的选项置灰且不可点，不写解释性长句", () => {
+    const onPick = vi.fn();
     render(
       <ChoicePanel
+        mode="active"
         choices={choices}
         gateFor={(index) => (index === 0 ? "店的位置" : null)}
-        tagFor={() => null}
-        onPick={() => {}}
+        onPick={onPick}
       />,
     );
     const buttons = screen.getAllByTestId("choice");
     expect(buttons[0]).toBeDisabled();
-    expect(buttons[0].textContent).toContain("需要记忆：店的位置（还没存下这句）");
+    expect(buttons[0].textContent).not.toContain("还没存下这句");
     expect(screen.queryByTestId("memory-tag")).toBeNull();
-    expect(buttons[1]).toBeEnabled();
-    expect(() => fireEvent.click(buttons[1])).not.toThrow();
+    fireEvent.click(buttons[1]);
+    expect(onPick).toHaveBeenCalledWith(1);
+  });
+
+  it("locked / empty 两态只有状态词与灰发送键，没有玩法说明", () => {
+    const { unmount } = render(<ChoicePanel mode="locked" choices={[]} onPick={() => {}} />);
+    expect(screen.getByText("AI 正在输出")).toBeTruthy();
+    expect(screen.queryAllByTestId("choice")).toHaveLength(0);
+    expect(document.querySelector(".send")?.className).toContain("off");
+    unmount();
+
+    render(<ChoicePanel mode="empty" choices={[]} onPick={() => {}} />);
+    expect(screen.getByText("暂无可选想法")).toBeTruthy();
+    const body = document.body.textContent ?? "";
+    expect(body).not.toContain("无法自由输入");
+    expect(body).not.toContain("游戏开始后");
   });
 });

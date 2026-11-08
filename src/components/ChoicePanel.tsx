@@ -1,58 +1,62 @@
 import type { Choice } from "../engine/types";
+import { SendIcon } from "./icons";
+
+export type ComposerMode = "active" | "locked" | "empty";
 
 type Props = {
-  aside?: string;
+  mode: ComposerMode;
   choices: Choice[];
   /** 返回该选项置灰所需的记忆标签；null 或缺省表示可选项。 */
   gateFor?: (index: number) => string | null;
-  /** 返回该选项已持有的记忆标签（打"记忆可用"标签）；null 或缺省表示与记忆无关。 */
+  /** 返回该选项已持有的记忆标签（打「记忆可用」小标签）。 */
   tagFor?: (index: number) => string | null;
   onPick: (index: number) => void;
 };
 
-export function ChoicePanel({ aside, choices, gateFor, tagFor, onPick }: Props) {
+/**
+ * 参考稿的输入长条卡：横排可换行胶囊、选中即发送（无独立提交步骤）。
+ * 三态只靠底色、chip 灰度与右下角那颗圆形发送键表达，不写一句玩法说明。
+ */
+export function ChoicePanel({ mode, choices, gateFor, tagFor, onPick }: Props) {
+  const active = mode === "active";
+  const hint = active ? "点选一个想法" : mode === "locked" ? "AI 正在输出" : "暂无可选想法";
+
   return (
-    <div className="border-t border-[#e4dcd0] bg-[#f4f1ea] px-3 py-3">
-      <p className="mb-2 text-[11px] tracking-[0.14em] text-[#6b645b]">自言自语</p>
-      {aside ? (
-        <div className="mb-3 max-h-28 overflow-y-auto border-l-2 border-[#2f5d54] pl-3 text-sm leading-relaxed text-[#3e4a45]">
-          {aside}
+    <div className={`input-card ${active ? "" : "locked"}`} data-testid="composer" data-mode={mode}>
+      {active && choices.length > 0 ? (
+        <div className="chips" role="group" aria-label="选一个想法">
+          {choices.map((choice, index) => {
+            const gate = gateFor?.(index) ?? null;
+            const tag = gate === null ? tagFor?.(index) ?? null : null;
+            return (
+              <button
+                key={`${index}-${choice.thought}`}
+                type="button"
+                data-testid="choice"
+                data-gated={gate === null ? undefined : "true"}
+                disabled={gate !== null}
+                title={gate ?? undefined}
+                onClick={() => onPick(index)}
+                className="chip"
+              >
+                {choice.thought}
+                {tag !== null ? <span className="memory-tag" data-testid="memory-tag">记忆可用</span> : null}
+              </button>
+            );
+          })}
         </div>
       ) : null}
-      <div role="group" aria-label="选一个想法" className="flex flex-col gap-2">
-        {choices.map((choice, index) => {
-          const gate = gateFor?.(index) ?? null;
-          const tag = gate === null ? tagFor?.(index) ?? null : null;
-          return (
-            <button
-              key={`${index}-${choice.thought}`}
-              type="button"
-              data-testid="choice"
-              data-gated={gate === null ? undefined : "true"}
-              disabled={gate !== null}
-              onClick={() => onPick(index)}
-              className={
-                gate === null
-                  ? "rounded-xl border border-[#ddd4c6] bg-white px-3 py-2.5 text-left text-[15px] leading-relaxed text-[#1c1915] transition-colors hover:border-[#2f5d54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
-                  : "rounded-xl border border-[#e4ddd2] bg-[#efeae2] px-3 py-2.5 text-left text-[15px] leading-relaxed text-[#8a8175]"
-              }
-            >
-              <span>{choice.thought}</span>
-              {gate === null && tag !== null ? (
-                <span
-                  data-testid="memory-tag"
-                  title={`这条记忆来自你之前存下的「${tag}」`}
-                  className="mt-1 inline-flex items-center gap-1 rounded-[3px] border border-[#d9b64a] bg-[#f6e3a8] px-1.5 py-0.5 text-xs leading-tight text-[#6b5a1e]"
-                >
-                  记忆可用：{tag}
-                </span>
-              ) : null}
-              {gate === null ? null : (
-                <span className="mt-1 block text-xs text-[#8a8175]">需要记忆：{gate}（还没存下这句）</span>
-              )}
-            </button>
-          );
-        })}
+      <div className="card-bottom">
+        <span className="card-hint">{hint}</span>
+        <button
+          type="button"
+          className={`send ${active ? "" : "off"}`}
+          disabled={!active}
+          aria-label="发送"
+          tabIndex={-1}
+        >
+          <SendIcon size={15} />
+        </button>
       </div>
     </div>
   );

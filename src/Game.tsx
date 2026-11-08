@@ -1,202 +1,87 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
-import { DebugStrip } from "./components/DebugStrip";
-import { messagesFor, playbackStep } from "./engine/scheduler";
 import { clearProgress } from "./engine/storage";
-import type { Channel, Script } from "./engine/types";
+import type { Script } from "./engine/types";
 import { useEngine } from "./useEngine";
 
-type Props = {
-  script: Script;
-};
+type Props = { script: Script };
 
+const CANVAS_W = 1440;
+const CANVAS_H = 920;
+const CHAPTER_LABEL: Record<number, string> = { 1: "一", 3: "三", 4: "四", 5: "五" };
+
+function fitScale(): number {
+  const width = window.innerWidth - 48;
+  const height = window.innerHeight - 48;
+  return Math.max(0.3, Math.min(1, width / CANVAS_W, height / CANVAS_H));
+}
+
+/** 固定尺寸画布，窗口不足时整块等比缩放；不重排、不做窄屏页签。 */
 export function Game({ script }: Props) {
-  const { state, dispatch } = useEngine(script.beats);
-  const [resetting, setResetting] = useState<Record<Channel, boolean>>({ left: false, right: false });
-  const [debug, setDebug] = useState(false);
+  const { state, dispatch, notice } = useEngine(script);
+  const [scale, setScale] = useState(fitScale);
   const [askRestart, setAskRestart] = useState(false);
-  const [epoch, setEpoch] = useState(0);
-  const [tab, setTab] = useState<Channel>("left");
-  const narrow = useNarrow();
-  const [seen, setSeen] = useState({ left: 0, right: 0 });
-  const counts = {
-    left: messagesFor(state, "left").length,
-    right: messagesFor(state, "right").length,
-  };
-  const unread = {
-    left: hasUnseen("left"),
-    right: hasUnseen("right"),
-  };
-
-  function hasUnseen(channel: Channel): boolean {
-    if (tab === channel) return false;
-    if (counts[channel] > seen[channel]) return true;
-    const pending = state.pending[channel];
-    return pending !== null && pending.kind !== "choices";
-  }
 
   useEffect(() => {
-    if (!narrow) {
-      setSeen(counts);
-      return;
-    }
-    setSeen((prev) => ({ ...prev, [tab]: counts[tab] }));
-  }, [narrow, tab, counts.left, counts.right]);
-
-  const endRitual = useCallback((channel: Channel) => {
-    setResetting((prev) => ({ ...prev, [channel]: false }));
+    const onResize = () => setScale(fitScale());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 开演只在这里决定一次。任一窗仪式结束、或记录被清空，都会带着新状态再问 playbackStep。
-  useEffect(() => {
-    const step = playbackStep(state, script.beats, resetting);
-    if (!step) return;
-    if (step.type === "reset") {
-      setResetting((prev) => (prev[step.channel] ? prev : { ...prev, [step.channel]: true }));
-      return;
-    }
-    dispatch({ type: "arm", channel: step.channel });
-  }, [state, resetting, script, dispatch]);
+  const chapter = Math.max(state.chapter.left, state.chapter.right);
+  const chapterLabel = CHAPTER_LABEL[chapter] ?? String(chapter);
 
   function restart() {
     clearProgress();
     dispatch({ type: "reset" });
-    setResetting({ left: false, right: false });
-    setEpoch((value) => value + 1);
     setAskRestart(false);
-    setTab("left");
-    setSeen({ left: 0, right: 0 });
   }
 
-  const tabs: Channel[] = ["left", "right"];
-
   return (
-    <div className="h-dvh bg-[#e6e0d6] text-[#1c1915] md:p-4">
-      <div className="mx-auto flex h-full max-w-[1120px] flex-col overflow-hidden bg-[#f6f3ed] md:rounded-2xl md:border md:border-[#ddd4c6] md:shadow-[0_18px_50px_rgba(60,40,20,0.08)]">
-        <header className="flex items-center justify-between gap-3 border-b border-[#e4dcd0] px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[11px] tracking-[0.18em] text-[#6b645b]">
-              双线 <span data-testid="build-version" className="tracking-normal opacity-70">· v{__APP_VERSION__} · {__COMMIT__}</span>
-            </p>
-            <h1 className="truncate text-base font-medium">{script.title}</h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <a
-              href="#map"
-              className="rounded-full px-3 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
-            >
-              结构
-            </a>
-            <button
-              type="button"
-              data-testid="debug-toggle"
-              aria-pressed={debug}
-              onClick={() => setDebug((value) => !value)}
-              className="rounded-full px-3 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
-            >
-              调试
-            </button>
-            {askRestart ? (
-              <>
-                <button
-                  type="button"
-                  data-testid="restart-confirm"
-                  onClick={restart}
-                  className="rounded-full border border-[#2f5d54] px-3 py-1 text-xs text-[#2f5d54] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
-                >
-                  确定重来
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAskRestart(false)}
-                  className="rounded-full px-3 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2]"
-                >
-                  取消
-                </button>
-              </>
-            ) : (
+    <div className="stage">
+      <div className="stage-frame" style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}>
+        <div
+          className="game-canvas"
+          style={{ transform: `scale(${scale})`, opacity: askRestart ? 0.35 : 1 }}
+          data-testid="game-canvas"
+        >
+          <header className="topbar">
+            <span className="topbar-title" data-testid="chapter-title">双线 · 第{chapterLabel}幕</span>
+            <span className="topbar-tag">助手 · 双会话</span>
+            <span className="topbar-build" data-testid="build-version">v{__APP_VERSION__} · {__COMMIT__}</span>
+            <div className="topbar-actions">
               <button
                 type="button"
+                className="topbar-act"
                 data-testid="restart"
                 onClick={() => setAskRestart(true)}
-                className="rounded-full px-3 py-1 text-xs text-[#6b645b] hover:bg-[#efeae2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f5d54]"
               >
                 重新开始
               </button>
-            )}
+            </div>
+          </header>
+
+          {notice ? <div className="notice" role="status">{notice}</div> : null}
+
+          <div className="duo">
+            <ChatPane script={script} channel="left" state={state} dispatch={dispatch} />
+            <ChatPane script={script} channel="right" state={state} dispatch={dispatch} />
           </div>
-        </header>
-        <div role="tablist" aria-label="选择一条对话" className="grid grid-cols-2 gap-1 border-b border-[#e4dcd0] p-2 md:hidden">
-          {tabs.map((channel) => {
-            const person = script.speakers.find((speaker) => speaker.channel === channel);
-            const active = tab === channel;
-            return (
-              <button
-                key={channel}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                data-testid={`tab-${channel}`}
-                onClick={() => setTab(channel)}
-                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                  active ? "bg-white text-[#1c1915] shadow-sm" : unread[channel] ? "bg-[#e7f0ea] text-[#1c1915]" : "text-[#6b645b]"
-                }`}
-              >
-                {person?.name ?? channel}
-                {unread[channel] ? (
-                  <span data-testid={`unread-${channel}`} className="text-xs text-[#2f5d54]">
-                    新消息
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
         </div>
-        {narrow && tab === "left" && unread.right ? (
-          <button
-            type="button"
-            data-testid="girl-banner"
-            onClick={() => setTab("right")}
-            className="border-b border-[#d5e4db] bg-[#e7f0ea] px-4 py-2 text-left text-sm text-[#1c1915]"
-          >
-            女生发来了新消息，点这里查看
-          </button>
-        ) : null}
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-2 md:divide-x md:divide-[#e4dcd0]">
-          <ChatPane
-            key={`left-${epoch}`}
-            script={script}
-            channel="left"
-            state={state}
-            dispatch={dispatch}
-            hidden={narrow && tab !== "left"}
-            resetting={resetting.left}
-            onRitualEnd={endRitual}
-          />
-          <ChatPane
-            key={`right-${epoch}`}
-            script={script}
-            channel="right"
-            state={state}
-            dispatch={dispatch}
-            hidden={narrow && tab !== "right"}
-            resetting={resetting.right}
-            onRitualEnd={endRitual}
-          />
-        </div>
-        {debug ? <DebugStrip script={script} state={state} /> : null}
       </div>
+
+      {askRestart ? (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="确定重来">
+          <div className="dialog">
+            <h2>确定重来？</h2>
+            <p>当前两条线的进度都会清空，回到第一幕开头。</p>
+            <div className="dialog-actions">
+              <button type="button" className="btn ghost" onClick={() => setAskRestart(false)}>取消</button>
+              <button type="button" className="btn danger" data-testid="restart-confirm" onClick={restart}>确定重来</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
-}
-
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => window.matchMedia("(max-width: 767px)").matches);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const onChange = () => setNarrow(media.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
-  return narrow;
 }

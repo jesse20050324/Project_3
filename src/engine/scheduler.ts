@@ -1,23 +1,30 @@
+import { compareBeats, windowState, windowViolation } from "./timeline";
 import type {
-  Beat,
-  Channel,
-  ChannelView,
-  ChatMessage,
-  EngineState,
-  Scalar,
+  Beat, Channel, ChannelView, ChatMessage, Ending, EngineState, Scalar,
 } from "./types";
 import { channelName } from "./validate";
 
+/** 跨章「上下文重置」仪式节奏（毫秒）。持久化在 EngineState，刷新后可恢复。 */
+export const RITUAL_MASK_MS = 2200;
+export const RITUAL_PAUSE_MS = 2000;
+
 /**
  * A root is a beat nobody points at with `next`.
- * It may start as soon as its `requires` are done.
- * Every other beat stays dark until the choice or linear next that names it has been taken.
+ * It may start as soon as its `requires` / `when` / `window` are satisfied.
  */
 export function isRoot(beat: Beat, beats: Beat[]): boolean {
   return !beats.some(
     (other) =>
       other.next === beat.id || other.choices?.some((choice) => choice.next === beat.id),
   );
+}
+
+function firstChapter(beats: Beat[], channel: Channel): number {
+  const chapters = beats
+    .filter((beat) => beat.channel === channel)
+    .map((beat) => beat.chapter ?? 0)
+    .filter((chapter) => chapter > 0);
+  return chapters.length > 0 ? Math.min(...chapters) : 1;
 }
 
 export function createInitial(beats: Beat[]): EngineState {
@@ -28,6 +35,11 @@ export function createInitial(beats: Beat[]): EngineState {
     messages: [],
     pending: { left: null, right: null },
     memories: { left: [], right: [] },
+    chapter: { left: firstChapter(beats, "left"), right: firstChapter(beats, "right") },
+    ritual: { left: null, right: null },
+    endings: [],
+    error: null,
+    runId: 0,
   };
 }
 
@@ -51,53 +63,43 @@ export function hasMemory(state: EngineState, channel: Channel, label: string): 
 }
 
 /**
- *「记忆可用」便签判定——已按用户要求移到选项上（见 ChoicePanel tagFor）。
- */
-
-/**
- * 串行节拍：本窗现在是否可以开演。
- * 规则：自己已有 pending 不开；对面正在播出（lines/reply）不开——
- * 面停在 choices 等玩家视为"完全结束"，不挡人。
- * 双方同时就绪时，上一条消息所在的一侧优先（无消息开局左侧优先），
- * 形成一来一回的节奏，两窗消息不会并行冒出。
+ * 本窗现在是否具备开演条件。
+ * 保留「一活一锁」的全局串行：对面正在播出（lines/reply）时不放行；
+ * 对面停在 choices 等玩家不算占用播出通道。
+ * 「谁先谁后」不再看 state.messages 最后一条属于哪一侧，改由 playbackStep
+ * 按 timeline 的全局排序键统一裁决。
  */
 export function canArm(state: EngineState, channel: Channel, beats: Beat[]): boolean {
+  if (state.ritual?.[channel]) return false;
   if (state.pending[channel]) return false;
   const other: Channel = channel === "left" ? "right" : "left";
   const otherPending = state.pending[other];
   if (otherPending && otherPending.kind !== "choices") return false;
-  if (channelView(state, channel, beats).mode !== "available") return false;
-  // 对面停在选项上不算"还有货要播"，只有它真的有下一拍可开才抢优先权
-  const otherReady = otherPending?.kind !== "choices" && channelView(state, other, beats).mode === "available";
-  if (!otherReady) return true;
-  const last = state.messages[state.messages.length - 1];
-  if (!last) return channel === "left";
-  return last.channel === channel;
+  return availableBeat(state, channel, beats) !== null;
 }
 
-export type PlaybackStep = { type: "arm" | "reset"; channel: Channel };
+export type PlaybackStep = { type: "arm"; channel: Channel };
 
 /**
- * 下一件播控动作。两窗共用这一处判断，避免各窗自己的定时器把开演权交出去后没人再喊。
- * 正在重置的窗跳过；轮到且下一拍跨章的窗先重置，否则直接开演。
- * 没有轮到的窗返回不了动作，调用方在状态再变时（对方仪式结束、记录被清空）重问一次。
+ * 全局唯一的开演决策点。两窗候选按剧本排序键比较，取最靠前的一拍。
+ * 这样「哪个先播哪个后播」由剧本决定，不会因消息到达顺序或刷新而变。
  */
-export function playbackStep(
-  state: EngineState,
-  beats: Beat[],
-  resetting: Record<Channel, boolean>,
-): PlaybackStep | null {
+export function playbackStep(state: EngineState, beats: Beat[]): PlaybackStep | null {
   for (const channel of ["left", "right"] as const) {
-    if (resetting[channel]) continue;
+    const pending = state.pending[channel];
+    if (pending && pending.kind !== "choices") return null;
+  }
+  const candidates: { channel: Channel; beat: Beat }[] = [];
+  for (const channel of ["left", "right"] as const) {
+    if (state.ritual?.[channel]) continue;
     if (state.pending[channel]) continue;
     if (!canArm(state, channel, beats)) continue;
-    const next = availableBeat(state, channel, beats);
-    if (next && crossesChapterBoundary(state, channel, next, beats)) {
-      return { type: "reset", channel };
-    }
-    return { type: "arm", channel };
+    const beat = availableBeat(state, channel, beats);
+    if (beat) candidates.push({ channel, beat });
   }
-  return null;
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => compareBeats(a.beat, b.beat));
+  return { type: "arm", channel: candidates[0].channel };
 }
 
 /** 阅后即焚：清掉本窗全部聊天记录（按窗，另一窗不动，已存记忆不动）。 */
@@ -106,11 +108,40 @@ export function clearChannelMessages(state: EngineState, channel: Channel): Engi
   return { ...state, messages: state.messages.filter((message) => message.channel !== channel) };
 }
 
+/** 推进持久化仪式：mask → 清空本窗记录 + 切章 + pause → 结束。刷新后靠 until 恢复。 */
+export function ritualTick(state: EngineState, channel: Channel, now: number): EngineState {
+  const ritual = state.ritual?.[channel];
+  if (!ritual || now < ritual.until) return state;
+  if (ritual.phase === "mask") {
+    const cleared = clearChannelMessages(state, channel);
+    return {
+      ...cleared,
+      chapter: { ...cleared.chapter, [channel]: ritual.to },
+      ritual: {
+        ...cleared.ritual,
+        [channel]: { ...ritual, phase: "pause", until: now + RITUAL_PAUSE_MS },
+      },
+    };
+  }
+  return { ...state, ritual: { ...state.ritual, [channel]: null } };
+}
+
+/** 已激活却因区间关闭而永远播不出的拍，必须显式报错而不是静默卡住。 */
+export function detectWindowViolation(state: EngineState, beats: Beat[]): string | null {
+  const completed = new Set(state.completed);
+  for (const beat of beats) {
+    if (completed.has(beat.id)) continue;
+    if (!state.activated.includes(beat.id)) continue;
+    if (windowState(beat, completed) === "closed") {
+      return windowViolation(beat, completed);
+    }
+  }
+  return null;
+}
+
 /**
- * A save written before a beat existed never runs completeBeat for what came before it.
- * Roots still need to enter the active set.
- * So does a beat named by a completed beat's own linear `next`.
- * Choice targets stay dark: finishing the choice beat must not open a branch that was not taken.
+ * 旧存档兼容：只在读取存档时补一次根拍与已完成线性 next。
+ * 不再作为运行时 useEffect 的补丁（那正是章间死锁的来源之一）。
  */
 export function withMissingRoots(state: EngineState, beats: Beat[]): EngineState {
   const known = new Set([...state.activated, ...state.completed]);
@@ -133,35 +164,52 @@ export function deliveryAnimates(delivery: ChatMessage["delivery"]): boolean {
   return delivery === "type";
 }
 
+/**
+ * 本窗下一个可播拍：按剧本排序键取最靠前的一个。
+ * requires = 严格等待门；window = 区间门（下界未到 / 上界已过都不放行）。
+ */
 export function availableBeat(state: EngineState, channel: Channel, beats: Beat[]): Beat | null {
+  const completed = new Set(state.completed);
+  let best: Beat | null = null;
   for (const beat of beats) {
     if (beat.channel !== channel) continue;
-    if (state.completed.includes(beat.id)) continue;
+    if (completed.has(beat.id)) continue;
     if (!state.activated.includes(beat.id)) continue;
     if (whenState(beat, state.flags) !== "ok") continue;
-    if ((beat.requires ?? []).some((id) => !state.completed.includes(id))) continue;
-    return beat;
+    if ((beat.requires ?? []).some((id) => !completed.has(id))) continue;
+    const gate = windowState(beat, completed);
+    if (gate === "waiting" || gate === "closed") continue;
+    if (!best || compareBeats(beat, best) < 0) best = beat;
   }
-  return null;
+  return best;
 }
 
 export function channelView(state: EngineState, channel: Channel, beats: Beat[]): ChannelView {
   const available = availableBeat(state, channel, beats);
   const locked = [];
+  const completed = new Set(state.completed);
   for (const beat of beats) {
     if (beat.channel !== channel) continue;
-    if (state.completed.includes(beat.id)) continue;
+    if (completed.has(beat.id)) continue;
     if (!state.activated.includes(beat.id)) continue;
     const gate = whenState(beat, state.flags);
     if (gate === "no") continue;
-    const unmet = (beat.requires ?? []).filter((id) => !state.completed.includes(id));
-    if (gate === "wait") {
+    const unmet = (beat.requires ?? []).filter((id) => !completed.has(id));
+    const window = windowState(beat, completed);
+    if (gate === "wait" || window === "waiting") {
       locked.push({ id: beat.id, unmet: unmet.length > 0 ? unmet : Object.keys(beat.when ?? {}) });
+      continue;
+    }
+    if (window === "closed") {
+      locked.push({ id: beat.id, unmet: [`区间已关闭：${beat.window?.上界.join("/") ?? ""}`] });
       continue;
     }
     if (unmet.length > 0) locked.push({ id: beat.id, unmet });
   }
   const hasBeats = beats.some((beat) => beat.channel === channel);
+  const endingId = state.endings.find((id) =>
+    beats.some((beat) => beat.ending === id && beat.channel === channel && completed.has(beat.id)),
+  ) ?? null;
   const mode = !hasBeats
     ? "empty"
     : available
@@ -169,51 +217,47 @@ export function channelView(state: EngineState, channel: Channel, beats: Beat[])
       : locked.length > 0
         ? "gated"
         : "ended";
-  return { mode, availableId: available?.id ?? null, locked };
+  return { mode, availableId: available?.id ?? null, locked, endingId };
 }
 
-export function playerStatus(view: ChannelView): string | null {
-  if (view.mode === "gated") return "等另一边先做出选择，这一侧才会发消息。";
-  if (view.mode === "empty") return "暂时没有消息。";
-  if (view.mode === "ended") return "先到这里。";
-  return null;
+/** 终局达成：某 ending 标记的所有拍都已完成（双窗共同抵达）。 */
+function achievedEndings(state: EngineState, beats: Beat[]): string[] {
+  const groups = new Map<string, string[]>();
+  for (const beat of beats) {
+    if (!beat.ending) continue;
+    groups.set(beat.ending, [...(groups.get(beat.ending) ?? []), beat.id]);
+  }
+  const completed = new Set(state.completed);
+  return [...groups.entries()]
+    .filter(([, ids]) => ids.length > 0 && ids.every((id) => completed.has(id)))
+    .map(([id]) => id);
 }
 
-export function formatFlags(flags: Record<string, Scalar>): string {
-  const keys = Object.keys(flags);
-  if (keys.length === 0) return "（无）";
-  return keys.map((key) => `${key} = ${String(flags[key])}`).join("，");
-}
-
-export function describeChannel(state: EngineState, channel: Channel, beats: Beat[]): string {
-  const pending = state.pending[channel];
-  const done = state.completed.filter((id) => beats.some((beat) => beat.id === id && beat.channel === channel));
-  const doneText = done.length > 0 ? done.join("、") : "无";
-  if (pending?.kind === "lines") {
-    return `正在播出 ${pending.beatId}，选择还锁着。已完成：${doneText}`;
-  }
-  if (pending?.kind === "reply") {
-    return `正在发出 ${pending.beatId} 的回复，选择还锁着。已完成：${doneText}`;
-  }
-  if (pending?.kind === "choices") {
-    return `在等选择：${pending.beatId}。已完成：${doneText}`;
-  }
-  const view = channelView(state, channel, beats);
-  if (view.mode === "empty") return "这一侧还没有写好的节拍。";
-  if (view.mode === "gated") {
-    const reasons = view.locked
-      .map((item) => `下一段 ${item.id} 还不能开始，要先完成 ${item.unmet.join("、")}。未放出的台词不会显示在这里。`)
-      .join(" ");
-    return `${reasons}已完成：${doneText}`;
-  }
-  if (view.mode === "ended") return `先到这里。已完成：${doneText}`;
-  return `下一段可以开始：${view.availableId}。已完成：${doneText}`;
-}
-
-export function openChannel(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
+export function openChannel(
+  state: EngineState,
+  channel: Channel,
+  beats: Beat[],
+  now: number = Date.now(),
+): EngineState {
   if (state.pending[channel]) return state;
+  if (state.ritual?.[channel]) return state;
   const beat = availableBeat(state, channel, beats);
   if (!beat) return state;
+  const targetChapter = beat.chapter ?? state.chapter[channel];
+  if (targetChapter !== state.chapter[channel]) {
+    return {
+      ...state,
+      ritual: {
+        ...state.ritual,
+        [channel]: {
+          from: state.chapter[channel],
+          to: targetChapter,
+          phase: "mask",
+          until: now + RITUAL_MASK_MS,
+        },
+      },
+    };
+  }
   if (beat.lines.length === 0 && beat.choices && beat.choices.length > 0) {
     return withPending(state, channel, { kind: "choices", beatId: beat.id });
   }
@@ -240,6 +284,7 @@ export function commitLine(state: EngineState, channel: Channel, beats: Beat[]):
       text: line.text,
       delivery: line.delivery,
       caption: line.caption,
+      timing: line.timing,
     },
   ];
   const nextIndex = pending.lineIndex + 1;
@@ -255,26 +300,9 @@ export function commitLine(state: EngineState, channel: Channel, beats: Beat[]):
       messages,
     };
   }
-  return openNextInChapter(completeBeat(state, channel, beat, messages, undefined, beat.next), channel, beats);
-}
-
-/**
- * commit 完一拍后的自动续播：下一拍仍在同一章就照旧接着开（"播完自动接上"的手感不变）。
- * 跨章则不自动开，留在 pending=null 交给 playbackStep：
- * 先走「上下文重置中」，仪式结束再开新章。
- * 否则 next 衔接的换幕会两幕消息连播，看不出换章。
- */
-function openNextInChapter(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
-  const next = availableBeat(state, channel, beats);
-  if (next && crossesChapterBoundary(state, channel, next, beats)) return state;
-  return openChannel(state, channel, beats);
-}
-
-function crossesChapterBoundary(state: EngineState, channel: Channel, nextBeat: Beat, beats: Beat[]): boolean {
-  const last = [...state.messages].reverse().find((message) => message.channel === channel);
-  if (!last) return false;
-  const lastBeat = beats.find((beat) => beat.id === last.beatId);
-  return lastBeat?.chapter !== undefined && nextBeat.chapter !== undefined && lastBeat.chapter !== nextBeat.chapter;
+  // 不再自动接下一拍：播完就放开这一窗，由 playbackStep 按全局排序键裁决下一拍。
+  // 旧引擎在这里直接 openChannel，正是「一条线一路播到底、另一条线等不到」的根因。
+  return completeBeat(state, channel, beat, messages, undefined, beat.next, beats);
 }
 
 export function choose(
@@ -317,9 +345,10 @@ export function commitReply(state: EngineState, channel: Channel, beats: Beat[])
       from: "ai",
       text: choice.reply,
       delivery: "type" as const,
+      timing: choice.timing,
     },
   ];
-  return openNextInChapter(completeBeat(state, channel, beat, messages, choice.set, choice.next), channel, beats);
+  return completeBeat(state, channel, beat, messages, choice.set, choice.next, beats);
 }
 
 function completeBeat(
@@ -329,6 +358,7 @@ function completeBeat(
   messages: ChatMessage[],
   set: Record<string, Scalar> | undefined,
   next: string | undefined,
+  beats: Beat[],
 ): EngineState {
   if (state.completed.includes(beat.id)) return state;
   const flags = { ...state.flags };
@@ -338,15 +368,17 @@ function completeBeat(
   const memories = wipeMemories(state.memories, beat.清空记忆);
   const activated =
     next && !state.activated.includes(next) ? [...state.activated, next] : state.activated;
-  return {
+  const completed = [...state.completed, beat.id];
+  const nextState: EngineState = {
     ...state,
     messages,
     flags,
     memories,
     activated,
-    completed: [...state.completed, beat.id],
+    completed,
     pending: { ...state.pending, [channel]: null },
   };
+  return { ...nextState, endings: achievedEndings(nextState, beats) };
 }
 
 function wipeMemories(
@@ -376,3 +408,10 @@ function mustBeat(beats: Beat[], id: string): Beat {
   if (!beat) throw new Error(`找不到节拍 ${id}`);
   return beat;
 }
+
+/** 按排序键排好的拍列表，供调度器与仿真使用。 */
+export function orderedBeats(beats: Beat[]): Beat[] {
+  return [...beats].sort(compareBeats);
+}
+
+export type { Ending };
