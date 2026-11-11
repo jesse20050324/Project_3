@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { loadBundledScript } from "./loadScript";
 import { consumeLoadNotice, loadProgress, saveProgress } from "./storage";
 import { createInitial } from "./scheduler";
 import type { Beat, EngineState } from "./types";
@@ -71,5 +72,29 @@ describe("存档 v2", () => {
     expect(loaded?.ritual).toEqual({ left: null, right: null });
     expect(loaded?.endings).toEqual([]);
     expect(loaded?.runId).toBe(0);
+  });
+
+  it("第五幕旧档仅撤下停用候选，保留双窗进度和其余记忆", () => {
+    const { script } = loadBundledScript();
+    if (!script) throw new Error("剧本加载失败");
+    const left = { label: "都会回", text: "她回得慢但都会回", beatId: "5m.2.1" };
+    const rightBeat = script.beats.find(beat => beat.记忆候选?.some(item => item.缩略标签 === "同桌是表妹"))!;
+    const right = { label: "同桌是表妹", text: rightBeat.记忆候选![0].短句, beatId: rightBeat.id };
+    const state: EngineState = {
+      ...createInitial(script.beats),
+      chapter: { left: 5, right: 5 },
+      completed: ["5m.4.4", "5f.4.4"],
+      endings: ["在一起"],
+      memories: {
+        left: [left, { label: "猫叫煤球", text: "她的猫踩着键盘抢镜，叫煤球", beatId: "5m.2.1" }],
+        right: [right, { label: "头像是小熊", text: "他头像是只小熊，看着挺憨", beatId: "5f.1.3" }],
+      },
+    };
+    saveProgress(state);
+    const loaded = loadProgress(script.beats);
+    expect(loaded?.completed).toEqual(state.completed);
+    expect(loaded?.chapter).toEqual(state.chapter);
+    expect(loaded?.endings).toEqual(state.endings);
+    expect(loaded?.memories).toEqual({ left: [left], right: [right] });
   });
 });

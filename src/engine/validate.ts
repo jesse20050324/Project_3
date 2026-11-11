@@ -90,8 +90,11 @@ export function validateScript(script: Script): Validation {
     if (beat.channel !== "left" && beat.channel !== "right") {
       errors.push(`节拍 ${beat.id} 的 channel 必须是 left 或 right。`);
     }
-    if (beat.lines.length === 0) {
+    if (beat.lines.length === 0 && !beat.control) {
       errors.push(`节拍 ${beat.id} 没有任何台词。`);
+    }
+    if (beat.control && (beat.lines.length > 0 || beat.choices?.length)) {
+      errors.push(`控制拍 ${beat.id} 不能含台词或玩家选项。`);
     }
     if (beat.choices && beat.choices.length > 0 && beat.next) {
       errors.push(`节拍 ${beat.id} 已经有选项，就不能再写节拍上的 next。`);

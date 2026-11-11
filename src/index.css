@@ -580,10 +580,29 @@ button {
 
 .memory-card {
   width: 360px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
   border-radius: 20px;
   background: var(--bg);
   padding: 20px 24px;
   box-shadow: 0 10px 40px rgba(10, 19, 23, 0.16);
+}
+
+.chat-date {
+  text-align: center;
+  color: var(--sub);
+  font-size: 12px;
+  padding: 12px 0 8px;
+}
+
+.memory-prompt {
+  color: var(--sub);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.memory-action {
+  margin-top: 6px;
 }
 
 .memory-card h3 {

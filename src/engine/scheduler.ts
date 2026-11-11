@@ -43,17 +43,34 @@ export function createInitial(beats: Beat[]): EngineState {
   };
 }
 
-/** 把一条候选存进该窗的记忆池。同一缩略标签只存一次。 */
+export function memoryCapacity(state: EngineState, channel: Channel): number | undefined {
+  return state.chapter[channel] >= 5 ? 5 : undefined;
+}
+
+/** 满槽时必须由玩家指定要替换的记忆。存入和移出在一次更新中完成。 */
 export function saveMemory(
   state: EngineState,
   channel: Channel,
   entry: { label: string; text: string; beatId: string },
+  replaceLabel?: string,
 ): EngineState {
-  if (entry.label.trim() === "") return state;
-  if (state.memories[channel].some((memory) => memory.label === entry.label)) return state;
+  const saved = state.memories[channel];
+  if (entry.label.trim() === "" || saved.some(memory => memory.label === entry.label)) return state;
+  const full = saved.length >= (memoryCapacity(state, channel) ?? Infinity);
+  if (full && !replaceLabel) return state;
+  if (replaceLabel && !saved.some(memory => memory.label === replaceLabel)) return state;
+  const next = saved.filter(memory => memory.label !== replaceLabel);
+  if (next.length >= (memoryCapacity(state, channel) ?? Infinity)) return state;
+  return { ...state, memories: { ...state.memories, [channel]: [...next, entry] } };
+}
+
+export function forgetMemory(state: EngineState, channel: Channel, label: string): EngineState {
+  const saved = state.memories[channel];
+  const next = saved.filter(memory => memory.label !== label);
+  if (next.length === saved.length) return state;
   return {
     ...state,
-    memories: { ...state.memories, [channel]: [...state.memories[channel], entry] },
+    memories: { ...state.memories, [channel]: next },
   };
 }
 
@@ -75,7 +92,19 @@ export function canArm(state: EngineState, channel: Channel, beats: Beat[]): boo
   const other: Channel = channel === "left" ? "right" : "left";
   const otherPending = state.pending[other];
   if (otherPending && otherPending.kind !== "choices") return false;
-  return availableBeat(state, channel, beats) !== null;
+  const candidate = availableBeat(state, channel, beats);
+  if (!candidate) return false;
+  // Preserve the reviewed timeline across unanswered choices and chapter resets.
+  // A second window may start its own reset while the first reset is in progress.
+  if ((candidate.chapter ?? 0) >= 5) {
+    const otherBeat = otherPending?.kind === "choices"
+      ? beats.find((item) => item.id === otherPending.beatId)
+      : state.ritual[other] && candidate.chapter === state.chapter[channel]
+        ? availableBeat(state, other, beats)
+        : null;
+    if (otherBeat && compareBeats(otherBeat, candidate) < 0) return false;
+  }
+  return true;
 }
 
 export type PlaybackStep = { type: "arm"; channel: Channel };
@@ -239,8 +268,7 @@ export function openChannel(
   beats: Beat[],
   now: number = Date.now(),
 ): EngineState {
-  if (state.pending[channel]) return state;
-  if (state.ritual?.[channel]) return state;
+  if (!canArm(state, channel, beats)) return state;
   const beat = availableBeat(state, channel, beats);
   if (!beat) return state;
   const targetChapter = beat.chapter ?? state.chapter[channel];
@@ -260,6 +288,10 @@ export function openChannel(
   }
   if (beat.lines.length === 0 && beat.choices && beat.choices.length > 0) {
     return withPending(state, channel, { kind: "choices", beatId: beat.id });
+  }
+  // Silent routing/exit markers carry causality without invented dialogue.
+  if (beat.control) {
+    return completeBeat(state, channel, beat, state.messages, undefined, beat.next, beats);
   }
   return withPending(state, channel, { kind: "lines", beatId: beat.id, lineIndex: 0 });
 }

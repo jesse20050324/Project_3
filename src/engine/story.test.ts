@@ -13,7 +13,7 @@ describe("CH1-CH5 剧本契约", () => {
   it("章号为 1/3/4/5，第五章 40 拍、16 档时间轴", () => {
     if (!script) throw new Error("剧本没有加载");
     const chapters = [...new Set(script.beats.map((beat) => beat.chapter))];
-    expect(chapters).toEqual([1, 3, 4, 5]);
+    expect(chapters).toEqual([1, 3, 4, 5, 6, 7]);
     expect(script.beats.filter((beat) => beat.chapter === 5)).toHaveLength(40);
     expect(script.axes?.[5]).toHaveLength(16);
   });
@@ -56,12 +56,14 @@ describe("CH1-CH5 剧本契约", () => {
     expect(all).not.toContain("就五个字");
   });
 
-  it("幕5 记忆候选共 8 条，类型用四格全名", () => {
+  it("幕5 每窗 3 条候选，保留原文但撤下两条纯占候选", () => {
     if (!script) throw new Error("剧本没有加载");
     const candidates = script.beats
       .filter((beat) => beat.chapter === 5)
       .flatMap((beat) => beat.记忆候选 ?? []);
-    expect(candidates).toHaveLength(8);
+    expect(candidates).toHaveLength(6);
+    expect(candidates.map(candidate => candidate.缩略标签)).not.toContain("猫叫煤球");
+    expect(candidates.map(candidate => candidate.缩略标签)).not.toContain("头像是小熊");
     for (const candidate of candidates) {
       expect(["Ta的真实", "对Ta的美化", "干扰项", "自己的真实", "自我的美化"]).toContain(candidate.类型);
     }

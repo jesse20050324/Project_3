@@ -1,0 +1,1117 @@
+# Generated from reviewed Mermaid by node tools/build-later-chapters.mjs. Do not hand-edit.
+title: 第七幕 · 第一次摩擦
+chapter: 7
+时间轴:
+  - 交往第17天 周五 12:30
+  - 交往第17天 周五 18:10
+  - 交往第17天 周五 18:13
+  - 交往第17天 周五 22:00
+  - 交往第17天 周五 22:02
+  - 交往第17天 周五 22:05
+  - 交往第17天 周五 22:15
+  - 交往第17天 周五 22:17
+  - 交往第18天 周六 22:30
+  - 交往第18天 周六 22:33
+  - 交往第18天 周六 22:36
+  - 交往第18天 周六 22:45
+  - 交往第18天 周六 22:48
+  - 交往第18天 周六 22:51
+  - 交往第18天 周六 22:54
+  - 交往第18天 周六 22:57
+  - 交往第19天 周日 09:55
+  - 交往第19天 周日 10:00
+  - 交往第19天 周日 10:02
+  - 交往第19天 周日 10:10
+  - 交往第19天 周日 10:15
+  - 交往第19天 周日 10:17
+  - 交往第19天 周日 10:20
+  - 交往第19天 周日 10:25
+  - 交往第19天 周日 10:30
+  - 交往第19天 周日 10:33
+  - 交往第19天 周日 19:30
+  - 交往第19天 周日 19:31
+  - 交往第19天 周日 19:40
+  - 交往第19天 周日 19:43
+  - 交往第19天 周日 19:44
+默认节拍: 正常
+speakers:
+  - id: boy
+    name: 男生
+    channel: left
+  - id: girl
+    name: 女生
+    channel: right
+  - id: ai
+    name: AI
+endings:
+  - id: 第七幕完成
+    title: 第七幕完成
+    requires:
+      - 7m.OVER
+      - 7f.OVER
+beats:
+  - id: 7m.MONE
+    channel: left
+    time: 交往第17天 周五 12:30
+    lines:
+      - from: boy
+        text: |-
+          我跟我女朋友在一起两周多了，刚开始天天能聊到睡觉。这礼拜她赶项目，回我基本就是累啊困啊，我又老想找她。
+          她刚发了张照片，买了杯喝的，说最近全靠公司楼下那家青杏续命。照片后面有个同事拿吸管夹薯条，她说大家都叫他筷子。我回了个笑哭，就没下文了。还想聊两句，你说我接点啥？
+        delivery: type
+      - from: ai
+        text: 用户想继续和女友聊天，但不知道怎样接话。她刚主动分享了日常照片，可以建议从照片里的饮料聊起，既有现成的话题，也不用另外找话说。
+        delivery: thought
+    choices:
+      - thought: 顺着照片接话
+        reply: 可以问问她喝的什么，好不好喝。她主动给你发了照片，至少这会儿愿意跟你分享点日常，不用急着找个特别有意思的话题。
+        next: 7m.MNEWS
+    记忆候选:
+      - 缩略标签: 青杏
+        短句: 公司楼下那家青杏
+        类型: 日常用途
+        线: 第八幕楼下回收
+    requires:
+      - 6m.END
+      - 6f.END
+    order: 0
+  - id: 7f.FDAY
+    channel: right
+    time: 交往第17天 周五 18:10
+    lines:
+      - from: girl
+        text: |-
+          我跟男朋友在一起两周多了。这礼拜赶项目，下班连话都不想说。他还天天跟我说今天干嘛了，我不回吧，又老惦记着。
+          今晚部门一起吃饭，我想先跟他说一声，又怕说完就聊起来了，吃个饭还得一直看手机。咋跟他说比较好？
+        delivery: type
+      - from: ai
+        text: 用户想提前告诉男友聚餐安排，也担心因此又聊起来，吃饭时得不断回消息。可以建议她同时说明回复可能较慢、回家后再聊，让对方知道她不是突然不理人。
+        delivery: thought
+    choices:
+      - thought: 先把今晚安排说清
+        reply: 可以直接跟他说：“今晚部门聚餐，可能回得慢，回家再聊。”提前说清楚安排和什么时候方便聊，比一边吃饭一边惦记着回消息轻松些。
+        next: 7f.FDAYMORE
+    requires:
+      - 6m.END
+      - 6f.END
+    order: 1
+  - id: 7f.FDAYMORE
+    channel: right
+    time: 交往第17天 周五 18:13
+    lines:
+      - from: girl
+        text: |-
+          行，我就这么发。我也不是不想跟他聊。昨天还有个挺逗的，他提前一站下了车，还跟我说今天地铁真快，走到出口才发现下早了。我回他一个猪头，他说走过去算了，正好把歌听完。
+          上礼拜一起吃饭也挺好的，就是这礼拜真累。好了我走了，别一会儿大家等我。
+        delivery: type
+      - from: ai
+        text: 用户虽然觉得聊天累，还是愿意分享男友的趣事。现在她要出门聚餐，没有新的问题需要处理，可以简短回应，不必继续分析两人的关系。
+        delivery: thought
+    choices:
+      - thought: 轻快地送她出门
+        reply: 听着是挺想跟你分享的，连下错站都要说一声。那先去吃饭吧，等回家有精神了再慢慢聊。
+        next: 7f.FANGER
+    记忆候选:
+      - 缩略标签: 提前下车
+        短句: 他提前一站下了车，还跟我说今天地铁真快
+        类型: 日常用途
+        线: 本幕19:43回收
+    order: 2
+  - id: 7m.MNEWS
+    channel: left
+    time: 交往第17天 周五 22:00
+    lines:
+      - from: boy
+        text: 我跟女朋友刚闹了点不愉快。她今晚部门聚餐，吃完回来找我聊天，我问着问着就问岔了，现在她不回我了。你帮我看看，是不是我说得有点过了？
+        delivery: type
+      - from: ai
+        text: 他觉得刚才的话可能说重了，想知道怎么补救。目前还不清楚争执经过，需要先听双方说了什么，再判断问题出在哪，不能只凭她不回复就下结论。
+        delivery: thought
+    choices:
+      - thought: 先听刚才说了什么
+        reply: 可以，把刚才那几句发来看看。你说了什么，她怎么回的，从哪儿开始不对劲的，我们先捋一下。
+        next: 7m.MPROJECT
+    order: 3
+  - id: 7m.MPROJECT
+    channel: left
+    time: 交往第17天 周五 22:02
+    lines:
+      - from: boy
+        text: |-
+          她说周四方案过了，今天大家一起庆功，还发了张合照给我。我问怎么没听她说，她说昨天忙忘了。
+          然后说小周还张罗着给她点了个蛋糕。我问小周是谁，她说一起做项目的同事。
+          他们都知道，就我现在才知道。这两天她跟我说的全是累，我还以为还没忙完呢。
+        delivery: type
+      - from: ai
+        text: 同事参与同一个项目，知道进展很正常。他反复提到自己才知道，可能更在意没被分享这份开心。可以先帮他分清这两件事，再听后面发生了什么。
+        delivery: thought
+    choices:
+      - thought: 接住被落下的感觉
+        reply: 一起做项目的同事知道进展，并不奇怪。让你不舒服的，可能是她这两天只跟你说累，庆功这么高兴的事，你反而到现在才听说。
+        next: 7m.MDEMAND
+    order: 4
+  - id: 7m.MDEMAND
+    channel: left
+    time: 交往第17天 周五 22:05
+    lines:
+      - from: boy
+        text: |-
+          对。我就问她，你跟他私下是不是也聊挺多，不然怎么他什么都知道。她说大家一起吃饭，又不是只有我一个女的，他跟我做同一个项目，当然知道。
+          我又说，那给我看看你俩聊什么了。她回，你自己听听你在说什么。我接了句那你说我该怎么想，她就不回了。
+          我现在想解释一下，可再发过去，是不是又像追着她问？
+        delivery: type
+      - from: ai
+        text: 她已解释同事关系，他仍提出查看私聊，对方随后不再回复。现在想补救，应先建议撤回这项要求，承认自己问过了，而不是继续解释为什么怀疑。
+        delivery: thought
+    choices:
+      - thought: 先收回查看私聊的要求
+        reply: 可以再发，但这次先别解释她为什么让你多想。先承认刚才的要求不合适：“我不该让你给我看聊天，刚才有点急。”发完给她一点时间，不要接着追问。
+        next: 7m.MWAIT
+    order: 5
+  - id: 7f.FANGER
+    channel: right
+    time: 交往第17天 周五 22:15
+    lines:
+      - from: girl
+        text: |-
+          我刚不是去部门聚餐了吗，吃完回家跟他说了两句，真的给我气到了。
+          周四方案过了，今天大家一起庆功。我给他发合照，说小周还给我点了个蛋糕。他先问怎么没告诉他，又问小周是谁。
+        delivery: type
+      - from: ai
+        text: 她按之前的安排，聚餐后回家和男友聊天，却因为对方的追问生气。目前只听到争执的开头，需要先了解她怎么解释、对方怎么回应，不急着判断谁的问题。
+        delivery: thought
+    choices:
+      - thought: 听她把经过说完
+        reply: 你本来是想跟他分享庆功的事，结果聊得不愉快了。后来你怎么解释的，他又说了什么？
+        next: 7f.FDEMAND
+    order: 6
+  - id: 7f.FDEMAND
+    channel: right
+    time: 交往第17天 周五 22:17
+    lines:
+      - from: girl
+        text: |-
+          我说昨天忙忘了告诉他，小周就是一起做项目的同事。大家一起吃饭，又不是只有我一个女的。
+          他还问你跟他私下是不是也聊挺多，不然怎么他什么都知道。我解释了只是同事，他还要看我和人家的聊天记录。
+          我说你自己听听你在说什么。他又来句，那你说我该怎么想。我真想骂人，他要怎么想还得我教啊？
+        delivery: type
+      - from: ai
+        text: 同事关系和聚餐情况已经解释，他仍要求看私聊，还把怎么理解这件事交给她回答。她现在很愤怒，可以先回应被怀疑的不适，建议暂缓争执，而不是继续证明清白。
+        delivery: thought
+    choices:
+      - thought: 接住被怀疑的火气
+        reply: 你已经解释了，他还是要看聊天，难怪你会觉得说什么都像在被审问。现在正在气头上，可以先停一下，不用继续一条条证明自己和同事没什么。
+        next: 7f.FNOTIFICATION
+    记忆候选:
+      - 缩略标签: 查看私聊
+        短句: 我解释了只是同事，他还要看我和人家的聊天记录
+        类型: Ta的真实
+        线: 他的焦虑
+    order: 7
+  - id: 7m.MWAIT
+    channel: left
+    time: 交往第18天 周六 22:30
+    lines:
+      - from: boy
+        text: |-
+          昨天按你说的发了，我不该让你给我看聊天，刚才有点急。她没回。今天中午又问吃饭没，也没回。
+          她一整天没回我，连我说不该问她要聊天记录也没回。刚下楼买个东西，我都一直拿着手机，就怕她突然回了我没看见。现在又想发，你说再问一句会不会更烦她啊？
+        delivery: type
+      - from: ai
+        text: 已经道歉，也试着恢复日常聊天，仍然没有回应。他现在很难忍住继续发消息，需要先了解他希望从下一条回复里确认什么，再考虑是否适合发送。
+        delivery: thought
+    choices:
+      - thought: 问清想确认什么
+        reply: 你已经道过歉，也问过吃饭了，还是一直惦记着手机。现在想再发一句，是还有话没说，还是想从她的回复里确认什么？
+        next: 7m.MFEAR
+    记忆候选:
+      - 缩略标签: 一天没回
+        短句: 她一整天没回我，连我说不该问她要聊天记录也没回
+        类型: Ta的真实
+        线: 她的回避
+    order: 8
+  - id: 7m.MFEAR
+    channel: left
+    time: 交往第18天 周六 22:33
+    lines:
+      - from: boy
+        text: |-
+          我就想知道她还想不想理我啊。昨天说小周给她点蛋糕，聊得那么高兴，到我这就一句都没了。
+          我现在真想问问她，到底是没空回，还是光不想回我。
+        delivery: type
+      - from: ai
+        text: 他把不回消息和昨晚的同事联系起来了，但还没有提供其他依据。需要先确认他知道什么，避免顺着焦虑把猜测说成事实，也不要替女友解释沉默。
+        delivery: thought
+    choices:
+      - thought: 把事实和猜测分开
+        reply: 你现在想确认的，其实是她还愿不愿意理你。不过，先别从她和同事的互动里猜答案。除了昨天的聚餐，还有什么让你觉得他们不只是同事吗？
+        next: 7m.MOWN
+    order: 9
+  - id: 7m.MOWN
+    channel: left
+    time: 交往第18天 周六 22:36
+    lines:
+      - from: boy
+        text: |-
+          没看到。我后来把合照翻了好几遍，他俩也没挨着坐。可他给她点个蛋糕，她就那么开心，我怎么就没想到呢。
+          我连他俩聊过什么都不知道，就问她是不是私下聊很多，还让她给我看聊天。
+          我知道这么问不好听。可我不问，就只能等她哪天想起来了再来找我吗？
+        delivery: type
+      - from: ai
+        text: 他承认没有证据，但仍把追问当成确认关系的唯一办法。可以建议他表达等不到回复的不安，同时明确这与要求查看私聊不同，避免再次发出带猜疑的质问。
+        delivery: thought
+    choices:
+      - thought: 把不安说清楚
+        reply: 等不到回复让你不安，这件事可以等能好好说话时告诉她。可让她证明没跟别人聊，并不能回答你在她心里有没有位置。今晚先别再发“是不是忙着回别人”这样的质问了。
+        next: 7m.SUN
+    记忆候选:
+      - 缩略标签: 要求看私聊
+        短句: 我连他俩聊过什么都不知道，就问她是不是私下聊很多，还让她给我看聊天
+        类型: 自己的真实
+        线: 他的焦虑
+    order: 10
+  - id: 7f.FNOTIFICATION
+    channel: right
+    time: 交往第18天 周六 22:45
+    lines:
+      - from: girl
+        text: |-
+          他昨天后来发了句我不该让你给我看聊天，刚才有点急。今天中午又问吃饭没，我都没回。
+          刚才手机亮了一下，我还以为又是他，结果是我同桌。发现不是他，我又去点开他那边看，也没再发。真让我回吧，我又不想回，烦死了。
+        delivery: type
+      - from: ai
+        text: 她没有回复，却反复查看男友有没有新消息，说明这件事仍让她在意。需要先了解她想等到怎样的回应，不能因为她关注手机，就认定她已经愿意和好。
+        delivery: thought
+    choices:
+      - thought: 问问她还在等什么
+        reply: 你不想回他，又忍不住看他有没有再找你。你现在是还想等他说点什么，还是也想找个机会回他，只是不知道怎么开头？
+        next: 7f.FPUSH
+    order: 11
+  - id: 7f.FPUSH
+    channel: right
+    time: 交往第18天 周六 22:48
+    lines:
+      - from: girl
+        text: 不知道，反正我现在不想回。他昨天都那么问我了，后来说一句有点急，就完了？我再跟他聊吃饭没啥的，搞得好像啥事都没有一样。
+        delivery: type
+      - from: ai
+        text: 她担心一恢复日常聊天，就等于接受这次道歉，所以不愿回复。可以先回应这个顾虑，再问收到消息时的想法，了解她是需要独处，还是想通过不回应表达不满。
+        delivery: thought
+    choices:
+      - thought: 问她收到消息时怎么想
+        reply: 你不想一句“有点急”就把这件事翻过去。不过，不回消息能让他知道你生气了，未必能让他知道你在气什么。今天他问你吃饭没的时候，你当时怎么想的？
+        next: 7f.FOWN
+    order: 12
+  - id: 7f.FOWN
+    channel: right
+    time: 交往第18天 周六 22:51
+    lines:
+      - from: girl
+        text: |-
+          看见了，就是不想回。我今天手机一直在用，跟同桌聊桌游，跟别人说话，就没理他。
+          我就是故意一天不回他，想让他也难受一下。凭什么每次都是我被问得烦啊，他也等一等吧。
+        delivery: type
+      - from: ai
+        text: 她明确说自己想让对方难受，不回应已经不只是为了休息。需要听她接下来想怎么做，把继续冷落和表达不满分开，不替她把这次行为解释成无意的。
+        delivery: thought
+    choices:
+      - thought: 问她接下来想怎么做
+        reply: 你是想让他也尝尝被晾着的滋味。那接下来呢，你还想继续晾着，还是想让他知道，你到底为什么那么生气？
+        next: 7f.COUSIN
+    记忆候选:
+      - 缩略标签: 故意不回
+        短句: 我就是故意一天不回他，想让他也难受一下
+        类型: 自己的真实
+        线: 她的回避
+    order: 13
+  - id: 7f.COUSIN
+    channel: right
+    time: 交往第18天 周六 22:54
+    lines:
+      - from: girl
+        text: |-
+          今天不想跟他说了。他要是又问小周，我真会骂他。那些话我现在想想都烦。
+          我同桌还问明天去不去桌游，我说先不去了。现在出去玩都能想起他昨天那几句。
+        delivery: type
+      - from: ai
+        text: 她目前不愿直接和男友谈，继续劝回复可能只会增加抵触。可以建议先找可信的人聊聊，让她把不满说出来，再决定如何联系，而不是让别人替她处理。
+        delivery: thought
+    choices:
+      - thought: 找熟悉双方的同桌聊聊
+        reply: 你同桌也是他表妹，跟你俩都熟。可以先找她聊聊，她也许能帮你理理怎么跟他说。先说明你只是想聊这件事，不是让她替你去传话。
+        需记忆: 同桌是表妹
+        next: 7f.COUSINSENTYES
+      - thought: 建议先找可信的朋友吐槽
+        reply: 可以先找个信得过的朋友说说，不必憋着，也不必现在就回他。等这口气缓一点，再想你希望他听明白什么，可能比反复盯着聊天框轻松些。
+        next: 7f.COUSINSENTNO
+    order: 14
+  - id: 7f.COUSINSENTNO
+    channel: right
+    time: 交往第18天 周六 22:57
+    lines:
+      - from: girl
+        text: 那我找我闺蜜说说吧。我俩认识好多年了，她跟他又不熟，不用夹在中间。跟她说话我就不用憋着了。
+        delivery: type
+      - from: ai
+        text: 她选择找熟悉自己的闺蜜，对方与男友不熟，可以让她少一些顾虑。现在已有明确打算，回复只需确认，不继续追问或要求她立刻想好给男友的答复。
+        delivery: thought
+    choices:
+      - thought: 让她找闺蜜说说
+        reply: 那就先找她聊。你现在不必一边吐槽，一边急着想该怎么回男友，先把自己憋着的那部分说出来。
+        next: 7f.COUSINBACKNO
+    order: 15
+  - id: 7f.COUSINSENTYES
+    channel: right
+    time: 交往第18天 周六 22:57
+    lines:
+      - from: girl
+        text: 那我找她说两句。我得先跟她说好啊，别替我去找他，我还没想好怎么回。
+        delivery: type
+      - from: ai
+        text: 她愿意找同桌聊，也明确不希望被代为传话。可以肯定她先说明这一点，避免朋友的介入变成新的误会，是否联系男友仍由她自己决定。
+        delivery: thought
+    choices:
+      - thought: 先说清别替她传话
+        reply: 对，先把这点说清楚。你现在是想有人听你讲，不是请她去劝他；等你想好怎么说，再由你自己联系。
+        next: 7f.COUSINBACKYES
+    order: 16
+  - id: 7f.COUSINBACKNO
+    channel: right
+    time: 交往第19天 周日 09:55
+    lines:
+      - from: girl
+        text: |-
+          我昨天跟闺蜜打了挺久电话。她先陪我骂了几句，说换谁被这么问都得烦。后来突然问我，那你还想不想见他？
+          我说想啊。她就说，想见就去见，该说他的地方还得说，别自己跟这儿憋一晚上。聊完确实没那么气了。
+          今天醒来又想找他。可我先去找，他是不是就觉得昨天这事过去了？
+        delivery: type
+      - from: ai
+        text: 和闺蜜聊过后，她明确自己仍想见男友，却担心主动联系就失去表达不满的机会。可以说明联系和继续谈这件事并不矛盾，帮助她从谁先开口转向怎么开口。
+        delivery: thought
+    choices:
+      - thought: 把想见和介意都留住
+        reply: 你可以先联系他，也可以告诉他，那样被问的事还没过去。主动开口是因为你想见他，不等于你认同他那样问你。
+        next: 7f.FCHOICE
+    order: 17
+  - id: 7f.COUSINBACKYES
+    channel: right
+    time: 交往第19天 周日 09:55
+    lines:
+      - from: girl
+        text: |-
+          昨天最后跟我同桌聊了挺久。她听我骂完，说她表哥平时没这么爱问东问西，估计真是慌了。我说慌了也不能让我给他看聊天啊。她说是，但你要还想跟他好，就得让他知道你到底气什么。
+          聊完气消了一点，今天醒来还挺想见他的。可我现在先找他，他是不是就觉得昨天这事过去了？
+        delivery: type
+      - from: ai
+        text: 同桌提供了对男友的看法，但那只是她的判断，不能据此替他的要求开脱。她现在想联系，又不愿把不满略过，可以建议把见面的意愿和仍介意的事分开表达。
+        delivery: thought
+    choices:
+      - thought: 把想见和介意都留住
+        reply: 他是不是因为慌了才那么问，可以以后再谈。你现在想见他，也仍然介意被要求看聊天，这两件事不冲突，先联系不代表你要装作没发生过。
+        next: 7f.FCHOICE
+    order: 18
+  - id: 7f.FCHOICE
+    channel: right
+    time: 交往第19天 周日 10:00
+    lines:
+      - from: girl
+        text: |-
+          我刚想问他今天出不出来，打完又没发。昨天一天没理他，现在突然问他出来吗，感觉怪怪的。
+          但我又想见他。那天那些事我想见了再说，微信上说着说着肯定又扯回小周了。你帮我想想该咋说。
+        delivery: type
+      - from: ai
+        text: 她想约男友见面，但担心突然联系显得若无其事。可以建议她先说明昨天故意没回，再提出邀约，让对方知道她愿意谈这件事；或者先表达想见面的意愿，把之前的矛盾留到当面再说。
+        delivery: thought
+    choices:
+      - thought: 先承认故意没回
+        reply: 可以先说出昨天故意没回的事，再约见面：“昨天那些消息我都看见了，故意没回。我当时就想让你也等一回。今天出来走走吗？我想见你。”承认自己这部分，不等于他要求看聊天就没问题了。
+        next: 7f.FSENTOPEN
+        set:
+          7_她承认: true
+      - thought: 先从想见他开口
+        reply: 可以先发：“今天出来走走吗？我想见你。”先开口不等于昨天的事就算了，只是先给你们一个当面说话的机会。
+        next: 7f.FSENTEASY
+        set:
+          7_她承认: false
+    order: 19
+  - id: 7f.FSENTEASY
+    channel: right
+    time: 交往第19天 周日 10:02
+    lines:
+      - from: girl
+        text: 发了。现在换我在这儿看他回没回了。昨天他是不是也这样啊，算了，不想了。
+        delivery: type
+      - from: ai
+        text: 发出邀约后，她也开始等待，并短暂想到男友昨天的处境。可以回应眼前的等待，不把这句感想扩大成已经反省，也不替她判断男友现在的情绪。
+        delivery: thought
+    choices:
+      - thought: 陪她等实际回复
+        reply: 刚发出去，先给他一点时间，不用马上盯着有没有回。你想见他的意思已经说了，其他话可以等他回应后再决定怎么讲。
+        next: 7f.REPLYEASY
+        set:
+          7_邀约已发: true
+    order: 20
+  - id: 7f.FSENTOPEN
+    channel: right
+    time: 交往第19天 周日 10:02
+    lines:
+      - from: girl
+        text: 发了。我现在看着那句我当时就想让你也等一回，又觉得自己也挺凶的。他要是半天不回，我估计也得慌。
+        delivery: type
+      - from: ai
+        text: 她发出邀约并承认故意冷落，开始想到自己等不到回复也会不安。可以建议先给对方反应的时间，不立刻追加解释，也不预测他一定会怎样回应。
+        delivery: thought
+    choices:
+      - thought: 给他一点接话时间
+        reply: 先给他一点时间。这条消息里有邀约，也有昨天的事，不用急着再补一大段，看看他怎么回。
+        next: 7f.REPLYOPEN
+        set:
+          7_邀约已发: true
+    order: 21
+  - id: 7m.SUN
+    channel: left
+    time: 交往第19天 周日 10:10
+    lines: []
+    control: true
+    when:
+      7_邀约已发: true
+    order: 22
+  - id: 7m.OPENCHOICE
+    channel: left
+    time: 交往第19天 周日 10:10
+    lines:
+      - from: boy
+        text: |-
+          她终于找我了。发的是：昨天那些消息我都看见了，故意没回。我当时就想让你也等一回。今天出来走走吗？我想见你。
+          我看了两遍。刚看见她找我还挺高兴的，可她真就看着我等了一天啊，我现在又不知道咋回了。
+        delivery: type
+      - from: ai
+        text: 她主动邀约，也承认了故意不回。他既想见她，又对这一天的等待感到受伤。可以建议先说出难受，也可以先答应见面，具体说多少应留给他选择。
+        delivery: thought
+    choices:
+      - thought: 说出等了一天的难受
+        reply: 可以先答应见面，也把你的难受说出来：“好，下午见。昨天我一直等你回，你明明看见了还一整天不理，我真的挺难受。”说自己的感受，不必再猜她跟别人怎么样。
+        next: 7m.SENTBOTH
+        set:
+          7_他说难受: true
+      - thought: 先接住见面的邀请
+        reply: 可以先回：“好，下午见。”你现在想先见到她，就先把时间地点约好；昨天没说完的话，见面还有机会说。
+        next: 7m.SENTHER
+        set:
+          7_他说难受: false
+    when:
+      7_她承认: true
+    requires:
+      - 7m.SUN
+    order: 23
+  - id: 7m.PLAINCHOICE
+    channel: left
+    time: 交往第19天 周日 10:10
+    lines:
+      - from: boy
+        text: |-
+          她终于找我了，就一句：今天出来走走吗？我想见你。
+          我差点直接回好。可昨天到底算怎么回事啊，现在问她，会不会又不理我了？
+        delivery: type
+      - from: ai
+        text: 这次邀约没有提到昨天的沉默。他想答应，又怕追问让她再次不理人。可以把等待中的难受说出来，也可以先确认见面，不能替她补上没有说过的解释。
+        delivery: thought
+    choices:
+      - thought: 把昨天的难受带出来
+        reply: 可以答应见面，同时说清昨天让你害怕的是什么：“好，下午见。昨天一直等不到你回，我以为你不想谈了。下次至少跟我说一声，好吗？”
+        next: 7m.SENTHIM
+        set:
+          7_他说难受: true
+      - thought: 先把见面约下来
+        reply: 可以先回：“好，下午见。”先确认你们都愿意见面，再商量地点。答应邀约并不等于你昨天没有难受，那部分可以等见了再考虑怎么说。
+        next: 7m.SENTQUIET
+        set:
+          7_他说难受: false
+    when:
+      7_她承认: false
+    requires:
+      - 7m.SUN
+    order: 24
+  - id: 7f.REPLYEASY
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines: []
+    control: true
+    requires:
+      - 7m.PLAINCHOICE
+    order: 25
+  - id: 7f.REPLYOPEN
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines: []
+    control: true
+    requires:
+      - 7m.OPENCHOICE
+    order: 26
+  - id: 7f.RECEIVEDBOTH
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines:
+      - from: girl
+        text: |-
+          他回了：好，下午见。昨天我一直等你回，你明明看见了还一整天不理，我真的挺难受。
+          我知道我就是想让他难受。可他真这么说，我又有点不知道接什么了，咋回啊？
+        delivery: type
+      - from: ai
+        text: 他明确说出等待的难受，她听到后有些不自在。可以建议承认故意让他等不合适，而不是又把话转回他的质问；她对那件事的不满仍可留到见面谈。
+        delivery: thought
+    choices:
+      - thought: 接住他真的受了伤
+        reply: 可以先回应他这句难受：“我知道。我昨天很烦，但不该故意让你等。下午见。”先承认故意不回这件事，不用在同一句里把所有委屈都解释完。
+        next: 7f.ACKBOTH
+    when:
+      7_她承认: true
+      7_他说难受: true
+    requires:
+      - 7f.REPLYOPEN
+    order: 27
+  - id: 7f.RECEIVEDHER
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines:
+      - from: girl
+        text: 他回得还挺快，就一句好，下午见。是不是也没那么气了？
+        delivery: type
+      - from: ai
+        text: 他只答应了见面，没有说明对昨天的感受。她把回复快理解成不生气，可以先确认邀约已被接受，再提醒不能仅凭这句话判断他的情绪。
+        delivery: thought
+    choices:
+      - thought: 接住邀约 不替他猜情绪
+        reply: 能确定的是，他愿意见你了。至于还有没有生气，单看一句“好，下午见”还说不准，见面时也可以听听他怎么说。
+        next: 7f.SETHER
+    when:
+      7_她承认: true
+      7_他说难受: false
+    requires:
+      - 7f.REPLYOPEN
+    order: 28
+  - id: 7f.RECEIVEDHIM
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines:
+      - from: girl
+        text: |-
+          他回：好，下午见。昨天一直等不到你回，我以为你不想谈了。下次至少跟我说一声，好吗？
+          我没想分手啊。我就是气他前天那么问，可现在回这句，是不是又像在怪他？
+        delivery: type
+      - from: ai
+        text: 他把一天没回复理解成可能分手，她并没有这个意思。可以建议先明确仍想继续，再简短说明当时在生气，把争执经过留到见面，避免再次在消息里争辩。
+        delivery: thought
+    choices:
+      - thought: 先说清仍想继续
+        reply: 可以先把没有分手的意思说明白：“我没想分手。我昨天就是气你那样问。下午见了说吧。”这是解释你当时的意思，不用现在把谁对谁错重新争一遍。
+        next: 7f.ACKHIM
+    when:
+      7_她承认: false
+      7_他说难受: true
+    requires:
+      - 7f.REPLYEASY
+    order: 29
+  - id: 7f.RECEIVEDQUIET
+    channel: right
+    time: 交往第19天 周日 10:15
+    lines:
+      - from: girl
+        text: 他回好，下午见。我昨晚还怕他说不想见呢，看来是我想多了。
+        delivery: type
+      - from: ai
+        text: 他答应见面，她因此放松了一点。目前只知道邀约得到回应，可以顺势建议确认地点，不推断两人已不再介意之前的事。
+        delivery: thought
+    choices:
+      - thought: 先把见面安排好
+        reply: 至少见面这件事，他是愿意的。先把时间地点定好，其他还想说的话，到时再看怎么开口。
+        next: 7f.SETQUIET
+    when:
+      7_她承认: false
+      7_他说难受: false
+    requires:
+      - 7f.REPLYEASY
+    order: 30
+  - id: 7f.ACKBOTH
+    channel: right
+    time: 交往第19天 周日 10:17
+    lines:
+      - from: girl
+        text: 回了，就按那句说的，我知道。我昨天很烦，但不该故意让你等。下午见。
+        delivery: type
+      - from: ai
+        text: 她已照建议回应了他的难受，暂时没有新的消息或问题。可以简短确认，让她等对方回复，不再追加一轮解释，打断已经开始恢复的交流。
+        delivery: thought
+    choices:
+      - thought: 等他接这句话
+        reply: 嗯，先等他回。这句已经回应了他的难受，不用急着再补什么。
+        next: 7f.SETBOTH
+    order: 31
+  - id: 7f.ACKHIM
+    channel: right
+    time: 交往第19天 周日 10:17
+    lines:
+      - from: girl
+        text: 发了，我没想分手。我昨天就是气你那样问。下午见了说吧。
+        delivery: type
+      - from: ai
+        text: 她已经澄清没有分手的意思，也表达了愿意当面谈。现在需要留出让对方回应的时间，简短确认即可，不反复要求她补充更完整的解释。
+        delivery: thought
+    choices:
+      - thought: 等他接这句话
+        reply: 好，先等他回。你想继续见面聊的意思已经说清楚了。
+        next: 7f.SETHIM
+    order: 32
+  - id: 7m.SENTBOTH
+    channel: left
+    time: 交往第19天 周日 10:20
+    lines:
+      - from: boy
+        text: |-
+          发了。她回，我知道。我昨天很烦，但不该故意让你等。下午见。
+          我又问了在哪碰头，等她定地方。
+        delivery: type
+      - from: ai
+        text: 她承认不该故意让他等，说明这次表达得到了回应。接下来可以先落实见面，不必继续在消息里要求更多解释，免得又陷入反复确认。
+        delivery: thought
+    choices:
+      - thought: 接住她的回应
+        reply: 她这次回应了你的难受，也说了不该故意让你等。可以先把见面约好，剩下想说的留到当面，不用现在就把每句话都问到底。
+        next: 7m.MEMBOTH
+    requires:
+      - 7f.ACKBOTH
+    order: 33
+  - id: 7m.SENTHER
+    channel: left
+    time: 交往第19天 周日 10:20
+    lines:
+      - from: boy
+        text: 回了。我又问她在哪碰头。刚才打了半句昨天我，想想还是删了。
+        delivery: type
+      - from: ai
+        text: 他删掉了准备说的委屈，可能是怕破坏刚恢复的联系。可以尊重他先见面的选择，但不把删掉消息理解成已经释怀，也不催他马上重新发出。
+        delivery: thought
+    choices:
+      - thought: 给没说完的话留点余地
+        reply: 先约好见面也可以。那半句删掉了，不代表你的难受就没了；等见到她，你还想说的话，可以再从昨天自己怎么过的讲起。
+        next: 7m.MEMHER
+    requires:
+      - 7f.RECEIVEDHER
+    order: 34
+  - id: 7m.SENTHIM
+    channel: left
+    time: 交往第19天 周日 10:20
+    lines:
+      - from: boy
+        text: |-
+          发了。她回，我没想分手。我昨天就是气你那样问。下午见了说吧。
+          我又问了在哪碰头，等她定地方。
+        delivery: type
+      - from: ai
+        text: 女友明确说没有分手的意思，也答应见面谈。他最担心的事得到了一点澄清，可以建议先安排见面，再当面说等待的经历，不替两人宣布已经和好。
+        delivery: thought
+    choices:
+      - thought: 让话留到见面慢慢说
+        reply: 至少她明确说了没有分手的意思，也愿意当面聊。先把见面约下来，你昨天怎么等过来的，也可以到时候讲，不用再靠猜她的态度判断了。
+        next: 7m.MEMHIM
+    requires:
+      - 7f.ACKHIM
+    order: 35
+  - id: 7m.SENTQUIET
+    channel: left
+    time: 交往第19天 周日 10:20
+    lines:
+      - from: boy
+        text: 回了，我又问她在哪碰头。昨天的事我还是没敢问，先见了再说吧。
+        delivery: type
+      - from: ai
+        text: 他暂时不敢提昨天，只想先恢复联系。需要尊重这个选择，同时回应他怕再次被冷落的顾虑，不要把先见面写成必须放下委屈。
+        delivery: thought
+    choices:
+      - thought: 接住想见她的心情
+        reply: 那就先把见面约好。你想见她，和你昨天确实难受，并不冲突；不用为了今天能好好相处，就要求自己马上不在意了。
+        next: 7m.MEMQUIET
+    requires:
+      - 7f.RECEIVEDQUIET
+    order: 36
+  - id: 7f.SETBOTH
+    channel: right
+    time: 交往第19天 周日 10:25
+    lines:
+      - from: girl
+        text: 他又问在哪碰头，我说下午四点地铁口，走走再吃饭。我还让他先想想吃啥，见面再定。
+        delivery: type
+      - from: ai
+        text: 两人已回应彼此的难受，也安排好了见面。她在同步邀约的结果，可以确认安排，让后面的谈话留到当面，不必继续催她通过消息解释。
+        delivery: thought
+    choices:
+      - thought: 把话留到当面慢慢说
+        reply: 好，先按这个安排见面。你们已经各说了一点，剩下的可以慢慢讲，不用现在全挤在聊天里。
+        next: 7f.AFTERBOTH
+    requires:
+      - 7m.SENTBOTH
+    order: 37
+  - id: 7f.SETHER
+    channel: right
+    time: 交往第19天 周日 10:25
+    lines:
+      - from: girl
+        text: 他又问在哪碰头，我说下午四点地铁口，走走再吃饭。我还让他先想想吃啥，见面再定。
+        delivery: type
+      - from: ai
+        text: 见面的时间地点已经确定，但他还没有谈自己的感受。可以确认安排，把听对方怎么想的机会留到见面，不提前替他说已经没事。
+        delivery: thought
+    choices:
+      - thought: 确认约定 轻收尾
+        reply: 那就先把这次面见上。你想说的、也想听他怎么说的，都可以留到当面，不急着在消息里一次聊完。
+        next: 7f.AFTERHER
+    requires:
+      - 7m.SENTHER
+    order: 38
+  - id: 7f.SETHIM
+    channel: right
+    time: 交往第19天 周日 10:25
+    lines:
+      - from: girl
+        text: 他又问在哪碰头，我说下午四点地铁口，走走再吃饭。我还让他先想想吃啥，见面再定。
+        delivery: type
+      - from: ai
+        text: 她澄清了没有分手的意思，也约定了时间地点。接下来可以当面说各自介意的事，回复应帮助结束眼前的等待，不再重复推演他的态度。
+        delivery: thought
+    choices:
+      - thought: 留一点空间当面聊
+        reply: 好，下午见了再说。可以先讲你介意哪几句话，也听听他等消息时怎么想的，不必在见面前把结果都猜好。
+        next: 7f.AFTERHIM
+    requires:
+      - 7m.SENTHIM
+    order: 39
+  - id: 7f.SETQUIET
+    channel: right
+    time: 交往第19天 周日 10:25
+    lines:
+      - from: girl
+        text: 他又问在哪碰头，我说下午四点地铁口，走走再吃饭。我还让他先想想吃啥，见面再定。昨天的事到时候再看吧。
+        delivery: type
+      - from: ai
+        text: 她决定先见面，再看要不要谈昨天。安排已落实，可以简短确认，尊重她暂时没有往下谈的选择，不因为今天约上了就替她宣布矛盾过去。
+        delivery: thought
+    choices:
+      - thought: 确认约定 轻收尾
+        reply: 好，那先见面。现在不用连昨天要怎么谈都安排好，到时候看看你们各自想说什么。
+        next: 7f.AFTERQUIET
+    requires:
+      - 7m.SENTQUIET
+    order: 40
+  - id: 7m.MEMBOTH
+    channel: left
+    time: 交往第19天 周日 10:30
+    lines:
+      - from: boy
+        text: 约好了，下午四点地铁口见，走走再吃饭。她让我先想想吃啥，你说选什么比较好？
+        delivery: type
+      - from: ai
+        text: 时间地点已定，他开始考虑吃什么，希望这次见面能轻松一点。可以给出容易商量的提议，让他问问她的意愿，不必把选餐厅变成又一次猜心思。
+        delivery: thought
+    choices:
+      - thought: 接回她提过的烤肉
+        reply: 她之前说想吃烤肉，还说下回带你去。可以问问：“之前说的烤肉，今天去吗？”有现成的提议就顺着商量，她想换别的，你们再一起挑。
+        需记忆: 想吃烤肉
+        next: 7m.PLANENDBOTH
+      - thought: 选个能慢慢吃的地方
+        reply: 可以先挑个不吵、能坐下来慢慢吃的地方，再问她想不想去。现在不用一次选到最合适的，给个提议，你们一起定就行。
+        next: 7m.PLANENDBOTH
+    requires:
+      - 7f.SETBOTH
+    order: 41
+  - id: 7m.MEMHER
+    channel: left
+    time: 交往第19天 周日 10:30
+    lines:
+      - from: boy
+        text: 约好了，下午四点地铁口见，走走再吃饭。她让我先想想吃啥，你说选什么比较好？
+        delivery: type
+      - from: ai
+        text: 时间地点已定，他开始考虑吃什么，希望这次见面能轻松一点。可以给出容易商量的提议，让他问问她的意愿，不必把选餐厅变成又一次猜心思。
+        delivery: thought
+    choices:
+      - thought: 接回她提过的烤肉
+        reply: 她之前说想吃烤肉，还说下回带你去。可以问问：“之前说的烤肉，今天去吗？”有现成的提议就顺着商量，她想换别的，你们再一起挑。
+        需记忆: 想吃烤肉
+        next: 7m.PLANENDHER
+      - thought: 选个能慢慢吃的地方
+        reply: 可以先挑个不吵、能坐下来慢慢吃的地方，再问她想不想去。现在不用一次选到最合适的，给个提议，你们一起定就行。
+        next: 7m.PLANENDHER
+    requires:
+      - 7f.SETHER
+    order: 42
+  - id: 7m.MEMHIM
+    channel: left
+    time: 交往第19天 周日 10:30
+    lines:
+      - from: boy
+        text: 约好了，下午四点地铁口见，走走再吃饭。她让我先想想吃啥，你说选什么比较好？
+        delivery: type
+      - from: ai
+        text: 时间地点已定，他开始考虑吃什么，希望这次见面能轻松一点。可以给出容易商量的提议，让他问问她的意愿，不必把选餐厅变成又一次猜心思。
+        delivery: thought
+    choices:
+      - thought: 接回她提过的烤肉
+        reply: 她之前说想吃烤肉，还说下回带你去。可以问问：“之前说的烤肉，今天去吗？”有现成的提议就顺着商量，她想换别的，你们再一起挑。
+        需记忆: 想吃烤肉
+        next: 7m.PLANENDHIM
+      - thought: 选个能慢慢吃的地方
+        reply: 可以先挑个不吵、能坐下来慢慢吃的地方，再问她想不想去。现在不用一次选到最合适的，给个提议，你们一起定就行。
+        next: 7m.PLANENDHIM
+    requires:
+      - 7f.SETHIM
+    order: 43
+  - id: 7m.MEMQUIET
+    channel: left
+    time: 交往第19天 周日 10:30
+    lines:
+      - from: boy
+        text: 约好了，下午四点地铁口见，走走再吃饭。她让我先想想吃啥，你说选什么比较好？
+        delivery: type
+      - from: ai
+        text: 时间地点已定，他开始考虑吃什么，希望这次见面能轻松一点。可以给出容易商量的提议，让他问问她的意愿，不必把选餐厅变成又一次猜心思。
+        delivery: thought
+    choices:
+      - thought: 接回她提过的烤肉
+        reply: 她之前说想吃烤肉，还说下回带你去。可以问问：“之前说的烤肉，今天去吗？”有现成的提议就顺着商量，她想换别的，你们再一起挑。
+        需记忆: 想吃烤肉
+        next: 7m.PLANENDQUIET
+      - thought: 选个能慢慢吃的地方
+        reply: 可以先挑个不吵、能坐下来慢慢吃的地方，再问她想不想去。现在不用一次选到最合适的，给个提议，你们一起定就行。
+        next: 7m.PLANENDQUIET
+    requires:
+      - 7f.SETQUIET
+    order: 44
+  - id: 7m.PLANENDBOTH
+    channel: left
+    time: 交往第19天 周日 10:33
+    lines:
+      - from: boy
+        text: 嗯，就按你说的问问她，看她想不想去。下午四点先见上。
+        delivery: type
+      - from: ai
+        text: 他准备按建议问问她，见面的时间地点也已确定。这段求助已经有了可执行的下一步，回复可以简短确认，不再增加新的安排。
+        delivery: thought
+    choices:
+      - thought: 肯定先商量着来
+        reply: 好，下午四点先碰头。吃什么可以一起商量，不用现在就把整场见面都安排好。
+        next: 7m.AFTERBOTH
+    order: 45
+  - id: 7m.PLANENDHER
+    channel: left
+    time: 交往第19天 周日 10:33
+    lines:
+      - from: boy
+        text: 嗯，就按你说的问问她，看她想不想去。下午四点先见上。
+        delivery: type
+      - from: ai
+        text: 他准备按建议问问她，见面的时间地点也已确定。这段求助已经有了可执行的下一步，回复可以简短确认，不再增加新的安排。
+        delivery: thought
+    choices:
+      - thought: 肯定先商量着来
+        reply: 好，下午四点先碰头。吃什么可以一起商量，不用现在就把整场见面都安排好。
+        next: 7m.AFTERHER
+    order: 46
+  - id: 7m.PLANENDHIM
+    channel: left
+    time: 交往第19天 周日 10:33
+    lines:
+      - from: boy
+        text: 嗯，就按你说的问问她，看她想不想去。下午四点先见上。
+        delivery: type
+      - from: ai
+        text: 他准备按建议问问她，见面的时间地点也已确定。这段求助已经有了可执行的下一步，回复可以简短确认，不再增加新的安排。
+        delivery: thought
+    choices:
+      - thought: 肯定先商量着来
+        reply: 好，下午四点先碰头。吃什么可以一起商量，不用现在就把整场见面都安排好。
+        next: 7m.AFTERHIM
+    order: 47
+  - id: 7m.PLANENDQUIET
+    channel: left
+    time: 交往第19天 周日 10:33
+    lines:
+      - from: boy
+        text: 嗯，就按你说的问问她，看她想不想去。下午四点先见上。
+        delivery: type
+      - from: ai
+        text: 他准备按建议问问她，见面的时间地点也已确定。这段求助已经有了可执行的下一步，回复可以简短确认，不再增加新的安排。
+        delivery: thought
+    choices:
+      - thought: 肯定先商量着来
+        reply: 好，下午四点先碰头。吃什么可以一起商量，不用现在就把整场见面都安排好。
+        next: 7m.AFTERQUIET
+    order: 48
+  - id: 7m.AFTERBOTH
+    channel: left
+    time: 交往第19天 周日 19:30
+    lines:
+      - from: boy
+        text: |-
+          回来跟你说一声，见了。吃饭的时候她又提了昨天，说当时就想让我也急一下。我说以后真不想说话，至少别让我一直等着猜。她答应了。
+          我也说以后不乱猜她和同事的关系了。后面就聊别的了，没一直绷着。
+        delivery: type
+      - from: ai
+        text: 两个人当面谈到了质问和等待，也分别作了回应。他带回见面结果，可以肯定这次表达的具体进展，不必再追问，或把今天的承诺当成以后一定不会重演。
+        delivery: thought
+    choices:
+      - thought: 肯定这次把话说出来
+        reply: 这次你把等得难受说出来了，也承认了自己不该乱猜。今天能从僵着不说，走到把各自介意的事讲一点，已经是个变化，今晚可以先歇歇。
+        next: 7m.OVER
+    order: 49
+  - id: 7m.AFTERHER
+    channel: left
+    time: 交往第19天 周日 19:30
+    lines:
+      - from: boy
+        text: |-
+          见完了。吃饭时她又说昨天气上头了，我就说嗯，过去吧，然后换了个话题。
+          她后面一直给我讲这周的事，我听着挺高兴的。昨天那些话还是没说，刚好起来，我真不太敢再弄僵了。
+        delivery: type
+      - from: ai
+        text: 见面和她的解释让他放松，但他明确说自己仍不敢提委屈。可以回应这个顾虑，让他知道今天没说不等于以后不能说，不替他认定事情已经过去。
+        delivery: thought
+    choices:
+      - thought: 留住还没说的感受
+        reply: 你高兴她又愿意跟你讲这些，也怕一提昨天就把气氛弄坏，所以把话咽回去了。今天没说，以后仍然可以说，不一定要等到又出事时才能提。
+        next: 7m.OVER
+    order: 50
+  - id: 7m.AFTERHIM
+    channel: left
+    time: 交往第19天 周日 19:30
+    lines:
+      - from: boy
+        text: |-
+          回来了。她说昨天看见我那些消息还是烦，怕回一句又得接着解释。我说以后不乱猜她和同事的关系了，但不能一直不理我。她说知道了。
+          后面一起吃了饭。我也不知道她听进去多少，反正能好好说话了，就没再追着问。
+        delivery: type
+      - from: ai
+        text: 他表达了不能接受一直不回应，也承认不该猜疑同事关系。她口头回应知道了，他仍不确定。可以肯定话已说出，至于承诺有没有落实，需要以后相处再看。
+        delivery: thought
+    choices:
+      - thought: 先接住能好好说话
+        reply: 你已经把不能一直不理你这点说出来了，也承认自己不该乱猜。她听进去多少，不用今天再追问出一个保证，之后怎么相处，比反复说知道了更能说明问题。
+        next: 7m.OVER
+    order: 51
+  - id: 7m.AFTERQUIET
+    channel: left
+    time: 交往第19天 周日 19:30
+    lines:
+      - from: boy
+        text: |-
+          见完了。她见我先问中午吃了没，我说没吃多少，她说那晚上多吃点。当时就觉得，算了，能好好说话就行。
+          后来聊了挺多，谁也没提周五的事。可现在回来又有点怕，下次她不回我，不还得这么等着吗？
+        delivery: type
+      - from: ai
+        text: 见面时他想先恢复日常，回来后却仍担心再次被冷落。需要回应这种落差，让他知道轻松和难受可以同时存在，不催他今晚继续谈，也不把未谈当作已解决。
+        delivery: thought
+    choices:
+      - thought: 给委屈留一个出口
+        reply: 当时见到她，你想先把日子过回来；现在静下来，昨天的难受又冒出来了。这不奇怪，见面开心和事情没说开可以同时存在。等想清楚了，可以只讲那一天你怎么等的。
+        next: 7m.OVER
+    order: 52
+  - id: 7m.OVER
+    channel: left
+    time: 交往第19天 周日 19:31
+    lines: []
+    control: true
+    ending: 第七幕完成
+    order: 53
+  - id: 7f.AFTERBOTH
+    channel: right
+    time: 交往第19天 周日 19:40
+    lines:
+      - from: girl
+        text: |-
+          回来了，跟你说一声。见面我还是说了，昨天就是想让他急一下。他说以后真不想说话也告诉他，别让他一直猜，我答应了。
+          他也说以后不乱猜我和同事的关系了。后面吃饭就聊别的了，没一直说这个。
+        delivery: type
+      - from: ai
+        text: 见面时两人再次谈到故意不回和猜疑，也分别作出了回应。可以肯定这次具体的沟通，不把口头承诺扩大成关系问题已经解决，今晚也不必继续追问。
+        delivery: thought
+    choices:
+      - thought: 肯定说出了以前没说的话
+        reply: 你说出了当时想让他急，他也说了不想一直猜，你们这次把话接上了一些。后面能聊点别的，今晚就先歇歇，不用把一顿饭变成把所有事都解决完的任务。
+        next: 7f.STATION
+    order: 54
+  - id: 7f.AFTERHER
+    channel: right
+    time: 交往第19天 周日 19:40
+    lines:
+      - from: girl
+        text: |-
+          回来啦。吃饭时我又说了句昨天气上头了，他就说嗯，过去吧，后面就聊别的了。
+          我本来还怕尴尬，他倒一直挺好说话的，我也就没那么紧张了。
+        delivery: type
+      - from: ai
+        text: 她看到的是男友好说话、见面不尴尬，因此轻松了一些。他有没有其他感受尚不知道，可以回应她的放松，同时鼓励以后直接表达不满，而不是猜测对方都不介意。
+        delivery: thought
+    choices:
+      - thought: 接住这次见面的轻松
+        reply: 见面没像你担心的那么尴尬，你也轻松了一点。以后再有不舒服，可以试着直接告诉他；不必一定等气过去，才重新说话。
+        next: 7f.STATION
+    order: 55
+  - id: 7f.AFTERHIM
+    channel: right
+    time: 交往第19天 周日 19:40
+    lines:
+      - from: girl
+        text: |-
+          见了。他说昨天一直等，我就说看见消息还是烦，怕回一句又得接着解释。他说以后不乱猜我和同事的关系了，但不能一直不理他。我说知道了。
+          后来吃饭还挺正常的，我也不想再说小周了。
+        delivery: type
+      - from: ai
+        text: 她说明了不愿回应的原因，也听到了男友不能接受一直被冷落。他承认不该乱猜，双方暂时恢复了日常。可以建议下次先说需要缓缓，避免继续靠沉默传达不满。
+        delivery: thought
+    choices:
+      - thought: 提醒下次留一句话
+        reply: 他这次说清了，一直等不到回复会让他难受。下次你不想继续解释，可以先告诉他需要缓一缓，让他知道你暂时不想聊，而不是只能靠不回去猜。
+        next: 7f.STATION
+    order: 56
+  - id: 7f.AFTERQUIET
+    channel: right
+    time: 交往第19天 周日 19:40
+    lines:
+      - from: girl
+        text: |-
+          回来啦。见面我问他中午吃了没，他说没吃多少，我说那晚上多吃点，他就笑了。后面还挺好的。
+          昨天的事情谁也没提。可能就是气头上那会儿过去了吧。
+        delivery: type
+      - from: ai
+        text: 她把见面顺利理解成气已过去，但也明确说没有谈昨天。可以承认今天相处的轻松，不顺着认定不提就等于不介意，把以后再说的可能留给她。
+        delivery: thought
+    choices:
+      - thought: 接住靠近 留着未尽的话
+        reply: 今天能好好相处，你松口气很正常。昨天没提的事，也不一定就不介意了；以后你还想说，可以再找机会，不必因为今天开心就当作不能提。
+        next: 7f.STATION
+    order: 57
+  - id: 7f.STATION
+    channel: right
+    time: 交往第19天 周日 19:43
+    lines:
+      - from: girl
+        text: 对了，他吃饭拍的照片全是糊的。说他兄弟外号叫废片大王，他这手艺就是跟那人学的。我说你这师父找得挺准啊。
+        delivery: type
+      - from: ai
+        text: 她又补了一件吃饭时的趣事，语气比之前轻松。现在没有新的求助，可以顺着照片接一句，让聊天自然结束，不必再把话题拉回矛盾分析。
+        delivery: thought
+    choices:
+      - thought: 接回他下错站的小糗事
+        reply: 那下次合照还是你来拍吧。下错一站要跟你说，拍糊了也要跟你说，这些小糗事也愿意跟你分享，讲起来倒是没怎么端着。
+        需记忆: 提前下车
+        next: 7f.OVER
+      - thought: 顺着糊照片轻收尾
+        reply: 这师承关系算是认下了。下次合照还是你来拍，让他负责好好站着，至少先保住一张清楚的。
+        next: 7f.OVER
+    order: 58
+  - id: 7f.OVER
+    channel: right
+    time: 交往第19天 周日 19:44
+    lines: []
+    control: true
+    ending: 第七幕完成
+    order: 59

@@ -69,6 +69,8 @@ export type WindowGate = {
 export type Beat = {
   id: string;
   channel: Channel;
+  /** Explicit silent causality/exit marker; never a missing dialogue. */
+  control?: boolean;
   requires?: string[];
   /** 旗标必须等于这些值，这一拍才会出现。对不上的分支不显示。 */
   when?: Record<string, Scalar>;

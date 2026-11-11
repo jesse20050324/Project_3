@@ -68,6 +68,8 @@ const 区间表 = overlay.区间 ?? [];
 const 清空教学记忆 = new Set(overlay.清空教学记忆 ?? []);
 const 节拍 = overlay.节拍 ?? {};
 const 终局表 = overlay.终局 ?? {};
+const 停用记忆候选 = new Set(overlay.停用记忆候选 ?? []);
+const 已停用记忆候选 = new Set();
 assert(拍序 && Array.isArray(拍序), "overlay 缺少 拍序");
 assert(new Set(拍序).size === 拍序.length, "overlay 拍序 里有重复 id");
 assert(入场旗标 && typeof 入场旗标 === "object", "overlay 缺少 入场旗标");
@@ -199,7 +201,11 @@ for (const [index, turn] of turns.entries()) {
         短句: String(item.短句),
         类型: String(item.类型 ?? "干扰项"),
         线: String(item.线 ?? "无"),
-      }));
+      })).filter((candidate) => {
+        if (!停用记忆候选.has(candidate.缩略标签)) return true;
+        已停用记忆候选.add(candidate.缩略标签);
+        return false;
+      });
 
   const beat = {
     id,
@@ -216,9 +222,11 @@ for (const [index, turn] of turns.entries()) {
   if (ending) beat.ending = ending;
   beat.lines = lines;
   beat.choices = choices;
-  if (candidates) beat.记忆候选 = candidates;
+  if (candidates?.length) beat.记忆候选 = candidates;
   beats.push(beat);
 }
+
+assert(已停用记忆候选.size === 停用记忆候选.size, "overlay 停用记忆候选引用了不存在的标签");
 
 // ---------- 区间门编译 ----------
 const windows = new Map();
@@ -331,7 +339,9 @@ if (CHECK) {
     console.error("content/chapter-05.yaml 不存在，请跑 node tools/build-chapter.mjs");
     process.exit(1);
   }
-  if (current.trimEnd() !== generated.trimEnd()) {
+  // Windows checkout may use CRLF; line endings alone are not script drift.
+  const normalizeNewlines = (text) => text.replace(/\r\n/g, "\n");
+  if (normalizeNewlines(current).trimEnd() !== normalizeNewlines(generated).trimEnd()) {
     console.error("content/chapter-05.yaml 已漂移，与 script/ch5.yaml v5.1 + overlay 不同步。");
     console.error("修复：node tools/build-chapter.mjs");
     process.exit(1);

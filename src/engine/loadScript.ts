@@ -3,6 +3,8 @@ import chapter1Source from "../../content/chapter-01.yaml?raw";
 import chapter3Source from "../../content/chapter-03.yaml?raw";
 import chapter4Source from "../../content/chapter-04.yaml?raw";
 import chapter5Source from "../../content/chapter-05.yaml?raw";
+import chapter6Source from "../../content/chapter-06.yaml?raw";
+import chapter7Source from "../../content/chapter-07.yaml?raw";
 import { pacingError, resolveTiming } from "../presentation";
 import type {
   Beat, Channel, Choice, Delivery, Ending, Line, MemoryCandidate,
@@ -13,7 +15,7 @@ import { validateScript, type Validation } from "./validate";
 
 // 按播放顺序读入各章，合成一份再检查。后一章的 requires 仍可指向前一章，旗标也不按章清掉。
 // 旧第二章（到店）已并入第三章，幕号2作废空缺。
-const bundledChapters = [chapter1Source, chapter3Source, chapter4Source, chapter5Source];
+const bundledChapters = [chapter1Source, chapter3Source, chapter4Source, chapter5Source, chapter6Source, chapter7Source];
 
 // 严格字段白名单：剧本里写了引擎不认识的字段必须当场报错，
 // 不能再像 v3 时代那样静默丢弃（第五章 v5.1 的 时间轴/等待/分叉/终局 就是这么丢掉的）。
@@ -22,7 +24,7 @@ const SPEAKER_KEYS = ["id", "name", "channel"];
 const BEAT_KEYS = [
   "id", "channel", "requires", "when", "aside", "lines", "choices", "next",
   "记忆候选", "清空记忆", "chapter", "order", "sortKey", "time", "timeRank",
-  "label", "window", "ending", "节拍",
+  "label", "window", "ending", "节拍", "control",
 ];
 const LINE_KEYS = ["from", "text", "delivery", "caption", "节拍", "timing"];
 const CHOICE_KEYS = ["thought", "reply", "set", "next", "需记忆", "节拍", "timing"];
@@ -125,6 +127,9 @@ function readBeats(value: unknown, chapterPace: string | undefined): Beat[] {
     const id = readString(item.id, `第 ${index + 1} 个节拍缺少 id`);
     checkUnknown(item, BEAT_KEYS, `节拍 ${id}`);
     const channel = readChannel(item.channel, id);
+    if (item.control !== undefined && typeof item.control !== "boolean") {
+      throw new Error(`节拍 ${id} 的 control 必须为布尔值`);
+    }
     const beatPace = item.节拍 === undefined ? undefined : readPacing(item.节拍, `节拍 ${id} 的 节拍`);
     const chain: (PacingValue | undefined)[] = [chapterPace, beatPace];
     const lines = readLines(item.lines, id, chain);
@@ -144,7 +149,7 @@ function readBeats(value: unknown, chapterPace: string | undefined): Beat[] {
     const sortKey = item.sortKey === undefined ? undefined : readNonNegativeInt(item.sortKey, `节拍 ${id} 的 sortKey`);
     const chapter = item.chapter === undefined ? undefined : readChapter(item.chapter);
     return {
-      id, channel, lines, choices, requires, when, aside, next, 记忆候选, 清空记忆,
+      id, channel, control: item.control as boolean | undefined, lines, choices, requires, when, aside, next, 记忆候选, 清空记忆,
       order, time, timeRank, label, window, ending, sortKey, chapter,
       ...(beatPace !== undefined ? { 节拍: beatPace } : {}),
     };

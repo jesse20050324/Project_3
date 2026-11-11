@@ -64,7 +64,7 @@ export function loadProgress(beats: Beat[]): EngineState | null {
         left: state.pending.left ?? null,
         right: state.pending.right ?? null,
       },
-      memories: normalizeMemories(state.memories),
+      memories: normalizeMemories(state.memories, beats),
       chapter: normalizeChapter(state.chapter, beats),
       ritual: normalizeRitual(state.ritual),
       endings: Array.isArray(state.endings) ? state.endings.filter((id) => typeof id === "string") : [],
@@ -135,12 +135,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** 旧存档没有记忆池时补空池，带脏数据时清成空池。 */
-function normalizeMemories(value: unknown): EngineState["memories"] {
+function normalizeMemories(value: unknown, beats: Beat[]): EngineState["memories"] {
   const empty = { left: [], right: [] };
   if (!isRecord(value)) return empty;
   const pick = (list: unknown) =>
     Array.isArray(list) && list.every((item) => isRecord(item) && typeof item.label === "string")
       ? list.map((item) => item as { label: string; text: string; beatId: string })
       : [];
-  return { left: pick(value.left), right: pick(value.right) };
+  const current = (list: unknown, channel: Channel) => pick(list).filter(memory => {
+    const beat = beats.find(item => item.id === memory.beatId && item.channel === channel);
+    // The CH5 overlay retires two old candidates while keeping their dialogue.
+    if (beat?.chapter !== 5) return true;
+    return beat.记忆候选?.some(candidate => candidate.缩略标签 === memory.label);
+  });
+  return { left: current(value.left, "left"), right: current(value.right, "right") };
 }

@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-11-11",
+  "baseCommit": "25446db7fc7b7a5db2598c860165d6f531f21c1b",
+  "files": [
+    {
+      "file": "docs/剧本审稿/第六幕-全文-男窗.mmd",
+      "source": "C:/Cursor_object/Project_3/docs/剧本审稿/第六幕-全文-男窗.mmd",
+      "sha256": "2ad2094a7347ac0d8c7a46ce57e1f680a10de8976a6770a0bfd167d6afd32c57",
+      "sha256LF": "2ad2094a7347ac0d8c7a46ce57e1f680a10de8976a6770a0bfd167d6afd32c57"
+    },
+    {
+      "file": "docs/剧本审稿/第六幕-全文-女窗.mmd",
+      "source": "C:/Cursor_object/Project_3/docs/剧本审稿/第六幕-全文-女窗.mmd",
+      "sha256": "d6653c5e4871d57489110555625dc4ebbcfed5950ab34daa8ec7798fa611ccf6",
+      "sha256LF": "d6653c5e4871d57489110555625dc4ebbcfed5950ab34daa8ec7798fa611ccf6"
+    },
+    {
+      "file": "docs/剧本审稿/第六幕-事件时间线.mmd",
+      "source": "C:/Cursor_object/Project_3/docs/剧本审稿/第六幕-事件时间线.mmd",
+      "sha256": "95a81f018847546ccd04add7d4d404728f1c2646fb42a2f89c5bcefee0360012",
+      "sha256LF": "95a81f018847546ccd04add7d4d404728f1c2646fb42a2f89c5bcefee0360012"
+    },
+    {
+      "file": "docs/剧本审稿/第七幕-全文-男窗.mmd",
+      "source": "7c40工作树审查润色稿",
+      "sha256": "159df41b6883cfdb55c41dc6c05653751efd84c0948a1eb2ee26f61a9e07efc9",
+      "sha256LF": "159df41b6883cfdb55c41dc6c05653751efd84c0948a1eb2ee26f61a9e07efc9"
+    },
+    {
+      "file": "docs/剧本审稿/第七幕-全文-女窗.mmd",
+      "source": "7c40工作树审查润色稿",
+      "sha256": "663d64db7d6587163a2c642b833cb1daac175c694a516203713bcc05918e6de2",
+      "sha256LF": "663d64db7d6587163a2c642b833cb1daac175c694a516203713bcc05918e6de2"
+    }
+  ]
+}

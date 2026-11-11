@@ -61,13 +61,28 @@ function buildConstraintIds(beats: Beat[]): Set<string> {
 }
 
 function makeSignature(beats: Beat[]): (state: EngineState) => string {
-  const constraintIds = buildConstraintIds(beats);
-  const gateLabels = new Set(
-    beats.flatMap((beat) => (beat.choices ?? []).map((choice) => choice.需记忆).filter((label): label is string => Boolean(label))),
-  );
-  return (state: EngineState) => JSON.stringify({
-    completed: state.completed.filter((id) => constraintIds.has(id)),
-    flags: state.flags,
+  const byId = new Map(beats.map(beat => [beat.id, beat]));
+  const chapterCache = new Map<string, { constraints: Set<string>; flags: Set<string>; gates: Set<string> }>();
+  return (state: EngineState) => {
+    const key = `${state.chapter.left}/${state.chapter.right}`;
+    let live = chapterCache.get(key);
+    if (!live) {
+      const future = beats.filter(beat => (beat.chapter ?? state.chapter[beat.channel]) >= state.chapter[beat.channel]);
+      live = {
+        constraints: buildConstraintIds(future),
+        flags: new Set(future.flatMap(beat => Object.keys(beat.when ?? {}))),
+        gates: new Set(future.flatMap(beat => beat.choices?.flatMap(choice => choice.需记忆 ? [choice.需记忆] : []) ?? [])),
+      };
+      chapterCache.set(key, live);
+    }
+    const completed = new Set(state.completed);
+    return JSON.stringify({
+    completed: state.completed.filter(id => live.constraints.has(id)).sort(),
+    activated: state.activated.filter(id => {
+      const beat = byId.get(id);
+      return beat && !completed.has(id) && (beat.chapter ?? state.chapter[beat.channel]) >= state.chapter[beat.channel];
+    }).sort(),
+    flags: Object.keys(state.flags).filter(flag => live.flags.has(flag)).sort().map(flag => [flag, state.flags[flag]]),
     pending: state.pending,
     chapter: state.chapter,
     ritual: {
@@ -76,10 +91,11 @@ function makeSignature(beats: Beat[]): (state: EngineState) => string {
     },
     endings: state.endings,
     memories: {
-      left: state.memories.left.map((memory) => memory.label).filter((label) => gateLabels.has(label)),
-      right: state.memories.right.map((memory) => memory.label).filter((label) => gateLabels.has(label)),
+      left: state.memories.left.map(memory => memory.label).filter(label => live.gates.has(label)).sort(),
+      right: state.memories.right.map(memory => memory.label).filter(label => live.gates.has(label)).sort(),
     },
-  });
+    });
+  };
 }
 
 function ritualsOf(state: EngineState): Channel[] {
@@ -102,16 +118,26 @@ function choiceChannels(state: EngineState): Channel[] {
 function autoSaveVisible(state: EngineState, beats: Beat[]): EngineState {
   let next = state;
   const byId = new Map(beats.map((beat) => [beat.id, beat]));
+  // Simulate explicit replacements that keep the remaining choices exercisable.
+  const remainingGates = new Set(beats.filter(beat => !state.completed.includes(beat.id))
+    .flatMap(beat => beat.choices?.map(choice => choice.需记忆) ?? []));
   for (const message of state.messages) {
     const beat = byId.get(message.beatId);
     for (const candidate of beat?.记忆候选 ?? []) {
       if (!message.text.includes(candidate.短句)) continue;
       if (hasMemory(next, message.channel, candidate.缩略标签)) continue;
-      next = saveMemory(next, message.channel, {
+      const entry = {
         label: candidate.缩略标签,
         text: candidate.短句,
         beatId: message.beatId,
-      });
+      };
+      const saved = saveMemory(next, message.channel, entry);
+      if (saved !== next) {
+        next = saved;
+      } else if (remainingGates.has(entry.label)) {
+        const replacement = next.memories[message.channel].find(memory => !remainingGates.has(memory.label));
+        if (replacement) next = saveMemory(next, message.channel, entry, replacement.label);
+      }
     }
   }
   return next;
@@ -217,6 +243,8 @@ export function simulateScript(script: Script, options: SimulationOptions = {}):
   const seen = new Set<string>();
   const signatureOf = makeSignature(beats);
   const stack: EngineState[] = [createInitial(beats)];
+  const lastChapter = Math.max(...beats.map(beat => beat.chapter ?? 0));
+  const finalEndings = new Set(beats.filter(beat => beat.chapter === lastChapter && beat.ending).map(beat => beat.ending));
   let stoppedWithoutEnding = 0;
   let chapterTransitions = 0;
   let paths = 0;
@@ -246,6 +274,10 @@ export function simulateScript(script: Script, options: SimulationOptions = {}):
     if (driven.terminal) {
       paths += 1;
       for (const ending of driven.state.endings) endings.add(ending);
+      if (driven.state.endings.length && finalEndings.size
+        && !driven.state.endings.some(ending => finalEndings.has(ending))) {
+        errors.push(`进入主线后未抵达最终幕出口：${deadlockDetail(driven.state, beats)}`);
+      }
       if (driven.state.endings.length === 0) {
         stoppedWithoutEnding += 1;
         // 未抵达终局但仍有可播拍 = 真死锁；定稿允许幕4「双不问」提前收线。

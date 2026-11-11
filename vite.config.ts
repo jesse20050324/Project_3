@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // 版本号：单一来源是 package.json 的 version；构建时附上 git 短哈希，
 // 部署到 GitHub Pages 后玩家在页面头部即可核对线上版是不是最新提交。
@@ -32,6 +32,8 @@ export default defineConfig({
     strictPort: true,
   },
   test: {
+    // This local Hook suite uses node:test, not Vitest; run with node --test.
+    exclude: [...configDefaults.exclude, "tools/codex-sync.test.cjs"],
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
   },

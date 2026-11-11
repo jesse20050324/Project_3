@@ -71,6 +71,30 @@ describe("全局时序调度", () => {
     expect(availableBeat(initial, "right", beats)).toBeNull();
     expect(playbackStep(initial, beats)?.channel).toBe("left");
   });
+
+  it("第五幕较晚的拍等待对窗先完成切章及入场选择", () => {
+    const { beats, initial } = prepare([
+      mk("old-left", "left", { chapter: 4 }),
+      mk("old-right", "right", { chapter: 4 }),
+      mk("left-entry", "left", { chapter: 5, order: 2 }),
+      mk("right-entry", "right", { chapter: 5, order: 1, choices: [fork("entry", "right-next")] }),
+      mk("right-next", "right", { chapter: 5, order: 3 }),
+    ]);
+    const ready = { ...initial, completed: ["old-left", "old-right"] };
+    const rightReset = openChannel(ready, "right", beats, 0);
+    const bothReset = openChannel(rightReset, "left", beats, 0);
+    const leftPaused = ritualTick(bothReset, "left", 2200);
+    const leftReady = ritualTick(leftPaused, "left", 4200);
+    expect(playbackStep(leftReady, beats)).toBeNull();
+    const rightPaused = ritualTick(leftReady, "right", 2200);
+    const rightReady = ritualTick(rightPaused, "right", 4200);
+    expect(playbackStep(rightReady, beats)?.channel).toBe("right");
+    const rightChoice = commitLine(openChannel(rightReady, "right", beats), "right", beats);
+    expect(rightChoice.pending.right?.kind).toBe("choices");
+    expect(playbackStep(rightChoice, beats)).toBeNull();
+    const chosen = commitReply(choose(rightChoice, "right", 0, beats), "right", beats);
+    expect(playbackStep(chosen, beats)?.channel).toBe("left");
+  });
 });
 
 describe("区间门", () => {

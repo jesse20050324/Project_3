@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AVATAR_BOY, AVATAR_GIRL } from "../assets/avatars";
-import { channelView, messagesFor } from "../engine/scheduler";
+import { channelView, memoryCapacity, messagesFor } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type {
-  Channel, Delivery, EngineState, MemoryCandidate, Script, Timing,
+  Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
 } from "../engine/types";
 import { resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
@@ -54,8 +54,10 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
   }
   const memoryTotal = visibleCandidates.size;
   const memorySaved = state.memories[channel].length;
+  const capacity = memoryCapacity(state, channel);
 
   const [showMemories, setShowMemories] = useState(false);
+  const [replacement, setReplacement] = useState<MemoryEntry | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const outgoing = resolveOutgoing(script, state, channel);
   const token = outgoing?.token ?? "";
@@ -143,6 +145,29 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
     (thinkTiming.pauseBeforeMs + thinkTiming.indicatorMs + thinkTiming.afterMs) / 1000,
   ));
   const timeLabel = beat?.time ?? beat?.label ?? null;
+  const dayOf = (beatId: string) => beatOf(beatId)?.time?.match(/^交往第\d+天 周./)?.[0];
+  const lastMessage = visibleMessages.at(-1);
+  const lastDay = lastMessage ? dayOf(lastMessage.beatId) : undefined;
+  const outgoingDay = pending && dayOf(pending.beatId);
+
+  useEffect(() => {
+    setShowMemories(false);
+    setReplacement(null);
+  }, [state.runId, state.chapter[channel]]);
+
+  function requestSave(entry: MemoryEntry) {
+    if (memorySaved >= (capacity ?? Infinity)) {
+      setReplacement(entry);
+      setShowMemories(true);
+    } else {
+      dispatch({ type: "save-memory", channel, ...entry });
+    }
+  }
+
+  function closeMemories() {
+    setReplacement(null);
+    setShowMemories(false);
+  }
 
   return (
     <section className="pane" data-testid={`pane-${channel}`} aria-label={title}>
@@ -158,27 +183,36 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
             onClick={() => setShowMemories(true)}
             aria-label={`已存 ${memorySaved} 条记忆`}
           >
-            <BookmarkIcon size={13} /> {memorySaved}/{Math.max(memoryTotal, memorySaved)}
+            <BookmarkIcon size={13} /> {memorySaved}/{capacity ?? Math.max(memoryTotal, memorySaved)}
           </button>
         </div>
       </header>
 
       <div ref={scroller} className="messages" role="log" aria-label={`${title}的对话`}>
-        {visibleMessages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            from={message.from}
-            text={message.text}
-            delivery={message.delivery}
-            caption={message.caption}
-            marks={marksFor(message.beatId, message.text)}
-            onSaveMark={(text) => {
-              const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
-              if (!candidate) return;
-              dispatch({ type: "save-memory", channel, label: candidate.缩略标签, text: candidate.短句, beatId: message.beatId });
-            }}
-          />
-        ))}
+        {visibleMessages.map((message, index) => {
+          const day = dayOf(message.beatId);
+          const previous = visibleMessages[index - 1];
+          return (
+            <Fragment key={message.id}>
+              {day && day !== (previous && dayOf(previous.beatId)) ? <div className="chat-date">{day}</div> : null}
+              <MessageBubble
+                from={message.from}
+                text={message.text}
+                delivery={message.delivery}
+                caption={message.caption}
+                marks={marksFor(message.beatId, message.text)}
+                onSaveMark={(text) => {
+                  const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
+                  if (!candidate) return;
+                  requestSave({ label: candidate.缩略标签, text: candidate.短句, beatId: message.beatId });
+                }}
+              />
+            </Fragment>
+          );
+        })}
+
+        {outgoing && outgoing.delivery !== "thought" && phase !== "idle"
+          && outgoingDay && outgoingDay !== lastDay ? <div className="chat-date">{outgoingDay}</div> : null}
 
         {phase === "indicator" && outgoing && outgoing.delivery !== "thought" ? (
           <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"}`}>
@@ -255,12 +289,13 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
                 type="button"
                 className="memory-entry"
                 data-testid={`memory-close-${channel}`}
-                onClick={() => setShowMemories(false)}
+                onClick={closeMemories}
                 aria-label="关闭"
               >
                 <CloseIcon size={15} />
               </button>
             </div>
+            {replacement ? <p className="memory-prompt">记忆已满。选择一条替换为「{replacement.label}」。</p> : null}
             {state.memories[channel].length === 0 ? (
               <p className="memory-empty" data-testid={`memory-empty-${channel}`}>还没存下任何记忆。</p>
             ) : (
@@ -269,6 +304,21 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
                   <li key={memory.label} data-testid="memory-entry">
                     <b>{memory.label}</b>
                     <span>「{memory.text}」</span>
+                    {capacity !== undefined ? (
+                      <button
+                        type="button"
+                        className="memory-entry memory-action"
+                        aria-label={replacement ? `替换「${memory.label}」` : `舍弃「${memory.label}」`}
+                        onClick={() => {
+                          if (replacement) {
+                            dispatch({ type: "save-memory", channel, ...replacement, replaceLabel: memory.label });
+                            closeMemories();
+                          } else {
+                            dispatch({ type: "forget-memory", channel, label: memory.label });
+                          }
+                        }}
+                      >{replacement ? "替换" : "舍弃"}</button>
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -1,0 +1,360 @@
+# Generated from reviewed Mermaid by node tools/build-later-chapters.mjs. Do not hand-edit.
+title: 第六幕 · 官宣与期待
+chapter: 6
+时间轴:
+  - 交往第1天 周三 09:10
+  - 交往第1天 周三 09:25
+  - 交往第1天 周三 09:30
+  - 交往第1天 周三 11:30
+  - 交往第1天 周三 11:32
+  - 交往第1天 周三 13:10
+  - 交往第1天 周三 13:13
+  - 交往第1天 周三 13:16
+  - 交往第1天 周三 14:00
+  - 交往第1天 周三 20:30
+  - 交往第1天 周三 20:40
+  - 交往第1天 周三 20:43
+  - 交往第1天 周三 20:50
+  - 交往第1天 周三 20:58
+  - 交往第1天 周三 20:59
+  - 交往第1天 周三 21:10
+  - 交往第1天 周三 21:11
+默认节拍: 正常
+speakers:
+  - id: boy
+    name: 男生
+    channel: left
+  - id: girl
+    name: 女生
+    channel: right
+  - id: ai
+    name: AI
+endings: []
+beats:
+  - id: 6m.CHOICE
+    channel: left
+    time: 交往第1天 周三 09:10
+    lines:
+      - from: boy
+        text: 昨晚她答应跟我在一起了。我睡前又看了两遍聊天，今天醒来还想看。我想发个朋友圈，用上次一起拍的照片。配什么啊，别太肉麻。
+        delivery: type
+      - from: ai
+        text: 用户刚确认恋爱关系，想公开这份喜悦，又不希望配文太肉麻。可以直接说出关系，也可以从以后一起吃饭入手，让照片表达剩下的意思。
+        delivery: thought
+    choices:
+      - thought: 直接说出关系
+        reply: 照片已经有了，配文可以简单直接一点：终于可以光明正大叫她女朋友了。开心的事，不一定非要藏着说。
+        next: 6m.M2A
+        set:
+          6_官宣: 直接
+      - thought: 用日常小事含蓄官宣
+        reply: 可以配这句：以后不用天天一个人吃饭了。话不用说得很满，合照一放，大家就懂了。
+        next: 6m.M2B
+        set:
+          6_官宣: 含蓄
+    requires:
+      - 5m.4.4
+      - 5f.4.4
+    order: 0
+  - id: 6m.M2A
+    channel: left
+    time: 交往第1天 周三 09:25
+    lines:
+      - from: boy
+        text: 发了。我朋友说，憋这么久，终于让你等到了。我兄弟眼红了哈哈哈。
+        delivery: type
+      - from: ai
+        text: 他发出动态后得到朋友的起哄，正借玩笑分享恋爱的开心。可以顺着回应，不必替他解释朋友的真实想法。
+        delivery: thought
+    choices:
+      - thought: 顺着他的得意开个玩笑
+        reply: 看出来了，你现在连被起哄都挺高兴。这条朋友圈值了。
+        next: 6m.M3
+    order: 1
+  - id: 6m.M2B
+    channel: left
+    time: 交往第1天 周三 09:25
+    lines:
+      - from: boy
+        text: 发了。我朋友评论，以前叫你吃饭，你可不是这么说的。我回他，你要是女的我也可以考虑考虑。他现在在群里骂我。
+        delivery: type
+      - from: ai
+        text: 朋友的调侃让他继续开起玩笑，语气轻松，想分享发出官宣后的热闹。可以回应这个结果，不把玩笑当成需要处理的矛盾。
+        delivery: thought
+    choices:
+      - thought: 接一句朋友间的玩笑
+        reply: 恋爱公开了，朋友也顺便逗到了。看起来今天的好心情还能撑很久。
+        next: 6m.M3
+    order: 2
+  - id: 6m.M3
+    channel: left
+    time: 交往第1天 周三 09:30
+    lines:
+      - from: boy
+        text: 我刚问她要不要庆祝一下。她问怎么庆祝，我说吃个青提蛋糕吧，想了好久了。她回我，原来重点在这儿。哈哈，也不能这么说。还没定哪天。
+        delivery: type
+      - from: ai
+        text: 两人已经开始轻松地商量庆祝，暂时没有确定时间。他是在分享刚才的互动，不需要立刻替他们安排一次见面。
+        delivery: thought
+    choices:
+      - thought: 顺着庆祝的话题聊两句
+        reply: 蛋糕想了很久，跟她一起庆祝是今天才有的新理由。时间你们慢慢商量，先把这份开心留着。
+        next: 6m.M4
+    order: 3
+  - id: 6f.F1
+    channel: right
+    time: 交往第1天 周三 11:30
+    lines:
+      - from: girl
+        text: 我昨晚答应跟他在一起了。他今天早上就把我俩照片发朋友圈了，也太快了吧。
+        delivery: type
+      - from: ai
+        text: 用户刚确认恋爱关系，对方已经公开合照，她提到速度快，但还没有说自己是否介意。先问她的感受，不急着把这件事解释为压力或喜悦。
+        delivery: thought
+    choices:
+      - thought: 问问她看到时的感觉
+        reply: 刚确认关系，他就想让大家知道了。你看到的时候什么感觉？
+        next: 6f.CHOICE
+    requires:
+      - 6m.CHOICE
+    order: 4
+  - id: 6f.CHOICE
+    channel: right
+    time: 交往第1天 周三 11:32
+    lines:
+      - from: girl
+        text: 有点好笑，也挺开心的。但我是不是也得发一条啊？想到同事都能看见，还要来问，就好尴尬。
+        delivery: type
+      - from: ai
+        text: 用户对恋爱公开感到开心，犹豫来自熟人围观时的害羞。可以鼓励她表达喜悦，也可以支持她先私下分享，不把是否发动态等同于是否认真对待关系。
+        delivery: thought
+    choices:
+      - thought: 鼓励她大胆分享开心
+        reply: 幸福不用等到不害羞才分享。既然开心，就大方晒一次。写一句自己的话就好，不用比谁更会表达。
+        next: 6f.F3A
+        set:
+          6_女方公开: true
+      - thought: 支持她先告诉亲近的人
+        reply: 幸福是自己的，不必用朋友圈证明。先告诉你想告诉的人，也是一种分享。不想一下子被很多人围观，就先跟熟悉的人说说。
+        next: 6f.F3B
+        set:
+          6_女方公开: false
+    order: 5
+  - id: 6f.F3A
+    channel: right
+    time: 交往第1天 周三 13:10
+    lines:
+      - from: girl
+        text: 我发了，写的好吧，以后一起吃饭。刚发出去我就把手机扣下了。结果我同事直接过来问，谁啊？我还得装得很平静，说就我男朋友啊。
+        delivery: type
+      - from: ai
+        text: 她已经发出动态，也经历了原先害羞的同事询问。她在分享既尴尬又高兴的小插曲，可以顺着回应，不必继续鼓励她做更多公开表达。
+        delivery: thought
+    choices:
+      - thought: 回应她藏不住的开心
+        reply: 朋友圈发出去了，当面介绍也说出口了。看来害羞没有耽误你开心，今天可以不用装得那么平静。
+        next: 6f.F4
+    order: 6
+  - id: 6f.F3B
+    channel: right
+    time: 交往第1天 周三 13:10
+    lines:
+      - from: girl
+        text: 我给闺蜜发了照片。她连着问，什么时候的，谁先说的，见了几次。我打字都赶不上她问。本来想悄悄说一下，结果她给我打电话了。
+        delivery: type
+      - from: ai
+        text: 她选择私下分享，闺蜜反而直接打来电话。她是在讲开心的热闹，可以顺着被采访的感觉开个玩笑，不需要把朋友的追问当成矛盾来处理。
+        delivery: thought
+    choices:
+      - thought: 顺着闺蜜的热情开个玩笑
+        reply: 公开会被围观，私聊会被采访。看来她已经准备好听完整个故事了，你可以慢慢跟她分享。
+        next: 6f.F4
+    order: 7
+  - id: 6f.F4
+    channel: right
+    time: 交往第1天 周三 13:13
+    lines:
+      - from: girl
+        text: 我刚还跟他说，你动作也太快了。然后问他要照片原图，朋友圈那个压得有点糊。跟他说我还是喜欢拿在手里的照片，手机里存一堆，后面根本想不起来翻。
+        delivery: type
+      - from: ai
+        text: 她主动索要合照原图，想以自己喜欢的方式留住照片。已经告诉男友这个偏好，可以回应这份珍惜，不需要再建议一次公开动态。
+        delivery: thought
+    choices:
+      - thought: 回应她想把照片留下来
+        reply: 原来害羞归害羞，照片还是要好好收着。手机里不容易翻到的，就换一种你喜欢的方式留住。
+        next: 6f.F5
+    order: 8
+  - id: 6f.F5
+    channel: right
+    time: 交往第1天 周三 13:16
+    lines:
+      - from: girl
+        text: 他早上还问要不要庆祝一下。我问怎么庆祝，他说吃个青提蛋糕吧，想了好久了。怎么最后还是吃。
+        delivery: type
+      - from: ai
+        text: 她接着分享男友提出的庆祝方式，语气带着亲近的打趣。可以回应蛋糕这个具体细节，不替他们补出尚未确定的见面安排。
+        delivery: thought
+    choices:
+      - thought: 顺着他的蛋糕庆祝聊一句
+        reply: 原来庆祝方式已经有候选了。想了很久的蛋糕，现在又多了一个一起吃的理由。
+        next: 6f.F6
+    记忆候选:
+      - 缩略标签: 想吃青提蛋糕
+        短句: 吃个青提蛋糕吧，想了好久了
+        类型: 日常用途
+        线: 吃个青提蛋糕吧，想了好久了
+    requires:
+      - 6m.M3
+    order: 9
+  - id: 6m.M4
+    channel: left
+    time: 交往第1天 周三 14:00
+    lines:
+      - from: boy
+        text: 她刚跟我说，你动作也太快了。然后又问我要照片原图。我还以为她嫌我发得急，结果她说，我还是喜欢拿在手里的照片。原图已经发她了。
+        delivery: type
+      - from: ai
+        text: 他先担心女友嫌公开太快，随后收到索要原图的回应，感到高兴。她亲口说喜欢纸质照片，可以据此回应，不必猜测她对公开关系的全部态度。
+        delivery: thought
+    choices:
+      - thought: 回应她主动要照片这件事
+        reply: 她觉得你发得快，也想把照片好好留着，这两件事可以同时成立。原图都找你要了，看来今天不只是你一个人在高兴。
+        next: 6m.M5
+    记忆候选:
+      - 缩略标签: 纸质合照
+        短句: 我还是喜欢拿在手里的照片
+        类型: 日常用途
+        线: 我还是喜欢拿在手里的照片
+    requires:
+      - 6f.F4
+    order: 10
+  - id: 6m.M5
+    channel: left
+    time: 交往第1天 周三 20:30
+    lines:
+      - from: boy
+        text: 我刚看了下日历，现在就问她一个月纪念日那天有没有空，会不会太早啊，才第一天。
+        delivery: type
+      - from: ai
+        text: 他已经开始期待一个月纪念日，犹豫的是现在提出会不会太早。可以建议先确认共同的时间，把具体安排留到之后，避免一次就把所有事情定下来。
+        delivery: thought
+    choices:
+      - thought: 先约时间，安排慢慢商量
+        reply: 可以先问问她，不用今天就把整天安排好。就说：一个月纪念日那天留给我吧，我们一起过。具体吃什么到时候再想。
+        next: 6m.MEMCHOICE
+    order: 11
+  - id: 6f.F6
+    channel: right
+    time: 交往第1天 周三 20:40
+    lines:
+      - from: girl
+        text: 他刚说，一个月纪念日那天留给我吧，我们一起过。具体吃什么到时候再想。才第一天，他怎么已经翻到下个月了。
+        delivery: type
+      - from: ai
+        text: 她转述男友的纪念日邀约，觉得他期待得很早，但没有表达拒绝。可以问她是否也想一起过，帮助她表达自己的意愿，不替她作决定。
+        delivery: thought
+    choices:
+      - thought: 让她按自己的期待回应
+        reply: 他已经开始期待那一天了。你也想一起过的话，就先答应，具体安排可以之后再慢慢商量。
+        next: 6f.F7
+    requires:
+      - 6m.M5
+    order: 12
+  - id: 6f.F7
+    channel: right
+    time: 交往第1天 周三 20:43
+    lines:
+      - from: girl
+        text: OK，正好那会儿项目也忙完了，放松一下。
+        delivery: type
+      - from: ai
+        text: 她已经表示愿意一起过纪念日，也期待忙完项目后能放松一下。可以支持她把时间留出来，顺着这份期待回应，不必再替两人安排具体怎么庆祝。
+        delivery: thought
+    choices:
+      - thought: 支持她留出一起过的时间
+        reply: 那就把那天先留出来。等忙完这一阵，有件一起期待的事也挺好。
+        next: 6f.F8
+    order: 13
+  - id: 6m.MEMCHOICE
+    channel: left
+    time: 交往第1天 周三 20:50
+    lines:
+      - from: boy
+        text: 她回，好啊，那天留给你。我现在就有点想准备东西。但礼物是不是挑得太早了，我还没想好送什么合适。
+        delivery: type
+      - from: ai
+        text: 女友答应一起过纪念日，他想准备一点东西，又怕挑得太早。可以根据已有的小细节给建议，也可以先不急着买，在之后相处中慢慢想。
+        delivery: thought
+    choices:
+      - thought: 把合照变成小礼物
+        reply: 她说过喜欢拿在手里的照片。可以先洗一张你们的合照，背面写上在一起的日期。不用一下子准备很贵重的礼物，从她喜欢的小东西开始就好。
+        需记忆: 纸质合照
+        next: 6m.M7A
+      - thought: 先留时间，慢慢了解喜好
+        reply: 先不用急着买。你们刚在一起，之后聊天、见面，还会慢慢知道她喜欢什么。先把那天留好，礼物可以等有了合适的想法再准备。
+        next: 6m.M7B
+    requires:
+      - 6f.F7
+    order: 14
+  - id: 6m.M7A
+    channel: left
+    time: 交往第1天 周三 20:58
+    lines:
+      - from: boy
+        text: 这个好。我下单了，洗两张，一人一张。等拿到了我自己写日期，字丑也认了。
+        delivery: type
+      - from: ai
+        text: 合照已经下单，他还打算亲手写日期，语气很期待。可以回应这份心意，顺着他担心字丑开个小玩笑，不必再建议添别的礼物。
+        delivery: thought
+    choices:
+      - thought: 肯定他亲手准备的心意
+        reply: 你自己写的日期，也会成为照片的一部分。字不用写得多漂亮，先把日子写对就好。
+        next: 6m.END
+        set:
+          6_已订照片: true
+    order: 15
+  - id: 6m.M7B
+    channel: left
+    time: 交往第1天 周三 20:58
+    lines:
+      - from: boy
+        text: 也是，今天才第一天。我先把那天记下来，后面想到了再说。突然觉得还挺有盼头的。
+        delivery: type
+      - from: ai
+        text: 约定已经记下，他接受了暂时不急着买礼物，也开始期待以后的相处。可以顺着这个轻松的心情收尾，不再追加准备任务。
+        delivery: thought
+    choices:
+      - thought: 让期待留在这里
+        reply: 那就先期待着。接下来还有很多一起吃饭、聊天的机会，合适的主意也许就在里面。
+        next: 6m.END
+        set:
+          6_已订照片: false
+    order: 16
+  - id: 6m.END
+    channel: left
+    time: 交往第1天 周三 20:59
+    lines: []
+    control: true
+    order: 17
+  - id: 6f.F8
+    channel: right
+    time: 交往第1天 周三 21:10
+    lines:
+      - from: girl
+        text: 我把那天记日历上了。写一个月纪念日有点不好意思，又改成了吃饭。
+        delivery: type
+      - from: ai
+        text: 她把约定记进日历，连给自己看的名称都有点害羞。她是在接着分享今晚的期待，轻松回应即可，不再增加需要她完成的新安排。
+        delivery: thought
+    choices:
+      - thought: 轻轻回应她的害羞
+        reply: 名字低调一点，期待一点没少。就让日历先替你留着那一天吧。
+        next: 6f.END
+    order: 18
+  - id: 6f.END
+    channel: right
+    time: 交往第1天 周三 21:11
+    lines: []
+    control: true
+    order: 19

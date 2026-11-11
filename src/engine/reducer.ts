@@ -1,7 +1,7 @@
 import type { Beat, Channel, EngineState } from "./types";
 import {
   choose, clearChannelMessages, commitLine, commitReply, createInitial,
-  detectWindowViolation, openChannel, ritualTick, saveMemory, withMissingRoots,
+  detectWindowViolation, forgetMemory, openChannel, ritualTick, saveMemory, withMissingRoots,
 } from "./scheduler";
 
 export type Action =
@@ -11,7 +11,8 @@ export type Action =
   | { type: "commit-line"; channel: Channel }
   | { type: "choose"; channel: Channel; index: number }
   | { type: "commit-reply"; channel: Channel }
-  | { type: "save-memory"; channel: Channel; label: string; text: string; beatId: string }
+  | { type: "save-memory"; channel: Channel; label: string; text: string; beatId: string; replaceLabel?: string }
+  | { type: "forget-memory"; channel: Channel; label: string }
   | { type: "clear-messages"; channel: Channel }
   | { type: "ritual-tick"; channel: Channel; now: number }
   | { type: "clear-error" };
@@ -41,12 +42,19 @@ export function createReducer(beats: Beat[]) {
           return settle(choose(state, action.channel, action.index, beats));
         case "commit-reply":
           return settle(commitReply(state, action.channel, beats));
-        case "save-memory":
+        case "save-memory": {
+          const beat = beats.find(item => item.id === action.beatId && item.channel === action.channel);
+          const candidate = beat?.记忆候选?.find(item => item.缩略标签 === action.label && item.短句 === action.text);
+          if (!candidate || !state.messages.some(message => message.channel === action.channel
+            && message.beatId === action.beatId && message.text.includes(action.text))) return state;
           return settle(saveMemory(state, action.channel, {
             label: action.label,
             text: action.text,
             beatId: action.beatId,
-          }));
+          }, action.replaceLabel));
+        }
+        case "forget-memory":
+          return settle(forgetMemory(state, action.channel, action.label));
         case "clear-messages":
           return settle(clearChannelMessages(state, action.channel));
         case "ritual-tick":

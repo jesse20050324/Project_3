@@ -31,6 +31,13 @@ const source = YAML.load(readFileSync(resolve(root, "script/ch5.yaml"), "utf8"))
 const engine = YAML.load(readFileSync(resolve(root, "content/chapter-05.yaml"), "utf8")) as Engine;
 const byId = new Map((engine.beats ?? []).map((beat) => [beat.id, beat]));
 
+it("第六、七幕生成物和已校验审稿源保持同步", () => {
+  expect(() => execFileSync(process.execPath, ["tools/build-later-chapters.mjs", "--check"], {
+    cwd: root,
+    encoding: "utf8",
+  })).not.toThrow();
+});
+
 function idOf(turn: Turn): string {
   return `${turn.所属 === "男生" ? "5m" : "5f"}.${turn.编号.slice(2)}`;
 }
