@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================
-// 第五章单向生成器：script/ch5.yaml（定稿，只读）
+// 第五章单向生成器：docs/剧本审稿/第五幕-上线定稿.yaml
 //   + tools/ch5-timing.yaml（实现层 overlay）
 //   → content/chapter-05.yaml（引擎实现层，生成物）
 //
@@ -19,12 +19,12 @@ import { fileURLToPath } from "node:url";
 import YAML from "js-yaml";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SCRIPT_PATH = path.join(ROOT, "script", "ch5.yaml");
+const SCRIPT_PATH = path.join(ROOT, "docs", "剧本审稿", "第五幕-上线定稿.yaml");
 const OVERLAY_PATH = path.join(ROOT, "tools", "ch5-timing.yaml");
 const OUTPUT_PATH = path.join(ROOT, "content", "chapter-05.yaml");
 const CHECK = process.argv.includes("--check");
 
-const HEADER = `# 第五幕 · 熟悉期 —— 由 script/ch5.yaml（v5.1 定稿）自动生成
+const HEADER = `# 第五幕 · 熟悉期 —— 由 docs/剧本审稿/第五幕-上线定稿.yaml自动生成
 # 生成命令：node tools/build-chapter.mjs
 # 实现层补充：tools/ch5-timing.yaml（全局拍序 / 区间门 / 逐消息节拍 / 入场旗标 / 教学记忆收口 / 终局）
 # 本文件是生成物，不要手改；剧本源与 script/feishu/*.mmd 是定稿，也不要改。
@@ -234,7 +234,7 @@ for (const rule of 区间表) {
   const targets = toArray(rule.拍).map(String);
   const lower = (rule.下界 ?? []).map(String);
   const upper = (rule.上界 ?? []).map(String);
-  assert(upper.length > 0, `区间规则「${String(rule.说明 ?? "")}」缺少 上界`);
+  assert(lower.length > 0 || upper.length > 0, `区间规则「${String(rule.说明 ?? "")}」缺少边界`);
   for (const target of targets) {
     assert(seenIds.has(target), `区间规则指向不存在的拍「${target}」`);
     assert(!windows.has(target), `拍「${target}」被两条区间规则重复定义`);
@@ -342,7 +342,7 @@ if (CHECK) {
   // Windows checkout may use CRLF; line endings alone are not script drift.
   const normalizeNewlines = (text) => text.replace(/\r\n/g, "\n");
   if (normalizeNewlines(current).trimEnd() !== normalizeNewlines(generated).trimEnd()) {
-    console.error("content/chapter-05.yaml 已漂移，与 script/ch5.yaml v5.1 + overlay 不同步。");
+    console.error("content/chapter-05.yaml 已漂移，与 第五幕上线定稿 + overlay 不同步。");
     console.error("修复：node tools/build-chapter.mjs");
     process.exit(1);
   }

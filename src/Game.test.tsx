@@ -26,17 +26,15 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("游戏主画面", () => {
-  it("固定画布 + 双栏 + 顶栏只剩重新开始，且没有解释玩法或调试类 UI", () => {
+  it("固定画布、双窗和常驻档案，无调试 UI", () => {
     const loaded = loadBundledScript();
     expect(loaded.script).not.toBeNull();
     render(<Game script={loaded.script!} />);
     expect(screen.getByTestId("game-canvas")).toBeTruthy();
-    const title = screen.getByTestId("chapter-title").textContent ?? "";
-    expect(title).toContain("He said, she said");
-    expect(title).toContain("第一幕");
-    expect(title).not.toContain("双线");
+    expect(screen.getByTestId("game-title")).toHaveTextContent(/^He said, she said$/);
     expect(screen.getByTestId("pane-left")).toBeTruthy();
     expect(screen.getByTestId("pane-right")).toBeTruthy();
+    expect(screen.getByTestId("terminal-archive")).toBeTruthy();
     expect(screen.getByText("助手 · 双会话")).toBeTruthy();
     expect(screen.getByTestId("restart")).toBeTruthy();
     expect(screen.queryByTestId("debug-toggle")).toBeNull();
@@ -52,7 +50,7 @@ describe("游戏主画面", () => {
     expect(screen.queryByTestId("girl-banner")).toBeNull();
   });
 
-  it("章标题按持久化章号显示，不再永远第一幕", () => {
+  it("非开局章节的顶栏也只显示游戏名", () => {
     const script = assignSchedule(parseScript([
       "title: 测试 · 第三章",
       "chapter: 3",
@@ -74,7 +72,7 @@ describe("游戏主画面", () => {
       "      - { from: boy, text: 再说, delivery: pop }",
     ].join("\n")));
     render(<Game script={script} />);
-    expect(screen.getByTestId("chapter-title").textContent).toContain("第三幕");
+    expect(screen.getByTestId("game-title")).toHaveTextContent(/^He said, she said$/);
   });
 
   it("重新开始走确认弹层", () => {
@@ -87,7 +85,7 @@ describe("游戏主画面", () => {
     expect(screen.queryByText("确定重来？")).toBeNull();
   });
 
-  it("上下文重置蒙版只出现在正在重置的那一侧", () => {
+  it("上下文重置系统行只出现在正在重置的那一侧", () => {
     const loaded = loadBundledScript();
     expect(loaded.script).not.toBeNull();
     const script = loaded.script!;
@@ -107,10 +105,28 @@ describe("游戏主画面", () => {
     expect(within(rightPane).queryByText("上下文重置中")).toBeNull();
   });
 
-  it("单窗浮层以 .pane 为定位上下文，不会铺满整块画布", () => {
+  it("固定画布与分窗定位", () => {
     const css = readFileSync(`${process.cwd()}/src/index.css`, "utf8");
     expect(css).toMatch(/\.pane\s*\{[^}]*position:\s*relative/);
-    expect(css).toMatch(/\.ritual-mask\s*\{[^}]*position:\s*absolute/);
-    expect(css).toMatch(/\.memory-dialog\s*\{[^}]*position:\s*absolute/);
+
+    expect(css).toMatch(/\.game-canvas\s*\{[^}]*width:\s*1440px;\s*height:\s*920px/);
+  });
+
+  it("窗头 MEM 原位展开，再点或点外面收起，永远不打开旧弹窗", () => {
+    render(<Game script={loadBundledScript().script!} />);
+    const counter = screen.getByTestId("memory-counter-left");
+    expect(counter).toHaveTextContent("[MEM");
+    fireEvent.click(counter);
+    expect(counter).toHaveAttribute("aria-expanded", "true");
+    expect(counter).toHaveTextContent("Memory 数量");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(counter);
+    expect(counter).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(counter);
+    fireEvent.pointerDown(screen.getByTestId("terminal-archive"));
+    expect(counter).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(counter);
+    fireEvent.blur(counter);
+    expect(counter).toHaveAttribute("aria-expanded", "false");
   });
 });

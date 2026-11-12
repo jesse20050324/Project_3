@@ -1,9 +1,18 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadBundledScript } from "./engine/loadScript";
-import { Game } from "./Game";
+import { TerminalMenu, TerminalStart } from "./components/TerminalStart";
+import { clearProgress, hasProgress } from "./engine/storage";
 
 export function App() {
   const loaded = useMemo(() => loadBundledScript(), []);
+  const [page, setPage] = useState<"title" | "boot">("title");
+  const [entry, setEntry] = useState<"new" | "resume">("new");
+  const toTitle = useCallback(() => setPage("title"), []);
+  const begin = useCallback((mode: "new" | "resume") => {
+    if (mode === "new") clearProgress();
+    setEntry(mode);
+    setPage("boot");
+  }, []);
 
   useEffect(() => {
     if (loaded.error) console.error(loaded.error);
@@ -27,5 +36,6 @@ export function App() {
     );
   }
 
-  return <Game script={loaded.script} />;
+  if (page === "title") return <TerminalMenu hasSave={hasProgress()} onBegin={begin} />;
+  return <TerminalStart entry={entry} script={loaded.script} onTitle={toTitle} />;
 }

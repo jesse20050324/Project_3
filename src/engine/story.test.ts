@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { loadBundledScript, parseScript } from "./loadScript";
 import { validateScript } from "./validate";
+import { windowState } from "./timeline";
+import { availableBeat, createInitial } from "./scheduler";
 
 describe("CH1-CH5 剧本契约", () => {
   const { script, error } = loadBundledScript();
@@ -18,26 +20,26 @@ describe("CH1-CH5 剧本契约", () => {
     expect(script.axes?.[5]).toHaveLength(16);
   });
 
-  it("第五章的 6 处真分叉、8 个区间拍、6 个入场变体、2 个终局拍都在", () => {
+  it("第五章的 6 处真分叉、11 个区间拍、6 个入场变体、2 个终局拍都在", () => {
     if (!script) throw new Error("剧本没有加载");
     const ch5 = script.beats.filter((beat) => beat.chapter === 5);
     const forks = ch5.filter((beat) => new Set((beat.choices ?? []).map((choice) => choice.next)).size > 1);
     expect(forks).toHaveLength(6);
-    expect(ch5.filter((beat) => beat.window)).toHaveLength(8);
+    expect(ch5.filter((beat) => beat.window)).toHaveLength(11);
     expect(ch5.filter((beat) => beat.when)).toHaveLength(6);
     expect(ch5.filter((beat) => beat.ending === "在一起")).toHaveLength(2);
     expect(script.endings?.map((ending) => ending.id)).toContain("在一起");
   });
 
-  it("等待门全部指向男线的共享拍，且都在本拍之前", () => {
+  it("等待门全部指向对侧已发生的共享拍", () => {
     if (!script) throw new Error("剧本没有加载");
     const byId = script.beatById!;
     const waits = script.beats.filter((beat) => beat.chapter === 5 && beat.requires);
     expect(waits).toHaveLength(9);
     for (const beat of waits) {
       for (const id of beat.requires ?? []) {
-        expect(id.startsWith("5m.")).toBe(true);
         expect(byId.has(id)).toBe(true);
+        expect(byId.get(id)!.channel).not.toBe(beat.channel);
         expect(byId.get(id)!.sortKey).toBeLessThan(beat.sortKey!);
       }
     }
@@ -54,6 +56,35 @@ describe("CH1-CH5 剧本契约", () => {
     expect(all).toContain("我也想试试，只是我可能不太会谈恋爱");
     expect(all).not.toContain("特冷的笑话");
     expect(all).not.toContain("就五个字");
+  });
+
+  it("旧版第五章已播男窗反馈的存档仍可打开女窗", () => {
+    const beats = script?.beatById;
+    if (!beats) throw new Error("剧本没有加载");
+    expect(windowState(beats.get("5f.1.2")!, new Set(["5m.1.4", "5m.1.6"]))).toBe("open");
+    expect(windowState(beats.get("5f.4.1")!, new Set(["5m.4.2", "5m.4.4"]))).toBe("open");
+    expect(windowState(beats.get("5m.4.4")!, new Set(["5m.4.2"]))).toBe("waiting");
+  });
+
+  it("女生走完纠错路线后，男窗才能看见她，双方收线后才进第四幕", () => {
+    if (!script) throw new Error("剧本没有加载");
+    const { beats, beatById } = script;
+    const state = {
+      ...createInitial(beats),
+      activated: ["3.2.2-A", "4.1.1"],
+      completed: ["3.2.1", "3.4.1"],
+      flags: { 化妆: "化", 路线: "攀谈" },
+    };
+    expect(availableBeat(state, "left", beats)).toBeNull();
+    state.completed.push("3.4.2", "3.4.arrived");
+    expect(availableBeat(state, "left", beats)?.id).toBe("3.2.2-A");
+    state.completed.push("3.2.2-A");
+    expect(windowState(beatById!.get("3.4.3-A")!, new Set(state.completed))).toBe("open");
+    expect(availableBeat(state, "left", beats)).toBeNull();
+    expect(windowState(beatById!.get("4.3.1")!, new Set(state.completed))).toBe("waiting");
+    state.completed.push("3.2.3", "3.4.4");
+    expect(availableBeat(state, "left", beats)?.id).toBe("4.1.1");
+    expect(windowState(beatById!.get("4.3.1")!, new Set(state.completed))).toBe("open");
   });
 
   it("幕5 每窗 3 条候选，保留原文但撤下两条纯占候选", () => {

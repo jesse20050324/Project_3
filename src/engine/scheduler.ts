@@ -1,3 +1,4 @@
+import { recordContext } from "./archive";
 import { compareBeats, windowState, windowViolation } from "./timeline";
 import type {
   Beat, Channel, ChannelView, ChatMessage, Choice, Ending, EngineState, Scalar,
@@ -37,6 +38,7 @@ export function createInitial(beats: Beat[]): EngineState {
     memories: { left: [], right: [] },
     chapter: { left: firstChapter(beats, "left"), right: firstChapter(beats, "right") },
     ritual: { left: null, right: null },
+    archive: { left: [], right: [] },
     endings: [],
     error: null,
     runId: 0,
@@ -93,31 +95,25 @@ export function choiceMemoryGate(state: EngineState, channel: Channel, choice: C
   return null;
 }
 
-/**
- * 本窗现在是否具备开演条件。
- * 保留「一活一锁」的全局串行：对面正在播出（lines/reply）时不放行；
- * 对面停在 choices 等玩家不算占用播出通道。
- * 「谁先谁后」不再看 state.messages 最后一条属于哪一侧，改由 playbackStep
- * 按 timeline 的全局排序键统一裁决。
- */
+/** 窗口各自播放；明确的等待、区间和跨时间档顺序仍由剧本决定。 */
 export function canArm(state: EngineState, channel: Channel, beats: Beat[]): boolean {
-  if (state.ritual?.[channel]) return false;
-  if (state.pending[channel]) return false;
-  const other: Channel = channel === "left" ? "right" : "left";
-  const otherPending = state.pending[other];
-  if (otherPending && otherPending.kind !== "choices") return false;
+  if (state.ritual?.[channel] || state.pending[channel]) return false;
   const candidate = availableBeat(state, channel, beats);
   if (!candidate) return false;
-  // Preserve the reviewed timeline across unanswered choices and chapter resets.
-  // A second window may start its own reset while the first reset is in progress.
-  if ((candidate.chapter ?? 0) >= 5) {
-    const otherBeat = otherPending?.kind === "choices"
-      ? beats.find((item) => item.id === otherPending.beatId)
-      : state.ritual[other] && candidate.chapter === state.chapter[channel]
-        ? availableBeat(state, other, beats)
-        : null;
-    if (otherBeat && compareBeats(otherBeat, candidate) < 0) return false;
-  }
+  const other: Channel = channel === "left" ? "right" : "left";
+  const pending = state.pending[other];
+  const otherBeat = pending
+    ? beats.find(item => item.id === pending.beatId)
+    : state.ritual[other] && candidate.chapter === state.chapter[channel]
+      ? availableBeat(state, other, beats)
+      : null;
+  const inSameTime = otherBeat?.chapter === candidate.chapter && candidate.timeRank !== undefined
+    && otherBeat?.timeRank === candidate.timeRank;
+  if (otherBeat && (candidate.chapter ?? 0) >= 5 && !inSameTime && compareBeats(otherBeat, candidate) < 0) return false;
+  // 即使两个窗同档，区间的上界也必须等区间内已激活的拍完成。
+  const completed = new Set(state.completed);
+  if (beats.some(beat => beat.channel === other && beat.window?.上界.includes(candidate.id)
+    && state.activated.includes(beat.id) && !completed.has(beat.id))) return false;
   return true;
 }
 
@@ -128,10 +124,6 @@ export type PlaybackStep = { type: "arm"; channel: Channel };
  * 这样「哪个先播哪个后播」由剧本决定，不会因消息到达顺序或刷新而变。
  */
 export function playbackStep(state: EngineState, beats: Beat[]): PlaybackStep | null {
-  for (const channel of ["left", "right"] as const) {
-    const pending = state.pending[channel];
-    if (pending && pending.kind !== "choices") return null;
-  }
   const candidates: { channel: Channel; beat: Beat }[] = [];
   for (const channel of ["left", "right"] as const) {
     if (state.ritual?.[channel]) continue;
@@ -156,7 +148,7 @@ export function ritualTick(state: EngineState, channel: Channel, now: number): E
   const ritual = state.ritual?.[channel];
   if (!ritual || now < ritual.until) return state;
   if (ritual.phase === "mask") {
-    const cleared = clearChannelMessages(state, channel);
+    const cleared = clearChannelMessages(recordContext(state, channel, ritual.from), channel);
     return {
       ...cleared,
       chapter: { ...cleared.chapter, [channel]: ritual.to },
@@ -276,6 +268,10 @@ function achievedEndings(state: EngineState, beats: Beat[]): string[] {
     .map(([id]) => id);
 }
 
+export function storyOutcome(state: EngineState) {
+  return state.endings.find(id => id === "未交换微信" || id === "和好" || id === "分手");
+}
+
 export function openChannel(
   state: EngineState,
   channel: Channel,
@@ -288,7 +284,7 @@ export function openChannel(
   const targetChapter = beat.chapter ?? state.chapter[channel];
   if (targetChapter !== state.chapter[channel]) {
     return {
-      ...state,
+      ...recordContext(state, channel, state.chapter[channel]),
       ritual: {
         ...state.ritual,
         [channel]: {
@@ -296,6 +292,7 @@ export function openChannel(
           to: targetChapter,
           phase: "mask",
           until: now + RITUAL_MASK_MS,
+          startedAt: now,
         },
       },
     };
@@ -427,7 +424,10 @@ function completeBeat(
     completed,
     pending: { ...state.pending, [channel]: null },
   };
-  return { ...nextState, endings: achievedEndings(nextState, beats) };
+  const endings = achievedEndings(nextState, beats);
+  const finished = { ...nextState, endings };
+  if (!storyOutcome(finished)) return finished;
+  return recordContext(recordContext(finished, "left", finished.chapter.left), "right", finished.chapter.right);
 }
 
 function wipeMemories(

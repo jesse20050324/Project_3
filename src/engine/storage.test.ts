@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadBundledScript } from "./loadScript";
 import { consumeLoadNotice, loadProgress, saveProgress } from "./storage";
 import { createInitial } from "./scheduler";
@@ -21,6 +21,30 @@ beforeEach(() => {
 });
 
 describe("存档 v2", () => {
+  it("独立试玩使用专属存档，读取和清除都不影响正式站", async () => {
+    const state = createInitial(beats);
+    saveProgress(state);
+    const mainSave = localStorage.getItem(KEY);
+    localStorage.setItem("shuangxian.progress.v1", "legacy");
+
+    vi.stubEnv("VITE_SAVE_NAMESPACE", "he-said-she-said-ui-test");
+    vi.resetModules();
+    try {
+      const preview = await import("./storage");
+      expect(preview.hasProgress()).toBe(false);
+      expect(preview.loadProgress(beats)).toBeNull();
+      preview.saveProgress({ ...state, runId: 4 });
+      expect(preview.loadProgress(beats)?.runId).toBe(4);
+      preview.clearProgress();
+      expect(preview.hasProgress()).toBe(false);
+      expect(localStorage.getItem(KEY)).toBe(mainSave);
+      expect(localStorage.getItem("shuangxian.progress.v1")).toBe("legacy");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
   it("写入读出能保住显式章号、仪式与终局", () => {
     const state: EngineState = {
       ...createInitial(beats),
@@ -96,5 +120,19 @@ describe("存档 v2", () => {
     expect(loaded?.chapter).toEqual(state.chapter);
     expect(loaded?.endings).toEqual(state.endings);
     expect(loaded?.memories).toEqual({ left: [left], right: [right] });
+  });
+
+  it("换店旧档撤下无效地址并能继续到店，已经播过的男窗不重复播", () => {
+    const { script } = loadBundledScript();
+    if (!script) throw new Error("剧本加载失败");
+    const old = createInitial(script.beats);
+    old.chapter = { left: 3, right: 3 };
+    old.completed = ["R1-shiguang", "3.4.1", "3.3.1"];
+    old.memories.right = [{ label: "店的位置", text: "小寨华旗国际A座", beatId: "R1-shiguang" }];
+    saveProgress(old);
+    const resumed = loadProgress(script.beats);
+    expect(resumed?.completed).toContain("3.4.arrived");
+    expect(resumed?.activated).not.toContain("3.3.1-A");
+    expect(resumed?.memories.right).toEqual([]);
   });
 });

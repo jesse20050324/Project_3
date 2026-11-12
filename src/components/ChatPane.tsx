@@ -1,13 +1,16 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { AVATAR_BOY, AVATAR_GIRL } from "../assets/avatars";
-import { channelView, choiceMemoryGate, memoryCapacity, messagesFor } from "../engine/scheduler";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { channelView, choiceMemoryGate, memoryCapacity, messagesFor, RITUAL_MASK_MS } from "../engine/scheduler";
+import { ritualElapsed } from "../terminalMotion";
+import { TerminalSpinner } from "./TerminalSpinner";
+import { ProgressiveText } from "./ProgressiveText";
+import { terminalUsers } from "../terminalIdentity";
 import type { Action } from "../engine/reducer";
 import type {
   Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
 } from "../engine/types";
 import { resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
-import { BookmarkIcon, CloseIcon } from "./icons";
+
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
 
 type Props = {
@@ -15,6 +18,16 @@ type Props = {
   channel: Channel;
   state: EngineState;
   dispatch: (action: Action) => void;
+  active: boolean;
+  focused: boolean;
+  selected: number;
+  skipRefs: RefObject<Partial<Record<Channel, () => void>>>;
+  onMove: (index: number) => void;
+  onPick: (index: number) => void;
+  now: number;
+  reduced: boolean;
+  running: boolean;
+  onMemoryFull: (entry: MemoryEntry) => void;
 };
 
 type Outgoing = {
@@ -28,15 +41,23 @@ type Outgoing = {
 
 type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 
-export function ChatPane({ script, channel, state, dispatch }: Props) {
-  const person = script.speakers.find((speaker) => speaker.channel === channel);
-  const title = person?.name ?? (channel === "left" ? "男生" : "女生");
+export function ChatPane({
+  script, channel, state, dispatch, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, onMemoryFull,
+}: Props) {
+  const { name: title, id } = terminalUsers[channel];
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
   const visibleMessages = messages.filter((message) => message.delivery !== "thought");
-  const thought = [...messages].reverse().find((message) => message.delivery === "thought");
+  const thought = pending?.kind === "choices"
+    ? [...messages].reverse().find(message => message.beatId === pending.beatId && message.delivery === "thought")
+    : null;
   const view = channelView(state, channel, script.beats);
   const ritual = state.ritual[channel];
+  const elapsed = ritual ? ritualElapsed(ritual, now) : 0;
+  const dropped = ritual ? ritual.phase === "pause" || reduced
+    ? visibleMessages.length
+    : Math.floor(visibleMessages.length * Math.min(1, elapsed / RITUAL_MASK_MS)) : 0;
+  const displayed = visibleMessages.slice(dropped);
 
   const beatOf = (beatId: string) => script.beatById?.get(beatId) ?? script.beats.find((beat) => beat.id === beatId);
   const savedLabels = new Set(state.memories[channel].map((memory) => memory.label));
@@ -56,17 +77,40 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
   const memorySaved = state.memories[channel].length;
   const capacity = memoryCapacity(state, channel);
 
-  const [showMemories, setShowMemories] = useState(false);
-  const [replacement, setReplacement] = useState<MemoryEntry | null>(null);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const outgoing = resolveOutgoing(script, state, channel);
+  const [showMemoryCount, setShowMemoryCount] = useState(false);
+  const memoryCounter = useRef<HTMLButtonElement>(null);
+  const [playback, setPlayback] = useState<{ token: string; phase: Phase }>();
+  const outgoing = running ? resolveOutgoing(script, state, channel) : null;
   const token = outgoing?.token ?? "";
+  const phase = playback?.token === token ? playback.phase : "idle";
   const commitRef = useRef<() => void>(() => {});
   const stateRef = useRef(state);
   const doneToken = useRef<string | null>(null);
   const timers = useRef<number[]>([]);
   const afterMsRef = useRef(0);
   const scroller = useRef<HTMLDivElement>(null);
+  const rowPositions = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    if (!ritual || reduced) {
+      rowPositions.current.clear();
+      return;
+    }
+    el.scrollTop = 0;
+    const next = new Map<string, number>();
+    for (const row of el.querySelectorAll<HTMLElement>("[data-clear-row]")) {
+      const key = row.dataset.clearRow!;
+      const top = row.offsetTop;
+      const previous = rowPositions.current.get(key);
+      next.set(key, top);
+      if (previous !== undefined && previous !== top) {
+        row.animate?.([{ transform: `translateY(${previous - top}px)` }, { transform: "translateY(0)" }],
+          { duration: 135, easing: "ease-out" });
+      }
+    }
+    rowPositions.current = next;
+  }, [ritual, dropped, reduced]);
   stateRef.current = state;
 
   const clearTimers = useCallback(() => {
@@ -98,81 +142,80 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
   }, [later]);
 
   const skip = useCallback(() => commitRef.current(), []);
+  useEffect(() => {
+    const refs = skipRefs.current;
+    refs[channel] = skip;
+    return () => { delete refs[channel]; };
+  }, [channel, skip, skipRefs]);
 
   // 一次消息 = pauseBefore（停顿感）→ indicator（三点）→ 逐字/整条 → afterMs（留白）→ commit。
   // 所有时长都来自该条消息解析后的定值 Timing，不再是全局常量匀速蹦。
   useEffect(() => {
     clearTimers();
+    const setPhase = (phase: Phase) => setPlayback({ token, phase });
     if (!outgoing) {
       setPhase("idle");
       return clearTimers;
     }
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const timing = reduced ? { ...ZERO_TIMING } : outgoing.timing;
-    afterMsRef.current = timing.afterMs;
+    afterMsRef.current = outgoing.delivery === "thought" ? 0 : timing.afterMs;
     setPhase("pause");
     later(() => {
       setPhase("indicator");
       later(() => {
-        if (shouldType(outgoing.delivery, reduced)) {
+        if ((!reduced && outgoing.delivery === "thought") || shouldType(outgoing.delivery, reduced)) {
           setPhase("typing");
         } else {
           setPhase("shown");
-          later(() => commitRef.current(), timing.afterMs);
+          later(() => commitRef.current(), afterMsRef.current);
         }
       }, timing.indicatorMs);
     }, timing.pauseBeforeMs);
     return clearTimers;
-  }, [token, clearTimers, later, outgoing?.delivery]);
+  }, [token, clearTimers, later, outgoing?.delivery, reduced]);
 
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [visibleMessages.length, phase, token]);
+    if (el && !ritual) el.scrollTop = el.scrollHeight;
+  }, [visibleMessages.length, phase, token, ritual]);
 
   const beat = pending ? beatOf(pending.beatId) : undefined;
-  const showChoices = pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
+  const showChoices = running && pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
   const composerMode: ComposerMode = showChoices
     ? "active"
     : pending?.kind === "lines" || pending?.kind === "reply" || view.mode === "gated" || ritual
       ? "locked"
       : "empty";
-  const liveThought = outgoing?.delivery === "thought" && phase !== "idle" && phase !== "pause"
-    ? outgoing
-    : null;
-  const thinkTiming = (liveThought ?? thought)?.timing ?? resolveTiming([]);
-  const thoughtSeconds = Math.max(1, Math.round(
-    (thinkTiming.pauseBeforeMs + thinkTiming.indicatorMs + thinkTiming.afterMs) / 1000,
-  ));
+  const liveThought = outgoing?.delivery === "thought" ? outgoing : null;
   const timeLabel = beat?.time ?? beat?.label ?? null;
   const dayOf = (beatId: string) => beatOf(beatId)?.time?.match(/^交往第\d+天 周./)?.[0];
   const lastMessage = visibleMessages.at(-1);
   const lastDay = lastMessage ? dayOf(lastMessage.beatId) : undefined;
   const outgoingDay = pending && dayOf(pending.beatId);
 
+  useEffect(() => setShowMemoryCount(false), [state.runId, state.chapter[channel]]);
   useEffect(() => {
-    setShowMemories(false);
-    setReplacement(null);
-  }, [state.runId, state.chapter[channel]]);
+    if (!showMemoryCount) return;
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !memoryCounter.current?.contains(event.target)) setShowMemoryCount(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [showMemoryCount]);
 
   function requestSave(entry: MemoryEntry) {
-    if (memorySaved >= (capacity ?? Infinity)) {
-      setReplacement(entry);
-      setShowMemories(true);
-    } else {
-      dispatch({ type: "save-memory", channel, ...entry });
-    }
+    if (memorySaved >= (capacity ?? Infinity)) onMemoryFull(entry);
+    else dispatch({ type: "save-memory", channel, ...entry });
   }
-
-  function closeMemories() {
-    setReplacement(null);
-    setShowMemories(false);
-  }
+  const memoryCount = `${memorySaved}/${capacity ?? Math.max(memoryTotal, memorySaved)}`;
 
   return (
-    <section className="pane" data-testid={`pane-${channel}`} aria-label={title}>
-      <header className="pane-head">
-        <img className="pane-avatar" src={channel === "left" ? AVATAR_BOY : AVATAR_GIRL} alt="" />
+    <section className="pane terminal-column" data-testid={`pane-${channel}`} aria-label={title}
+      data-focused={focused || undefined} data-playing={active || undefined}>
+      <header className="pane-head ascii-rule">
+        <span className="pane-signal" aria-hidden="true">{active ? ">" : " "}</span>
+        <span className="pane-number">USER {id} /</span>
         <span className="pane-name">{title}</span>
         <div className="pane-head-right">
           {timeLabel ? <span className="pane-meta" data-testid={`time-${channel}`}>{timeLabel}</span> : null}
@@ -180,20 +223,23 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
             type="button"
             className="memory-entry"
             data-testid={`memory-counter-${channel}`}
-            onClick={() => setShowMemories(true)}
-            aria-label={`已存 ${memorySaved} 条记忆`}
+            ref={memoryCounter}
+            onClick={() => setShowMemoryCount(value => !value)}
+            onBlur={() => setShowMemoryCount(false)}
+            aria-expanded={showMemoryCount}
+            aria-label={`Memory 数量：${memoryCount}`}
           >
-            <BookmarkIcon size={13} /> {memorySaved}/{capacity ?? Math.max(memoryTotal, memorySaved)}
+            {showMemoryCount ? `[Memory 数量：${memoryCount}]` : `[MEM ${memoryCount}]`}
           </button>
         </div>
       </header>
 
       <div ref={scroller} className="messages" role="log" aria-label={`${title}的对话`}>
-        {visibleMessages.map((message, index) => {
+        {displayed.map((message, index) => {
           const day = dayOf(message.beatId);
-          const previous = visibleMessages[index - 1];
+          const previous = displayed[index - 1];
           return (
-            <Fragment key={message.id}>
+            <div key={message.id} data-clear-row={message.id}>
               {day && day !== (previous && dayOf(previous.beatId)) ? <div className="chat-date">{day}</div> : null}
               <MessageBubble
                 from={message.from}
@@ -201,28 +247,33 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
                 delivery={message.delivery}
                 caption={message.caption}
                 marks={marksFor(message.beatId, message.text)}
-                onSaveMark={(text) => {
+                onSaveMark={ritual ? undefined : (text) => {
                   const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
                   if (!candidate) return;
                   requestSave({ label: candidate.缩略标签, text: candidate.短句, beatId: message.beatId });
                 }}
               />
-            </Fragment>
+            </div>
           );
         })}
 
         {outgoing && outgoing.delivery !== "thought" && phase !== "idle"
           && outgoingDay && outgoingDay !== lastDay ? <div className="chat-date">{outgoingDay}</div> : null}
 
+        {ritual && elapsed < RITUAL_MASK_MS + 500 && !reduced ? (
+          <p className="system-line" data-clear-row="system" data-testid={`resetting-${channel}`} role="status">
+            [SYS] {ritual.phase === "mask" ? "正在清空上下文…" : "已清空"}
+          </p>
+        ) : null}
         {phase === "indicator" && outgoing && outgoing.delivery !== "thought" ? (
-          <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"}`}>
-            <button type="button" className="typing" data-testid="skip" onClick={skip} aria-label="正在输入，点击跳过">
-              <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
-              正在输入
+          <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"} message-wait`} data-testid={`message-wait-${channel}`}>
+            <span className="msg-direction"><TerminalSpinner /></span>
+            <button type="button" className={`${outgoing.from === "ai" ? "msg-ai" : "msg-user"} message-wait-button`}
+              data-testid="skip" onClick={skip} aria-label="跳过当前播放">
+              {outgoing.from === "ai" ? "正在发送" : "正在接收"}
             </button>
           </div>
         ) : null}
-
         {(phase === "typing" || phase === "shown") && outgoing && outgoing.delivery !== "thought" ? (
           <MessageBubble
             key={outgoing.token}
@@ -242,90 +293,20 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
         ) : null}
       </div>
 
-      <div className="composer">
+      {!ritual && (showChoices || (liveThought && phase !== "idle" && phase !== "pause")) ? <div className="composer">
         {thought || liveThought ? (
           <div className="think-block" data-testid={`think-${channel}`}>
-            <div className="think-block-head">已思考 {thoughtSeconds} 秒</div>
-            {liveThought && phase === "indicator" ? (
-              <button type="button" className="typing" data-testid="skip" onClick={skip} aria-label="正在思考，点击跳过">
-                <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
-                正在输入
-              </button>
-            ) : (
-              (liveThought ?? thought)?.text
-            )}
+            <span className="think-block-head">[THINKING]</span>{" "}
+            {liveThought && phase === "indicator" ? <span className="think-progress"><TerminalSpinner /> 正在思考</span>
+              : liveThought && phase === "typing" ? <ProgressiveText key={liveThought.token} text={liveThought.text}
+                interval={Math.max(15, Math.min(31, liveThought.timing.typeIntervalMs))} onFinished={finishTyping} />
+                : (liveThought ?? thought)?.text}
           </div>
         ) : null}
-        <ChoicePanel
-          mode={composerMode}
-          choices={showChoices ? beat?.choices ?? [] : []}
-          gateFor={(index) => {
-            const choice = beat?.choices?.[index];
-            return choice ? choiceMemoryGate(state, channel, choice) : null;
-          }}
-          tagFor={(index) => {
-            const need = beat?.choices?.[index]?.需记忆;
-            return need && savedLabels.has(need) ? need : null;
-          }}
-          onPick={(index) => dispatch({ type: "choose", channel, index })}
-        />
-      </div>
-
-      {ritual ? (
-        <div className="ritual-mask" data-testid={`resetting-${channel}`} role="status">
-          <span className="typing">
-            <span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>
-            上下文重置中
-          </span>
-        </div>
-      ) : null}
-
-      {showMemories ? (
-        <div className="memory-dialog" role="dialog" aria-label="记忆">
-          <div className="memory-card">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h3>{title}窗的记忆</h3>
-              <button
-                type="button"
-                className="memory-entry"
-                data-testid={`memory-close-${channel}`}
-                onClick={closeMemories}
-                aria-label="关闭"
-              >
-                <CloseIcon size={15} />
-              </button>
-            </div>
-            {replacement ? <p className="memory-prompt">记忆已满。选择一条替换为「{replacement.label}」。</p> : null}
-            {state.memories[channel].length === 0 ? (
-              <p className="memory-empty" data-testid={`memory-empty-${channel}`}>还没存下任何记忆。</p>
-            ) : (
-              <ul className="memory-list">
-                {state.memories[channel].map((memory) => (
-                  <li key={memory.label} data-testid="memory-entry">
-                    <b>{memory.label}</b>
-                    <span>「{memory.text}」</span>
-                    {capacity !== undefined ? (
-                      <button
-                        type="button"
-                        className="memory-entry memory-action"
-                        aria-label={replacement ? `替换「${memory.label}」` : `舍弃「${memory.label}」`}
-                        onClick={() => {
-                          if (replacement) {
-                            dispatch({ type: "save-memory", channel, ...replacement, replaceLabel: memory.label });
-                            closeMemories();
-                          } else {
-                            dispatch({ type: "forget-memory", channel, label: memory.label });
-                          }
-                        }}
-                      >{replacement ? "替换" : "舍弃"}</button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      ) : null}
+        <ChoicePanel mode={composerMode} choices={showChoices ? beat?.choices ?? [] : []}
+          selected={selected} onMove={onMove} onPick={onPick}
+          memoryGate={choice => choiceMemoryGate(state, channel, choice)} />
+      </div> : null}
     </section>
   );
 }

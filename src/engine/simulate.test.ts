@@ -20,6 +20,9 @@ describe("全剧本可达性仿真（CH1-CH8）", () => {
     expect(result.endings).toContain("在一起");
     expect(result.endings).toContain("和好");
     expect(result.endings).toContain("分手");
+    expect(result.endings).toContain("未交换微信");
+    expect(result.stoppedWithoutEnding).toBe(0);
+    expect(["3.2.2-A", "3.3.1-A", "4.2.3-direct"].every(id => result.visitedBeats.has(id))).toBe(true);
     const laterBeats = script.beats.filter(beat => (beat.chapter ?? 1) >= 6);
     expect(laterBeats.filter(beat => !result.visitedBeats.has(beat.id)).map(beat => beat.id)).toEqual([]);
     expect(result.chapterTransitions).toBeGreaterThan(0);

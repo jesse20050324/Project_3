@@ -152,12 +152,15 @@ export type Pending =
   | { kind: "reply"; beatId: string; choiceIndex: number; memoryNext?: string };
 
 /** 跨章「上下文重置」仪式。存进 EngineState，刷新后可恢复，不再靠 React 局部 state。 */
+export type ArchiveEntry = { chapter: number; beatIds: string[] };
+
 export type Ritual = {
   from: number;
   to: number;
   phase: "mask" | "pause";
   /** Date.now() 截止时刻；到期由 ritual-tick 推进。 */
   until: number;
+  startedAt?: number;
 };
 
 export type EngineState = {
@@ -172,6 +175,7 @@ export type EngineState = {
   chapter: Record<Channel, number>;
   /** 持久化跨章仪式。 */
   ritual: Record<Channel, Ritual | null>;
+  archive?: Record<Channel, ArchiveEntry[]>;
   /** 已达成的终局 id。 */
   endings: string[];
   /** reducer 异常不再静默吞掉，写入这里供运行时观测。 */

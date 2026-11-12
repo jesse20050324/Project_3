@@ -4,7 +4,7 @@ import { createInitial, playbackStep } from "./engine/scheduler";
 import { consumeLoadNotice, loadProgress, saveProgress } from "./engine/storage";
 import type { Channel, Script } from "./engine/types";
 
-export function useEngine(script: Script) {
+export function useEngine(script: Script, reduceMotion = false, running = true) {
   const beats = script.beats;
   const reducer = useMemo(() => createReducer(beats), [beats]);
   const [state, dispatch] = useReducer(reducer, beats, (initial) => loadProgress(initial) ?? createInitial(initial));
@@ -13,8 +13,8 @@ export function useEngine(script: Script) {
   // 存档只写一次；读档与兼容归一化都在 storage.ts 里一次性完成。
   // 旧版每次渲染都 dispatch sync-roots 的运行时补丁已移除。
   useEffect(() => {
-    saveProgress(state);
-  }, [state]);
+    if (running) saveProgress(state);
+  }, [state, running]);
 
   // 运行时错误仍可追踪，但不在画面上展示（界面已不提供任何调试类 UI）。
   useEffect(() => {
@@ -24,13 +24,16 @@ export function useEngine(script: Script) {
   // 跨章仪式由持久化状态驱动：刷新/StrictMode 双调用都能按 until 恢复，
   // 不再依赖组件局部 state + 定时器（那正是「章间必须刷新才能继续」的根因）。
   useEffect(() => {
+    if (!running) return;
     const now = Date.now();
     const due = (["left", "right"] as Channel[]).filter((channel) => {
       const ritual = state.ritual[channel];
-      return ritual !== null && ritual.until <= now;
+      return ritual !== null && (reduceMotion || ritual.until <= now);
     });
     if (due.length > 0) {
-      for (const channel of due) dispatch({ type: "ritual-tick", channel, now });
+      for (const channel of due) {
+        dispatch({ type: "ritual-tick", channel, now: Math.max(now, state.ritual[channel]!.until) });
+      }
       return;
     }
     const pending = (["left", "right"] as Channel[])
@@ -47,13 +50,14 @@ export function useEngine(script: Script) {
       }
     }, Math.max(0, next - now));
     return () => window.clearTimeout(timer);
-  }, [state.ritual]);
+  }, [state.ritual, reduceMotion, running]);
 
   // 唯一的开演决策点：按剧本排序键选下一个该播的窗。
   useEffect(() => {
+    if (!running) return;
     const step = playbackStep(state, beats);
     if (step) dispatch({ type: "arm", channel: step.channel });
-  }, [state, beats]);
+  }, [state, beats, running]);
 
   return { state, dispatch, notice };
 }

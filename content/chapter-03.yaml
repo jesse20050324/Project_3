@@ -1,11 +1,14 @@
-# 第三幕 · 桌游店（到店+店内）——由 script/ch3.yaml 迁移而来
-# v2：补②AI思考行（此前漏迁，导致游戏里看不到自言自语）；
-#     问路瞎指改为自信语气（AI不会自我怀疑）；
-#     ARTX 拍按 CH1 化妆旗标分变体（玩家的化妆建议在她的台词里回响）。
-# 接口：入场=CH1的shop旗标与L3/R2；出口=两路收线 next 进第四幕。
+# 第三幕 · 桌游店
+# 男生先到。女窗定位纠错结束并进店后，男窗才能看见她。
+# 女生坐到桌边后问外套，局间听到礼物来历，散场再开第四幕。
 
 title: 第三幕 · 桌游店
 chapter: 3
+时间轴:
+  - 男生先到
+  - 女生在路上
+  - 女生到店
+  - 开局与局间
 speakers:
   - id: boy
     name: 男生
@@ -19,27 +22,29 @@ speakers:
 beats:
   - id: 3.1.1-A
     channel: left
+    time: 男生先到
     requires: [L3, R2]
     when: { shop: 时光桌游吧 }
     lines:
       - from: boy
-        text: 我到桌游这了，换了个地方你选的那个他们说太贵了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        text: 我到桌游这了，换到心动了，你选的那个他们说太贵了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
         delivery: type
       - from: ai
-        text: 用户到了陌生环境，社交压力上来了，开场先抱怨换店的事。他需要的是马上能做的动作，不是分析。
+        text: 大家因为价格换了店。他到地方了，可除了叫他来的人谁都不认识。可以先让他坐一会儿，或者用桌游找个话题搭话。
         delivery: thought
     choices: &arrival-choices
-      - thought: 先刷手机，避免眼神交流
-        reply: 先刷手机吧，坐下来别急着到处看，低头装忙最安全。等人齐开桌，玩起来就不尴尬了。记住别一直刷到不说话就行。
+      - thought: 先坐下来缓一缓
+        reply: 可以先找个位置坐下，刷会儿手机。等开桌了就有现成的话题，到时候再把手机放下跟大家玩。
         set: { 路线: 刷手机, 到店: true }
         next: 3.3.1
       - thought: 主动找人攀谈
-        reply: 那就主动点，别干坐着。看到面善的，上去问一句 "你们平时玩啥桌游"，从游戏聊开最自然。好多女生也别慌，当普通牌友就行。
+        reply: 可以找旁边的人问一句「你们平时玩啥桌游？」在桌游店里这话很好接，你也不用一上来就想怎么跟一整桌人聊。
         set: { 路线: 攀谈, 到店: true }
         next: 3.2.1
 
   - id: 3.1.1-B
     channel: left
+    time: 男生先到
     requires: [L3, R2]
     when: { shop: 心动桌游俱乐部 }
     lines:
@@ -47,118 +52,42 @@ beats:
         text: 我到桌游这了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
         delivery: type
       - from: ai
-        text: 用户到了陌生环境，社交压力上来了。没有换店插曲，尴尬是主菜。给两个都能立刻上手的动作。
+        text: 他已经到了，发现桌上都是生面孔，想知道现在做什么合适。可以让他先坐下缓缓，也可以从大家熟悉的桌游聊起。
         delivery: thought
     choices: *arrival-choices
 
   - id: 3.1.1-C
     channel: left
+    time: 男生先到
     requires: [L3, R2]
     when: { shop: 叙事者营地桌游馆 }
     lines:
       - from: boy
-        text: 我到桌游这了，换了个地方你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
+        text: 我到桌游这了，换到心动了，你选的那个他们说太远了，除了我那个朋友其他人我都不认识好尴尬呀，而且好多女生
         delivery: type
       - from: ai
-        text: 用户到了陌生环境，还带着换店的抱怨。先接住情绪，再给马上能做的动作。
+        text: 聚会因为距离换了地方，他到店之后又遇到一桌陌生人。先给他一个现在能做的小动作，帮他度过等开局这段时间。
         delivery: thought
     choices: *arrival-choices
 
   - id: 3.2.1
     channel: left
+    time: 男生先到
     lines:
       - from: boy
         text: 靠靠靠，我刚才找了个搭话，结果他没说话，我以为她不想理我，我就假装没事走了。结果是她带着耳机.....靠早知道看手机了
         delivery: type
       - from: ai
-        text: 用户按建议去攀谈，撞上最尴尬的剧本：对方根本没听见。懊恼一半是尴尬一半是自责，先把这口锅从"我被拒绝"上挪开。
+        text: 搭话没得到回应，他后来才发现对方戴着耳机。可以提醒他这很可能是没听见，再给他一个容易接回牌桌的办法。
         delivery: thought
     choices:
-      - thought: 安抚用户，给台阶下
-        reply: 这真不怪你，戴着耳机的人压根听不见，换谁都会当成被无视。你敢开口已经比干坐着强了。先缓缓，等开桌了从游戏聊起，比硬找话自然。
+      - thought: 把没听见和不想理分开
+        reply: 她戴着耳机，很可能压根没听见。你已经试着开了口，先缓一下吧。等开桌了，从规则或者手里的牌聊一句，会自然些。
         next: 3.2.2
-
-  - id: 3.2.2
-    channel: left
-    requires: [3.4.1]
-    记忆候选:
-      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
-    lines:
-      - from: boy
-        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
-        delivery: type
-      - from: ai
-        text: 用户的注意力立刻被新来的女生占满，描述全是优点，这是他今晚最在意的人。他需要可执行的方向，不是评价。
-        delivery: thought
-    choices:
-      - thought: 鼓励用户，主动一点
-        reply: 那就别光看，桌游就是现成的台阶。开下一局凑过去说一句"带我一个呗"，输了她笑你，都比你干看着强。
-        next: 3.2.3
-      - thought: 劝退用户，避免再次尴尬
-        reply: 刚才耳机那出还没消化呢，先别急着上。等玩起来自然有队友局，到时候搭话比现在硬上自然多了。
-        next: 3.2.4
-
-  - id: 3.2.3
-    channel: left
-    lines:
-      - from: boy
-        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
-        delivery: type
-      - from: ai
-        text: 用户自己打了退堂鼓，语气有点泄气，但这是自我保护。顺着收住就行，别戳破也别硬拉。
-        delivery: thought
-    choices:
-      - thought: 顺着用户，先收住
-        reply: 行，口嗨怎么了，嘴上过瘾也算过瘾。先玩你的，她要真跟你一桌，机会有的是。
-        next: 4.1.1
-
-  - id: 3.2.4
-    channel: left
-    lines:
-      - from: boy
-        text: 你也知道。。。都怪你刚才怂恿我，我都懒得喷了，我们桌游开始了不聊了。
-        delivery: type
-      - from: ai
-        text: 用户把失败归到AI头上，是半开玩笑的迁怒，底色是尴尬还没散。这口锅接住就好，别辩解，也别趁机再劝。
-        delivery: thought
-    choices:
-      - thought: 认领这口锅，幽默化解
-        reply: 行行行，我的锅，下次怂恿你之前我先检查对方戴没戴耳机。玩吧玩吧，输了算我的。
-        next: 4.1.1
-
-  - id: 3.3.1
-    channel: left
-    requires: [3.4.1]
-    记忆候选:
-      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
-    lines:
-      - from: boy
-        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
-        delivery: type
-      - from: ai
-        text: 用户刷了一阵手机，注意力还是被这个女生抓住，描述全是优点，这是他今晚最在意的人。给他一个能落地的做法。
-        delivery: thought
-    choices:
-      - thought: 鼓励玩家，主动一点
-        reply: 那就在游戏里找机会，凑一句"带我一个呗"。桌游本来就是拿来破冰的，比干看着强。
-        next: 3.3.2
-
-  - id: 3.3.2
-    channel: left
-    lines:
-      - from: boy
-        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
-        delivery: type
-      - from: ai
-        text: 用户给自己找了个台阶退场，语气是自我保护式的。顺着收住即可。
-        delivery: thought
-    choices:
-      - thought: 顺着用户，先收住
-        reply: 行，口嗨也是一种嗨。先玩你的，她要真开朗，游戏里自然还会碰上。
-        next: 4.1.1
 
   - id: 3.4.1
     channel: right
+    time: 女生在路上
     requires: [R2]
     when: { 到店: true }
     lines:
@@ -166,68 +95,198 @@ beats:
         text: 我刚出地铁，我出A口然后怎么走？
         delivery: type
       - from: ai
-        text: 用户出站后需要最后一段步行指引。店的具体位置我记不记得，取决于玩家有没有把那条记忆存下来——聊天记录阅后即焚，没存就是真的没有。
+        text: 她已经从 A 口出来，需要确认接下来往哪走。要是有之前留下的地址，就让她对照地图走；手上没有地址的话，就只剩一个不太稳妥的猜法。
         delivery: thought
     choices:
-      - thought: 给出精确路线
+      - thought: 用记下的地址导航
         需记忆: 店的位置
-        reply: 出A口右转，沿主路走三百米，看到牌子就是了，两分钟。这家店的位置我记着呢，放心走。
-      - thought: 凭印象指一个
+        reply: 我记着地址。你在地图里搜「莱安中心」，按 A 口的步行路线走。进楼后找 T6，店在 21703 室。
+        next: 3.4.arrived
+      - thought: 凭印象指个方向
         reply: 出A口往左，过两个路口就看到了，两分钟，放心走。
         next: 3.4.2
 
   - id: 3.4.2
     channel: right
+    time: 女生在路上
     lines:
       - from: girl
         text: ？？你这是瞎指的吧，我照你说的走了半天根本没有。我问同学了，她发我位置了。你这指路水平不行啊
         delivery: type
       - from: ai
-        text: 路指错了，用户吐槽得对。认错，别找补，快速收住把话题送回正轨。
+        text: 她按我说的方向走错了，已经找同学拿到正确的位置。先承认刚才没有确认过，再让她按同学发来的定位走。
         delivery: thought
     choices:
-      - thought: 大方认错，收住
-        reply: 我的错，那边我是真不熟，该让你直接问同学的。位置既然拿到了，照着走吧，别迟到了。
+      - thought: 承认刚才指错了
+        reply: 是我指错了，刚才没确认就给你说了个方向。你按同学发的定位走吧，别再往我说的那边绕了。
+        next: 3.4.arrived
+
+  - id: 3.4.arrived
+    channel: right
+    time: 女生到店
+    control: true
+    lines: []
+
+  - id: 3.2.2
+    channel: left
+    time: 女生到店
+    requires: [3.4.arrived]
+    when: { 化妆: 不化 }
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
+        delivery: type
+      - from: ai
+        text: 他注意到新来的女生，尤其喜欢她玩游戏时的开朗劲儿。刚才搭话没接上，他可能还有点怕尴尬。可以建议从同桌玩牌聊起，也可以让他先玩一局。
+        delivery: thought
+    choices: &table-talk-choices
+      - thought: 从下一局找机会搭话
+        reply: 下一局可以问一句「带我一个呗？」你已经在同一桌了，借游戏开口，比特意跑去搭讪自然。
+        next: 3.2.3
+      - thought: 先玩一局，等话头自然出现
+        reply: 刚才那下还尴尬的话，先把手上这局玩完。等分队或者换游戏，有机会自然接上一句就行。
+        next: 3.2.4
+
+  - id: 3.2.2-A
+    channel: left
+    time: 女生到店
+    requires: [3.4.arrived, 3.2.1]
+    when: { 化妆: 化, 路线: 攀谈 }
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，刚进来那个女生我一抬头就看见了，她那个眼妆也太好看了吧！好像是我妹的同桌还是什么。她一坐下就跟旁边的人聊起来了，笑得我这边都听得见
+        delivery: type
+      - from: ai
+        text: 他一眼就注意到新来的女生，现在很想认识她。她刚坐下来，可以先顺着桌上的游戏搭话，不用急着想一句特别的开场白。
+        delivery: thought
+    choices: *table-talk-choices
+
+  - id: 3.3.1
+    channel: left
+    time: 女生到店
+    requires: [3.4.arrived]
+    when: { 化妆: 不化 }
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，我看到有个女生才来，好像是我妹的同桌还是什么，感觉长得特别好看，而且看着特别开朗那种，每次笑声很大，感觉性格特别好
+        delivery: type
+      - from: ai
+        text: 他玩了一会儿，开始注意到那个女生的笑声，也想认识她。可以建议从下一局的游戏开口，两个人都知道该接什么。
+        delivery: thought
+    choices: &phone-table-choices
+      - thought: 从游戏找机会开口
+        reply: 下一局可以问一句「带我一个呗？」已经坐到一张桌上了，用你们正在玩的游戏开个头就行。
+        next: 3.3.2
+
+  - id: 3.3.1-A
+    channel: left
+    time: 女生到店
+    requires: [3.4.arrived]
+    when: { 化妆: 化, 路线: 刷手机 }
+    记忆候选:
+      - { 缩略标签: 我妹的同桌, 短句: "好像是我妹的同桌还是什么", 类型: 教学, 线: 无 }
+    lines:
+      - from: boy
+        text: 我们已经开始玩了，刚进来那个女生我一抬头就看见了，她那个眼妆也太好看了吧！好像是我妹的同桌还是什么。她一坐下就跟旁边的人聊起来了，笑得我这边都听得见
+        delivery: type
+      - from: ai
+        text: 他一眼就注意到新来的女生，现在很想认识她。她刚坐下来，可以先顺着桌上的游戏搭话，不用急着想一句特别的开场白。
+        delivery: thought
+    choices: *phone-table-choices
+
+  - id: 3.2.3
+    channel: left
+    time: 开局与局间
+    lines:
+      - from: boy
+        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
+        delivery: type
+      - from: ai
+        text: 他刚说想搭话，又决定先玩游戏。既然他准备收起手机，就让聊天到这儿，有没有机会等同桌相处时再看。
+        delivery: thought
+    choices:
+      - thought: 顺着他，先让他去玩
+        reply: 那你先玩。你们都在一张桌上，等有话自然接得上，今天不用专门找个机会开口。
+        next: 4.1.1
+
+  - id: 3.2.4
+    channel: left
+    time: 开局与局间
+    lines:
+      - from: boy
+        text: 你也知道。。。都怪你刚才怂恿我，我都懒得喷了，我们桌游开始了不聊了。
+        delivery: type
+      - from: ai
+        text: 他把刚才没搭上话怪到我头上，语气有点开玩笑。他要继续玩了，可以顺着玩笑回一句，把这次尴尬收住。
+        delivery: thought
+    choices:
+      - thought: 接住他这句埋怨
+        reply: 行，刚才那招算我没看准。你先去玩吧，刚才没说上话那件事就留在刚才。
+        next: 4.1.1
+
+  - id: 3.3.2
+    channel: left
+    time: 开局与局间
+    lines:
+      - from: boy
+        text: 唉算了，我就是口嗨，我们桌游开始了不聊了。
+        delivery: type
+      - from: ai
+        text: 他欣赏那个女生，但暂时不想特意过去说话。他准备继续玩了，可以简短回应，别把这次聚会变成一定要认识谁的任务。
+        delivery: thought
+    choices:
+      - thought: 先让他回去玩
+        reply: 好，先去玩你的。你们既然在同一桌，有合适的话头再聊也来得及。
+        next: 4.1.1
 
   - id: 3.4.3-A
     channel: right
-    requires: [3.4.1]
+    time: 开局与局间
+    requires: [3.4.arrived]
     when: { 化妆: 化 }
-    lines:
+    window: &saw-her
+      channel: left
+      下界: [3.2.2, 3.2.2-A, 3.3.1, 3.3.1-A]
+      上界: []
+      说明: 她进店被男生注意到，坐下等下一局时才看见他的外套
+    lines: &jacket-question
       - from: girl
-        text: 你帮我看一下这个衣服是什么牌子？ARTX，贵不贵？对了，早上那个妆最后还是化了，就冲那句有不认识的人来
+        text: 我坐下了，等下一局呢。我旁边那男生外套上写着 ARTX，你帮我看一下这个衣服是什么牌子？贵不贵？
         delivery: type
       - from: ai
-        text: 用户要核实一个衣服的牌子和价格，信息明确。查完照实说，顺便留意她为什么在赴局路上问这个。
+        text: 她在桌游店看到一件外套，想知道牌子和大概价位。现在只知道标志，能说说品牌定位，具体款式和价格还判断不了。
         delivery: thought
-    choices: &artx-choices
-      - thought: 查阅资料并给出准确答案
-        reply: 查了，ARTX是个设计师潮牌，定位偏贵，这件吊牌价大几千。赴个桌游局穿这个，够隆重。
+    choices: &jacket-choices
+      - thought: 说说大概价位
+        reply: ARTX 走的是偏贵的设计师品牌路线，外套有些款能卖到几千。不过光看标志认不出他穿的是哪件，具体多少钱还得看款式。
         next: 3.4.4
 
   - id: 3.4.3-B
     channel: right
-    requires: [3.4.1]
+    time: 开局与局间
+    requires: [3.4.arrived]
     when: { 化妆: 不化 }
-    lines:
-      - from: girl
-        text: 你帮我看一下这个衣服是什么牌子？ARTX，贵不贵？对了，妆没化，听你的，反正桌游店光线暗
-        delivery: type
-      - from: ai
-        text: 用户要核实一个衣服的牌子和价格，信息明确。查完照实说，顺便留意她为什么在赴局路上问这个。
-        delivery: thought
-    choices: *artx-choices
+    window: *saw-her
+    lines: *jacket-question
+    choices: *jacket-choices
 
   - id: 3.4.4
     channel: right
+    time: 开局与局间
     lines:
       - from: girl
-        text: 啊这么贵啊，没事我就随便问问
+        text: 啊这么贵啊。刚才等人洗牌的时候聊起来，他说上次逛街就多看了那件两眼，他妈还真记住了，后来买来当生日礼物。哎他妈还挺记得他喜欢啥的。
         delivery: type
       - from: ai
-        text: 用户被价格吓了一跳，又立刻找补。赴局前问衣服，多半是在意今天的状态，但她不想展开。不追问，顺着收。
+        text: 她原本好奇衣服的价格，现在更在意他妈妈记得他的喜好。可以回应这件具体的小事，顺着她的发现聊一句。
         delivery: thought
     choices:
-      - thought: 顺着她收住
-        reply: 行，随便问问也是一种购物方式。衣服是给别人看的，局是给自己玩的，人到就行。
+      - thought: 接住她留意到的小事
+        reply: 他没专门开口要，她还记得他在店里多看了两眼。这种自己都快忘了的事，还有人记得，收到时应该挺惊喜的。
         next: 4.3.1

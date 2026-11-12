@@ -31,7 +31,7 @@ export type SimulationResult = {
   visitedBeats: Set<string>;
   unvisitedBeats: string[];
   endings: string[];
-  /** 提前结束（未抵达终局）的状态数，例如幕4「双不问」的定稿早停分支。 */
+  /** 没有抵达已声明终局就停止的状态数。 */
   stoppedWithoutEnding: number;
   chapterTransitions: number;
 };
@@ -184,6 +184,13 @@ function drive(
       continue;
     }
 
+    const step = playbackStep(state, beats);
+    if (step) {
+      state = openChannel(state, step.channel, beats, 0);
+      steps += 1;
+      continue;
+    }
+
     const busy = busyOf(state);
     if (busy) {
       state = busy.kind === "lines"
@@ -211,12 +218,6 @@ function drive(
       };
     }
 
-    const step = playbackStep(state, beats);
-    if (step) {
-      state = openChannel(state, step.channel, beats, 0);
-      steps += 1;
-      continue;
-    }
     return { state, choices: [], terminal: true, error: currentError(state, beats), steps, transitions };
   }
   return {
@@ -286,13 +287,14 @@ export function simulateScript(script: Script, options: SimulationOptions = {}):
     if (driven.terminal) {
       paths += 1;
       for (const ending of driven.state.endings) endings.add(ending);
-      if (driven.state.endings.length && finalEndings.size
+      const endedWithoutContact = driven.state.endings.includes("未交换微信");
+      if (driven.state.endings.length && finalEndings.size && !endedWithoutContact
         && !driven.state.endings.some(ending => finalEndings.has(ending))) {
         errors.push(`进入主线后未抵达最终幕出口：${deadlockDetail(driven.state, beats)}`);
       }
       if (driven.state.endings.length === 0) {
         stoppedWithoutEnding += 1;
-        // 未抵达终局但仍有可播拍 = 真死锁；定稿允许幕4「双不问」提前收线。
+        // 未抵达终局却还有可播拍，说明调度没有走完。
         const stuck = (["left", "right"] as Channel[]).some((channel) =>
           availableBeat(driven.state, channel, beats) !== null || driven.state.pending[channel] !== null,
         );

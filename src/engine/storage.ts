@@ -1,8 +1,11 @@
+import { normalizeArchive } from "./archive";
 import { isRoot } from "./scheduler";
 import type { Beat, Channel, EngineState, Ritual } from "./types";
 
-const KEY = "shuangxian.progress.v2";
-const LEGACY_KEY = "shuangxian.progress.v1";
+// GitHub Pages repositories under one account share an origin and localStorage.
+const saveNamespace = import.meta.env.VITE_SAVE_NAMESPACE || "shuangxian";
+const KEY = `${saveNamespace}.progress.v2`;
+const LEGACY_KEY = `${saveNamespace}.progress.v1`;
 
 let loadNotice: string | null = null;
 
@@ -19,6 +22,11 @@ export function saveProgress(state: EngineState): void {
   } catch (error) {
     console.error("[存档] 写入失败", error);
   }
+}
+
+export function hasProgress(): boolean {
+  try { return Boolean(localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY)); }
+  catch { return false; }
 }
 
 export function clearProgress(): void {
@@ -52,14 +60,15 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       clearProgress();
       return null;
     }
-    const activated = [...state.activated];
+    const { activated, completed, superseded } = resumeTabletopProgress(state, beats);
     for (const beat of beats) {
-      if (!isRoot(beat, beats) || state.completed.includes(beat.id) || activated.includes(beat.id)) continue;
+      if (!isRoot(beat, beats) || completed.includes(beat.id) || activated.includes(beat.id) || superseded.has(beat.id)) continue;
       activated.push(beat.id);
     }
     return {
       ...state,
       activated,
+      completed,
       pending: {
         left: state.pending.left ?? null,
         right: state.pending.right ?? null,
@@ -67,6 +76,7 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       memories: normalizeMemories(state.memories, beats),
       chapter: normalizeChapter(state.chapter, beats),
       ritual: normalizeRitual(state.ritual),
+      archive: normalizeArchive(state.archive, beats),
       endings: Array.isArray(state.endings) ? state.endings.filter((id) => typeof id === "string") : [],
       error: typeof state.error === "string" ? state.error : null,
       runId: typeof state.runId === "number" ? state.runId : 0,
@@ -77,6 +87,27 @@ export function loadProgress(beats: Beat[]): EngineState | null {
     clearProgress();
     return null;
   }
+}
+
+/** 已经播过的到店剧情不补播新版分支，未播完的路线继续走。 */
+function resumeTabletopProgress(state: EngineState, beats: Beat[]) {
+  const activated = [...state.activated];
+  const completed = [...state.completed];
+  const superseded = new Set<string>();
+  const arrived = "3.4.arrived";
+  if (!beats.some(beat => beat.id === arrived)) return { activated, completed, superseded };
+
+  if (completed.includes("3.4.1") && !completed.includes(arrived) && !activated.includes(arrived)) {
+    if (state.chapter?.right >= 4 || completed.includes("3.4.2")
+      || !activated.includes("3.4.2")) completed.push(arrived);
+  }
+  for (const original of ["3.2.2", "3.3.1"]) {
+    const revised = original + "-A";
+    if (completed.includes(original) || state.pending.left?.beatId === original) {
+      superseded.add(revised);
+    }
+  }
+  return { activated: activated.filter(id => !superseded.has(id)), completed, superseded };
 }
 
 function isUsable(state: EngineState, beats: Beat[]): boolean {
@@ -125,6 +156,7 @@ function normalizeRitual(value: unknown): Record<Channel, Ritual | null> {
       to: item.to,
       phase: item.phase,
       until: item.until,
+      ...(typeof item.startedAt === 'number' ? { startedAt: item.startedAt } : {}),
     };
   }
   return empty;
@@ -144,6 +176,9 @@ function normalizeMemories(value: unknown, beats: Beat[]): EngineState["memories
       : [];
   const current = (list: unknown, channel: Channel) => pick(list).filter(memory => {
     const beat = beats.find(item => item.id === memory.beatId && item.channel === channel);
+    if (beat?.chapter === 1 && beat.记忆候选 && memory.label === "店的位置") {
+      return beat.记忆候选?.some(candidate => candidate.缩略标签 === memory.label && candidate.短句 === memory.text);
+    }
     // The CH5 overlay retires two old candidates while keeping their dialogue.
     if (beat?.chapter !== 5) return true;
     return beat.记忆候选?.some(candidate => candidate.缩略标签 === memory.label);

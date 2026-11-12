@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { loadBundledScript } from "./loadScript";
 
 /**
- * 防漂移：定稿 script/ch5.yaml（只读）↔ 实现层 content/chapter-05.yaml。
+ * 防漂移：第五幕上线定稿↔ 实现层 content/chapter-05.yaml。
  * 历史上第五章掉队就是因为这条链没有机器校验，v5.1 定稿了而引擎还在播 v3。
  */
 type Turn = {
@@ -27,7 +27,7 @@ type Engine = {
 };
 
 const root = process.cwd();
-const source = YAML.load(readFileSync(resolve(root, "script/ch5.yaml"), "utf8")) as Source;
+const source = YAML.load(readFileSync(resolve(root, "docs/剧本审稿/第五幕-上线定稿.yaml"), "utf8")) as Source;
 const engine = YAML.load(readFileSync(resolve(root, "content/chapter-05.yaml"), "utf8")) as Engine;
 const byId = new Map((engine.beats ?? []).map((beat) => [beat.id, beat]));
 
@@ -42,7 +42,7 @@ function idOf(turn: Turn): string {
   return `${turn.所属 === "男生" ? "5m" : "5f"}.${turn.编号.slice(2)}`;
 }
 
-describe("第五章 v5.1 定稿 ↔ 引擎实现层", () => {
+describe("第五章上线定稿 ↔ 引擎实现层", () => {
   it("生成器的 --check 通过（生成物没有漂移）", () => {
     const output = execFileSync(process.execPath, ["tools/build-chapter.mjs", "--check"], {
       cwd: root,
@@ -98,12 +98,17 @@ describe("第五章 v5.1 定稿 ↔ 引擎实现层", () => {
     expect(endings).toBe(2);
   });
 
-  it("三条「范围包含」约束共覆盖 8 拍，且每条都带上下界", () => {
+  it("跨窗区间覆盖 11 拍，女方收到表白的拍允许旧存档继续", () => {
     const windowed = (engine.beats ?? []).filter((beat) => beat.window);
-    expect(windowed).toHaveLength(8);
+    expect(windowed).toHaveLength(11);
     for (const beat of windowed) {
       const gate = beat.window as { 下界: string[]; 上界: string[] };
-      expect(gate.上界.length).toBeGreaterThan(0);
+      if (beat.id === "5f.4.1") {
+        expect(gate.下界).toEqual(["5m.4.2", "5m.4.3"]);
+        expect(gate.上界).toEqual([]);
+      } else {
+        expect(gate.上界.length).toBeGreaterThan(0);
+      }
       expect(gate.下界.length).toBeGreaterThan(0);
     }
   });

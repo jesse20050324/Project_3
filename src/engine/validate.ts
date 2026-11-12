@@ -222,8 +222,8 @@ function validateTime(errors: string[], beat: Beat, script: Script): void {
 function validateWindow(errors: string[], beat: Beat, byId: Map<string, Beat>): void {
   const gate = beat.window;
   if (!gate) return;
-  if (gate.上界.length === 0) {
-    errors.push(`节拍 ${beat.id} 的区间门没有上界，「超出区间就出错」无从判定。`);
+  if (gate.上界.length === 0 && gate.下界.length === 0) {
+    errors.push(`节拍 ${beat.id} 的区间门没有上下界。`);
   }
   const other: Channel = beat.channel === "left" ? "right" : "left";
   if (gate.channel !== other) {

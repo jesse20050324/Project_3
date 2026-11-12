@@ -37,11 +37,11 @@ describe("参考稿的三级文字层级", () => {
         onFinished={onFinished}
       />,
     );
-    expect(screen.getByTestId("bubble-text").textContent).toBe("你");
+    expect(screen.getByTestId("bubble-text").querySelector(".msg-ink")?.textContent).toBe("你");
     act(() => vi.advanceTimersByTime(100));
-    expect(screen.getByTestId("bubble-text").textContent).toBe("你");
+    expect(screen.getByTestId("bubble-text").querySelector(".msg-ink")?.textContent).toBe("你");
     act(() => vi.advanceTimersByTime(200));
-    expect(screen.getByTestId("bubble-text").textContent).toBe("你好");
+    expect(screen.getByTestId("bubble-text").querySelector(".msg-ink")?.textContent).toBe("你好");
     expect(onFinished).toHaveBeenCalledTimes(1);
   });
 

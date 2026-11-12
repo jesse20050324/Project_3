@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useProgressiveText } from "./ProgressiveText";
 import type { Delivery } from "../engine/types";
 
 /** 记忆候选高亮：候选原文片段；saved=已存（不再可点）。 */
@@ -38,33 +39,10 @@ export function MessageBubble({
   onSkip,
 }: Props) {
   const typing = animate && delivery === "type";
-  const [shown, setShown] = useState(() => (typing ? Math.min(1, text.length) : text.length));
-  const finished = useRef(false);
-  const onFinishedRef = useRef(onFinished);
-  const onProgressRef = useRef(onProgress);
-  onFinishedRef.current = onFinished;
-  onProgressRef.current = onProgress;
   const mine = from === "ai";
-
-  useEffect(() => {
-    if (!typing) return;
-    if (shown >= text.length) {
-      if (!finished.current) {
-        finished.current = true;
-        onFinishedRef.current?.();
-      }
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setShown((count) => count + 1);
-      onProgressRef.current?.();
-    }, Math.max(0, typeIntervalMs));
-    return () => window.clearTimeout(timer);
-  }, [shown, text, typing, typeIntervalMs]);
+  const visible = useProgressiveText(text, typing, typeIntervalMs, onFinished, onProgress);
 
   if (delivery === "thought") return null;
-
-  const visible = typing ? text.slice(0, shown) : text;
   const renderWithMarks = (value: string) => {
     if (!marks || marks.length === 0) return value;
     const found = marks
@@ -78,17 +56,16 @@ export function MessageBubble({
       if (at < cursor) continue;
       if (at > cursor) nodes.push(value.slice(cursor, at));
       nodes.push(
-        <span
-          key={`${at}-${mark.text}`}
-          data-testid="memory-mark"
-          data-saved={mark.saved}
-          role={mark.saved ? undefined : "button"}
-          tabIndex={mark.saved ? -1 : 0}
-          className={mark.saved ? "memory-mark memory-mark-saved" : "memory-mark"}
-          onClick={mark.saved || !onSaveMark ? undefined : () => onSaveMark(mark.text)}
-        >
-          {mark.text}
-        </span>,
+        mark.saved ? (
+          <span key={`${at}-${mark.text}`} data-testid="memory-mark" data-saved="true" className="memory-mark-saved">
+            {mark.text}<span className="memory-tag"> [MEM] 已存</span>
+          </span>
+        ) : (
+          <button key={`${at}-${mark.text}`} type="button" data-testid="memory-mark" data-saved="false"
+            className="memory-mark" disabled={!onSaveMark} aria-label={`存记忆：${mark.text}`} onClick={() => onSaveMark?.(mark.text)}>
+            {mark.text} [+]
+          </button>
+        ),
       );
       cursor = at + mark.text.length;
     }
@@ -99,6 +76,7 @@ export function MessageBubble({
   if (delivery === "image") {
     return (
       <div className={`msg-row ${mine ? "right" : "left"}`} data-from={from} data-delivery={delivery}>
+        <span className="msg-direction" aria-hidden="true">{mine ? "OUT<" : "IN>"}</span>
         <figure className="msg-image">
           <img src={text} alt={caption ?? "图片"} />
           {caption ? <figcaption>{caption}</figcaption> : null}
@@ -109,14 +87,15 @@ export function MessageBubble({
 
   return (
     <div className={`msg-row ${mine ? "right" : "left"}`} data-from={from} data-delivery={delivery}>
+      <span className="msg-direction" aria-hidden="true">{mine ? "OUT<" : "IN>"}</span>
       <div
         className={mine ? "msg-ai" : "msg-user"}
         data-testid="bubble-text"
         onClick={typing ? onSkip : undefined}
         title={typing ? "点击跳过" : undefined}
       >
-        {renderWithMarks(visible)}
-        {typing && shown < text.length ? <span className="caret" aria-hidden="true" /> : null}
+        {mine ? <span className="msg-ink">{renderWithMarks(visible)}</span> : renderWithMarks(visible)}
+        {typing && visible.length < text.length ? <span className="caret" aria-hidden="true" /> : null}
       </div>
     </div>
   );

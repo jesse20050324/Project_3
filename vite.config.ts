@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
@@ -35,6 +36,6 @@ export default defineConfig({
     // This local Hook suite uses node:test, not Vitest; run with node --test.
     exclude: [...configDefaults.exclude, "tools/codex-sync.test.cjs"],
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts",
+    setupFiles: fileURLToPath(new URL("./src/test/setup.ts", import.meta.url)),
   },
 });

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   availableBeat, canArm, choose, commitLine, commitReply, createInitial,
   detectWindowViolation, hasMemory, openChannel, playbackStep, ritualTick, saveMemory,
@@ -32,7 +32,7 @@ describe("全局时序调度", () => {
     expect(playbackStep(initial, beats)?.channel).toBe("right");
   });
 
-  it("对面正在播出时本窗不放行（一活一锁）", () => {
+  it("无依赖的两窗可以同时播放", () => {
     const { beats, initial } = prepare([
       mk("m1", "left", { order: 1, choices: [fork("m1", "m2")] }),
       mk("f1", "right", { order: 2, choices: [fork("f1", "f2")] }),
@@ -43,10 +43,28 @@ describe("全局时序调度", () => {
       ...initial,
       pending: { left: { kind: "lines", beatId: "m1", lineIndex: 0 }, right: null },
     };
-    expect(canArm(playing, "right", beats)).toBe(false);
-    expect(playbackStep(playing, beats)).toBeNull();
+    expect(canArm(playing, "right", beats)).toBe(true);
+    expect(playbackStep(playing, beats)).toEqual({ type: "arm", channel: "right" });
   });
 
+  it("同一时间档可并播，跨档和区间上界继续等前置拍", () => {
+    const { beats, initial } = prepare([
+      mk("left", "left", { chapter: 5, order: 1, timeRank: 0,
+        window: { channel: "right", 下界: [], 上界: ["upper"] } }),
+      mk("same", "right", { chapter: 5, order: 2, timeRank: 0 }),
+      mk("upper", "right", { chapter: 5, order: 3, timeRank: 0 }),
+      mk("later", "right", { chapter: 5, order: 4, timeRank: 1 }),
+    ]);
+    const playing = openChannel(initial, "left", beats, 0);
+    expect(playbackStep(playing, beats)?.channel).toBe("right");
+    const together = openChannel(playing, "right", beats, 0);
+    expect(together.pending.left?.kind).toBe("lines");
+    expect(together.pending.right?.beatId).toBe("same");
+    const sameDone = commitLine(together, "right", beats);
+    expect(canArm(sameDone, "right", beats)).toBe(false);
+    expect(canArm({ ...sameDone, completed: ["same", "upper"] }, "right", beats)).toBe(false);
+    expect(playbackStep(commitLine(sameDone, "left", beats), beats)?.channel).toBe("right");
+  });
   it("播完一拍不再自动接下一拍（这正是女线 16 拍播不到的旧根因）", () => {
     const { beats, initial } = prepare([
       mk("m1", "left", { order: 1, next: "m2" }),
@@ -137,13 +155,15 @@ describe("跨章仪式：状态持久化，刷新可恢复", () => {
       messages: [{ id: "old", channel: "left", beatId: "a1", from: "boy", text: "旧章消息", delivery: "pop" }],
     };
     const masked = openChannel(withMessage, "left", beats, 1000);
-    expect(masked.ritual.left).toEqual({ from: 1, to: 2, phase: "mask", until: 1000 + 2200 });
+    expect(masked.ritual.left).toEqual({ from: 1, to: 2, phase: "mask", until: 1000 + 2200, startedAt: 1000 });
     expect(masked.pending.left).toBeNull();
+    expect(masked.archive).toEqual({ left: [{ chapter: 1, beatIds: ['a1'] }], right: [] });
 
     const paused = ritualTick(masked, "left", 1000 + 2200);
     expect(paused.ritual.left?.phase).toBe("pause");
     expect(paused.chapter.left).toBe(2);
     expect(paused.messages.filter((message) => message.channel === "left")).toHaveLength(0);
+    expect(paused.archive).toEqual(masked.archive);
 
     const cleared = ritualTick(paused, "left", 1000 + 2200 + 2000);
     expect(cleared.ritual.left).toBeNull();
