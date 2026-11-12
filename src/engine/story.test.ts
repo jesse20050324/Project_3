@@ -5,15 +5,15 @@ import { validateScript } from "./validate";
 describe("CH1-CH5 剧本契约", () => {
   const { script, error } = loadBundledScript();
 
-  it("四章都能通过严格解析与启动校验", () => {
+  it("各章都能通过严格解析与启动校验", () => {
     expect(error).toBeNull();
     expect(script).not.toBeNull();
   });
 
-  it("章号为 1/3/4/5，第五章 40 拍、16 档时间轴", () => {
+  it("章号为 1/3/4/5/6/7/8，第五章 40 拍、16 档时间轴", () => {
     if (!script) throw new Error("剧本没有加载");
     const chapters = [...new Set(script.beats.map((beat) => beat.chapter))];
-    expect(chapters).toEqual([1, 3, 4, 5, 6, 7]);
+    expect(chapters).toEqual([1, 3, 4, 5, 6, 7, 8]);
     expect(script.beats.filter((beat) => beat.chapter === 5)).toHaveLength(40);
     expect(script.axes?.[5]).toHaveLength(16);
   });

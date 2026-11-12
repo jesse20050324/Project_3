@@ -1,6 +1,6 @@
 import { compareBeats, windowState, windowViolation } from "./timeline";
 import type {
-  Beat, Channel, ChannelView, ChatMessage, Ending, EngineState, Scalar,
+  Beat, Channel, ChannelView, ChatMessage, Choice, Ending, EngineState, Scalar,
 } from "./types";
 import { channelName } from "./validate";
 
@@ -15,7 +15,7 @@ export const RITUAL_PAUSE_MS = 2000;
 export function isRoot(beat: Beat, beats: Beat[]): boolean {
   return !beats.some(
     (other) =>
-      other.next === beat.id || other.choices?.some((choice) => choice.next === beat.id),
+      other.next === beat.id || other.choices?.some((choice) => choice.next === beat.id || choice.记忆后继?.some(route => route.next === beat.id)),
   );
 }
 
@@ -77,6 +77,20 @@ export function forgetMemory(state: EngineState, channel: Channel, label: string
 /** 该窗是否已存某条记忆（置灰门判定用）。 */
 export function hasMemory(state: EngineState, channel: Channel, label: string): boolean {
   return state.memories[channel].some((memory) => memory.label === label);
+}
+
+export function choiceMemoryLabels(choice: Choice): string[] {
+  return [...(choice.需记忆 ? [choice.需记忆] : []), ...(choice.记忆后继 ?? []).flatMap(route => route.all)];
+}
+
+export function matchingMemoryRoute(state: EngineState, channel: Channel, choice: Choice) {
+  return choice.记忆后继?.find(route => route.all.every(label => hasMemory(state, channel, label)));
+}
+
+export function choiceMemoryGate(state: EngineState, channel: Channel, choice: Choice): string | null {
+  if (choice.需记忆 && !hasMemory(state, channel, choice.需记忆)) return choice.需记忆;
+  if (choice.记忆后继 && !matchingMemoryRoute(state, channel, choice)) return "相关旧记忆";
+  return null;
 }
 
 /**
@@ -352,10 +366,13 @@ export function choose(
   if (!choice) {
     throw new Error(`节拍 ${beat.id} 没有第 ${index + 1} 个选项`);
   }
-  if (choice.需记忆 && !hasMemory(state, channel, choice.需记忆)) {
-    throw new Error(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${choice.需记忆}」，本窗还没存`);
-  }
-  return withPending(state, channel, { kind: "reply", beatId: beat.id, choiceIndex: index });
+  const gate = choiceMemoryGate(state, channel, choice);
+  if (gate) throw new Error(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${gate}」，本窗还没存`);
+  const memoryNext = matchingMemoryRoute(state, channel, choice)?.next;
+  return withPending(state, channel, {
+    kind: "reply", beatId: beat.id, choiceIndex: index,
+    ...(memoryNext ? { memoryNext } : {}),
+  });
 }
 
 export function commitReply(state: EngineState, channel: Channel, beats: Beat[]): EngineState {
@@ -380,7 +397,7 @@ export function commitReply(state: EngineState, channel: Channel, beats: Beat[])
       timing: choice.timing,
     },
   ];
-  return completeBeat(state, channel, beat, messages, choice.set, choice.next, beats);
+  return completeBeat(state, channel, beat, messages, choice.set, pending.memoryNext ?? choice.next, beats);
 }
 
 function completeBeat(

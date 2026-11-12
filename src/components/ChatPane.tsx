@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AVATAR_BOY, AVATAR_GIRL } from "../assets/avatars";
-import { channelView, memoryCapacity, messagesFor } from "../engine/scheduler";
+import { channelView, choiceMemoryGate, memoryCapacity, messagesFor } from "../engine/scheduler";
 import type { Action } from "../engine/reducer";
 import type {
   Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
@@ -260,8 +260,8 @@ export function ChatPane({ script, channel, state, dispatch }: Props) {
           mode={composerMode}
           choices={showChoices ? beat?.choices ?? [] : []}
           gateFor={(index) => {
-            const need = beat?.choices?.[index]?.需记忆;
-            return need && !savedLabels.has(need) ? need : null;
+            const choice = beat?.choices?.[index];
+            return choice ? choiceMemoryGate(state, channel, choice) : null;
           }}
           tagFor={(index) => {
             const need = beat?.choices?.[index]?.需记忆;

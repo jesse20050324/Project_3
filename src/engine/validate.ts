@@ -57,6 +57,15 @@ export function validateScript(script: Script): Validation {
   );
   for (const beat of script.beats) {
     for (const choice of beat.choices ?? []) {
+      for (const route of choice.记忆后继 ?? []) {
+        if (!route.all.length || route.all.some(label => !script.beats.some(source =>
+          source.channel === beat.channel && source.记忆候选?.some(candidate => candidate.缩略标签 === label)))) {
+          errors.push(`节拍 ${beat.id} 的记忆后继需要本窗有效候选。`);
+        }
+        if (!route.next) errors.push(`节拍 ${beat.id} 的记忆后继缺少目标。`);
+        checkLink(errors, byId, beat, route.next, "记忆后继");
+      }
+      if (choice.next && choice.记忆后继) errors.push(`节拍 ${beat.id} 的选项同时声明固定后继与记忆后继。`);
       if (choice.需记忆 && !memoryLabels.has(choice.需记忆)) {
         errors.push(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${choice.需记忆}」，但没有任何节拍提供这条候选。`);
       }

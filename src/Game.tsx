@@ -8,7 +8,7 @@ type Props = { script: Script };
 
 const CANVAS_W = 1440;
 const CANVAS_H = 920;
-const CHAPTER_LABEL: Record<number, string> = { 1: "一", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七" };
+const CHAPTER_LABEL: Record<number, string> = { 1: "一", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八" };
 
 function fitScale(): number {
   const width = window.innerWidth - 48;
@@ -62,7 +62,8 @@ export function Game({ script }: Props) {
           </header>
 
           {notice ? <div className="notice" role="status">{notice}</div> : null}
-          {state.endings.includes("第七幕完成") ? <div className="notice" role="status">第七幕完成</div> : null}
+          {chapter === 8 && state.endings.includes("和好") ? <div className="notice" role="status">结局 · 和好</div> : null}
+          {chapter === 8 && state.endings.includes("分手") ? <div className="notice" role="status">结局 · 分手</div> : null}
 
           <div className="duo">
             <ChatPane script={script} channel="left" state={state} dispatch={dispatch} />

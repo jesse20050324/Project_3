@@ -51,6 +51,8 @@ export type Choice = {
   next?: string;
   /** 置灰门：未存这条缩略标签的记忆时，该选项置灰不可选。 */
   需记忆?: string;
+  /** 按声明顺序选择首个本窗记忆全部满足的后继，无匹配时置灰。 */
+  记忆后继?: { all: string[]; next: string }[];
   节拍?: PacingValue;
   timing?: Timing;
 };
@@ -147,7 +149,7 @@ export type ChatMessage = {
 export type Pending =
   | { kind: "lines"; beatId: string; lineIndex: number }
   | { kind: "choices"; beatId: string }
-  | { kind: "reply"; beatId: string; choiceIndex: number };
+  | { kind: "reply"; beatId: string; choiceIndex: number; memoryNext?: string };
 
 /** 跨章「上下文重置」仪式。存进 EngineState，刷新后可恢复，不再靠 React 局部 state。 */
 export type Ritual = {

@@ -1,7 +1,8 @@
 import {
-  availableBeat, canArm, channelView, choose, commitLine, commitReply, createInitial,
-  detectWindowViolation, hasMemory, openChannel, playbackStep, ritualTick, saveMemory,
+  availableBeat, canArm, channelView, choiceMemoryGate, choiceMemoryLabels, choose, commitLine, commitReply, createInitial,
+  detectWindowViolation, hasMemory, matchingMemoryRoute, openChannel, playbackStep, ritualTick, saveMemory,
 } from "./scheduler";
+import { compareBeats } from "./timeline";
 import type { Beat, Channel, EngineState, Script } from "./types";
 
 /**
@@ -71,7 +72,7 @@ function makeSignature(beats: Beat[]): (state: EngineState) => string {
       live = {
         constraints: buildConstraintIds(future),
         flags: new Set(future.flatMap(beat => Object.keys(beat.when ?? {}))),
-        gates: new Set(future.flatMap(beat => beat.choices?.flatMap(choice => choice.需记忆 ? [choice.需记忆] : []) ?? [])),
+        gates: new Set(future.flatMap(beat => beat.choices?.flatMap(choiceMemoryLabels) ?? [])),
       };
       chapterCache.set(key, live);
     }
@@ -119,8 +120,18 @@ function autoSaveVisible(state: EngineState, beats: Beat[]): EngineState {
   let next = state;
   const byId = new Map(beats.map((beat) => [beat.id, beat]));
   // Simulate explicit replacements that keep the remaining choices exercisable.
-  const remainingGates = new Set(beats.filter(beat => !state.completed.includes(beat.id))
-    .flatMap(beat => beat.choices?.map(choice => choice.需记忆) ?? []));
+  const latest: Partial<Record<Channel, Beat>> = {};
+  for (const id of state.completed) {
+    const beat = byId.get(id);
+    if (beat && (!latest[beat.channel] || compareBeats(beat, latest[beat.channel]!) > 0)) latest[beat.channel] = beat;
+  }
+  const future = beats.filter(beat => !latest[beat.channel] || compareBeats(beat, latest[beat.channel]!) > 0);
+  const remainingGates = new Set(future.flatMap(beat => beat.choices?.flatMap(choiceMemoryLabels) ?? []));
+  const branchGates = new Set(future.filter(beat =>
+    new Set(beat.choices?.flatMap(choice => choice.记忆后继?.map(route => route.next) ?? [choice.next])).size > 1)
+    .flatMap(beat => beat.choices?.flatMap(choiceMemoryLabels) ?? []));
+  const matrixLabels = new Set(beats.flatMap(beat => beat.choices?.flatMap(choice =>
+    choice.记忆后继?.flatMap(route => route.all) ?? []) ?? []));
   for (const message of state.messages) {
     const beat = byId.get(message.beatId);
     for (const candidate of beat?.记忆候选 ?? []) {
@@ -135,7 +146,8 @@ function autoSaveVisible(state: EngineState, beats: Beat[]): EngineState {
       if (saved !== next) {
         next = saved;
       } else if (remainingGates.has(entry.label)) {
-        const replacement = next.memories[message.channel].find(memory => !remainingGates.has(memory.label));
+        const replacement = next.memories[message.channel].find(memory => !remainingGates.has(memory.label))
+          ?? (matrixLabels.has(entry.label) ? next.memories[message.channel].find(memory => !branchGates.has(memory.label)) : undefined);
         if (replacement) next = saveMemory(next, message.channel, entry, replacement.label);
       }
     }
@@ -294,15 +306,26 @@ export function simulateScript(script: Script, options: SimulationOptions = {}):
       for (const index of group.indices) {
         const beat = beats.find((item) => item.id === prepared.pending[group.channel]?.beatId);
         const choice = beat?.choices?.[index];
-        if (choice?.需记忆 && !hasMemory(prepared, group.channel, choice.需记忆)) continue;
-        let child: EngineState;
-        try {
-          child = choose(prepared, group.channel, index, beats);
-        } catch (error) {
-          errors.push(`仿真在 ${group.channel}/${beat?.id} 选第 ${index + 1} 项失败：${error instanceof Error ? error.message : String(error)}`);
-          continue;
+        if (choice && choiceMemoryGate(prepared, group.channel, choice)) continue;
+        // Exercise every evidenced route by keeping or discarding the relevant
+        // saved memories. Never add a memory the simulated player did not see.
+        const states = [prepared];
+        if (autoSave && choice?.记忆后继) {
+          const labels = new Set(choiceMemoryLabels(choice));
+          for (const route of choice.记忆后继) {
+            const saved = prepared.memories[group.channel].filter(memory =>
+              !labels.has(memory.label) || route.all.includes(memory.label) || choice.需记忆 === memory.label);
+            const candidate = { ...prepared, memories: { ...prepared.memories, [group.channel]: saved } };
+            if (matchingMemoryRoute(candidate, group.channel, choice)?.next === route.next) states.push(candidate);
+          }
         }
-        stack.push(child);
+        for (const state of states) {
+          try {
+            stack.push(choose(state, group.channel, index, beats));
+          } catch (error) {
+            errors.push(`仿真在 ${group.channel}/${beat?.id} 选第 ${index + 1} 项失败：${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
       }
     }
   }

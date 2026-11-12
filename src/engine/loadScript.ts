@@ -5,6 +5,7 @@ import chapter4Source from "../../content/chapter-04.yaml?raw";
 import chapter5Source from "../../content/chapter-05.yaml?raw";
 import chapter6Source from "../../content/chapter-06.yaml?raw";
 import chapter7Source from "../../content/chapter-07.yaml?raw";
+import chapter8Source from "../../content/chapter-08.yaml?raw";
 import { pacingError, resolveTiming } from "../presentation";
 import type {
   Beat, Channel, Choice, Delivery, Ending, Line, MemoryCandidate,
@@ -15,7 +16,7 @@ import { validateScript, type Validation } from "./validate";
 
 // 按播放顺序读入各章，合成一份再检查。后一章的 requires 仍可指向前一章，旗标也不按章清掉。
 // 旧第二章（到店）已并入第三章，幕号2作废空缺。
-const bundledChapters = [chapter1Source, chapter3Source, chapter4Source, chapter5Source, chapter6Source, chapter7Source];
+const bundledChapters = [chapter1Source, chapter3Source, chapter4Source, chapter5Source, chapter6Source, chapter7Source, chapter8Source];
 
 // 严格字段白名单：剧本里写了引擎不认识的字段必须当场报错，
 // 不能再像 v3 时代那样静默丢弃（第五章 v5.1 的 时间轴/等待/分叉/终局 就是这么丢掉的）。
@@ -27,7 +28,7 @@ const BEAT_KEYS = [
   "label", "window", "ending", "节拍", "control",
 ];
 const LINE_KEYS = ["from", "text", "delivery", "caption", "节拍", "timing"];
-const CHOICE_KEYS = ["thought", "reply", "set", "next", "需记忆", "节拍", "timing"];
+const CHOICE_KEYS = ["thought", "reply", "set", "next", "需记忆", "记忆后继", "节拍", "timing"];
 const CANDIDATE_KEYS = ["缩略标签", "短句", "类型", "线"];
 const WINDOW_KEYS = ["channel", "下界", "上界", "说明"];
 const ENDING_KEYS = ["id", "title", "requires", "set"];
@@ -230,13 +231,27 @@ function readChoices(value: unknown, beatId: string, chain: (PacingValue | undef
     const set = item.set === undefined ? undefined : readFlags(item.set, beatId);
     const 需记忆 = item.需记忆 === undefined ? undefined : readString(item.需记忆, `节拍 ${beatId} 的需记忆无法读取`);
     const 节拍 = item.节拍 === undefined ? undefined : readPacing(item.节拍, `节拍 ${beatId} 的第 ${index + 1} 个选项 节拍`);
+    const 记忆后继 = item.记忆后继 === undefined ? undefined : readMemoryRoutes(item.记忆后继, beatId);
     return {
       thought, reply,
+      ...(记忆后继 !== undefined ? { 记忆后继 } : {}),
       ...(next !== undefined ? { next } : {}),
       ...(set !== undefined ? { set } : {}),
       ...(需记忆 !== undefined ? { 需记忆 } : {}),
       ...(节拍 !== undefined ? { 节拍 } : {}),
       timing: resolveTiming([...chain, 节拍]),
+    };
+  });
+}
+
+function readMemoryRoutes(value: unknown, beatId: string): NonNullable<Choice["记忆后继"]> {
+  if (!Array.isArray(value) || !value.length) throw new Error(`节拍 ${beatId} 缺少记忆后继`);
+  return value.map((route) => {
+    if (!isRecord(route)) throw new Error(`节拍 ${beatId} 的记忆后继无法读取`);
+    checkUnknown(route, ["all", "next"], `节拍 ${beatId} 的记忆后继`);
+    return {
+      all: readStringList(route.all, `节拍 ${beatId} 的记忆后继条件`),
+      next: readString(route.next, `节拍 ${beatId} 缺少记忆后继目标`),
     };
   });
 }

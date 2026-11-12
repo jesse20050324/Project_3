@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadBundledScript } from "./loadScript";
 import { simulateScript } from "./simulate";
 
-describe("全剧本可达性仿真（CH1-CH7）", () => {
+describe("全剧本可达性仿真（CH1-CH8）", () => {
   it("剧本能通过严格解析与启动校验", () => {
     const { script, error } = loadBundledScript();
     expect(error).toBeNull();
@@ -18,7 +18,8 @@ describe("全剧本可达性仿真（CH1-CH7）", () => {
     }
     expect(result.ok).toBe(true);
     expect(result.endings).toContain("在一起");
-    expect(result.endings).toContain("第七幕完成");
+    expect(result.endings).toContain("和好");
+    expect(result.endings).toContain("分手");
     const laterBeats = script.beats.filter(beat => (beat.chapter ?? 1) >= 6);
     expect(laterBeats.filter(beat => !result.visitedBeats.has(beat.id)).map(beat => beat.id)).toEqual([]);
     expect(result.chapterTransitions).toBeGreaterThan(0);
@@ -30,7 +31,8 @@ describe("全剧本可达性仿真（CH1-CH7）", () => {
     const { script } = loadBundledScript();
     if (!script) throw new Error("剧本加载失败");
     const result = simulateScript(script, { autoSave: false });
-    expect(result.endings).toContain("第七幕完成");
+    expect(result.endings).toContain("分手");
+    expect(result.endings).not.toContain("和好");
     expect(result.errors.filter((message) => !message.includes("播不到"))).toEqual([]);
   });
 
