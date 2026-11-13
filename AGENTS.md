@@ -78,7 +78,7 @@
 - **改剧本（剧本轮）**：过 `script/设计流程.md` 五个 Phase → 改 `script/ch*.yaml` → `node script/feishu/build.mjs` 出细图＋时间轴图 → 用户贴飞书审 → 认可的内容才同步进 `script/outline.md`。**飞书 mmd 是生成物，不要手改。**
 - **迁可玩（实现轮）**：第五章走 `node tools/build-chapter.mjs`（读定稿源＋overlay，重出 `content/chapter-05.yaml`）→ `node tools/build-chapter.mjs --check` 确认无漂移 → `npx vitest run`（含 `scriptSync.test.ts` 逐拍比对）→ `npx tsc --noEmit` → `npm run build`。旧章仍手写 `content/chapter-0N.yaml` 并在 `loadScript.ts` 注册。
 - **调节奏**：整体改 `src/presentation.ts` 的 `PACING`；单拍/单句改 `tools/ch5-timing.yaml` 的 `节拍` 三张表；改时序改 `拍序`／`区间`。改完必须重跑生成器与 `--check`。**界面上没有调速控件，也不再加回。**
-- **协作纪律**：每次交付 bump `package.json` 的 version；是否 push 由用户决定（push main 会触发 GitHub Pages 部署，一两分钟后强刷才看到新版）。发散想法先口头提，点头才落文件；机制不提前发明；记忆候选必须是角色说的话；未声明的 YAML 字段会被 `loadScript` 直接报错，不许靠静默丢弃糊过去。
+- **协作纪律**：每次交付 bump `package.json` 的 version。经确认的项目实现改动，验证通过后默认提交并推送到 GitHub。普通讨论、试写和未确认提案不发布。发散想法先口头提，点头才落文件；机制不提前发明；记忆候选必须是角色说的话；未声明的 YAML 字段会被 `loadScript` 直接报错，不许靠静默丢弃糊过去。
 - **纠错纪律**：结构性问题的根因与修法追加到 `.learnings/LEARNINGS.md` / `ERRORS.md`，并同步本文件、`README.md` 与 `docs/`，避免别人读旧文件误判状态。
 
 ## 命令速查
@@ -98,6 +98,8 @@ node script/feishu/build.mjs         # 重生成全部飞书图（剧本轮）
 线上：`jesse20050324.github.io/Project_3`；游戏内「重新开始」清存档。
 
 ## 当前状态（正式版 v0.7.0；独立试玩 v0.6.7）
+
+终端版 v0.7.1 按九段为双窗独立清屏和归档，段内保留聊天并用时间分割线提示跳时。源码推送到 Project_3，正式试玩成品发布到作品集仓库的 he-said-she-said/play/。
 
 v0.7.0 以终端试玩版为界面基准，接入已确认的第 1、3、4 章修订、`3489b98` 的第 5 章上线稿、正式站已有的第 6、7、8 章（第 8 章基线 `c7d8934`）。顶栏显示游戏名，右栏归档用会话名，四幕叙事结构见 [讨论进度](docs/剧本审稿/讨论进度.md)。原正式入口 `/Project_3/` 和正式存档键继续使用，独立试玩站使用自己的存档。第 8 章按本窗证据解锁回顾选项，存档保留选定的后继，和好、分手及未交换微信都会显示结局并收录最后一段会话。发布与验收范围见 [终端界面正式实现任务](docs/终端界面正式实现任务.md)。
 
@@ -131,7 +133,7 @@ v0.5.0 接入第六、七幕。按已审查的 Mermaid 单向生成引擎内容�
 6. **严格校验**：`loadScript` 遇未知字段直接报错并列文件名/拍 id/字段名；`validate` 校验时间轴一致性、区间端点、终局声明、节拍数值范围、孤立拍与成环；reducer 异常写入 `state.error` 并在控制台输出，不再静默吞错。
 7. **文档与记忆同步**：本文件、`README.md`、`docs/引擎实现说明.md`、`docs/记忆系统实现方案.md`、`docs/界面设计背景.md`、`content/GAPS.md`、`.learnings/*`、工作区 `项目入口_新窗口必读.md` 全部更新。
 8. **v0.4.1 移除调试设计（废案）**：删除 `src/ScriptMap.tsx`、`src/ScriptMap.test.tsx`、`src/components/DebugStrip.tsx`；`App.tsx` 移除 `#map` hash 路由；`Game.tsx` 顶栏只留「重新开始」；`ChatPane.tsx` 去掉倍率参数；`index.css` 把 `.debug-strip` 改为中性的 `.script-error` 并删 `.debug-error`；清理只服务调试条的孤儿导出与全部注释；`Game.test.tsx` 改为断言界面无调试 UI；`useEngine.ts` 用 `console.error` 保留运行时错误可观测性。剧本加载失败的错误页保留（不是调试 UI）。
-9. 验证：`--check` 通过、测试全绿、`tsc --noEmit` 通过、`npm run build` 通过；v0.4.1 已按用户要求推送 `origin/main`（`4fdbf9e`），GitHub Pages 部署需一两分钟。后续是否 push 仍由用户决定。
+9. 验证：`--check` 通过、测试全绿、`tsc --noEmit` 通过、`npm run build` 通过；v0.4.1 已按用户要求推送 `origin/main`（`4fdbf9e`），GitHub Pages 部署需一两分钟。后续按上方协作纪律发布。
 10. **v0.4.2 游戏名与单窗蒙版**：正式游戏名 `He said, she said`（宏观定稿 `script/outline.md`）同步到顶栏、`index.html` 的 `<title>`、README 与全部约束文档；修掉「上下文重置」蒙版全局铺满的问题——`.pane` 加 `position: relative`，让 `.ritual-mask` 与 `.memory-dialog` 只盖住本窗（`.game-canvas` 带 `transform`，缺定位上下文时 `absolute; inset:0` 会以整块画布为基准）。`Game.test.tsx` 新增 DOM 分侧断言与 CSS 定位契约断言。
 
 **设计定稿（剧本侧，未变）**：记忆矩阵体系＋5-8 章新结构在 `script/outline.md`；`script/act5-8-structure.mmd` 是 5-8 章手写骨架图。ch5 v5.1 已审定，v4/v5/v5.1 的迭代脉络留在 `script/设计流程.md` 与 `.learnings/`。

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ArchiveEntry, Channel, EngineState, MemoryEntry, Script } from "../engine/types";
+import { contextTitles } from "../engine/contextSections";
 import { summariesFor } from "../contextSummaries";
 import { ritualElapsed } from "../terminalMotion";
 import { memoryCapacity, storyOutcome } from "../engine/scheduler";
@@ -20,11 +21,35 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
 }) {
   const [folders, setFolders] = useState({ left: true, right: true });
   const [sessions, setSessions] = useState<Record<string, boolean>>({});
-  const leftReset = state.ritual.left?.from;
-  const rightReset = state.ritual.right?.from;
+  function resettingSession(channel: Channel) {
+    const ritual = state.ritual[channel];
+    if (!ritual || ritual.phase === "mask" && ritual.contextTo !== undefined) return undefined;
+    return ritual.contextTo === undefined
+      ? ritual.from : state.archive?.[channel].at(-1)?.section;
+  }
+  const leftReset = resettingSession("left");
+  const rightReset = resettingSession("right");
   const ended = Boolean(storyOutcome(state));
-  const { left: leftChapter, right: rightChapter } = state.chapter;
+  const leftSession = state.context?.left ?? state.chapter.left;
+  const rightSession = state.context?.right ?? state.chapter.right;
   const scroll = useRef<HTMLDivElement>(null);
+  const closed = channels.flatMap(channel => (state.archive?.[channel] ?? []).flatMap(entry => {
+    if (entry.section === undefined || state.ritual[channel]?.phase === "mask" && entry.section === state.context?.[channel]) return [];
+    return [`${channel}:${entry.section}`];
+  }));
+  const seen = useRef(new Set(closed));
+  useLayoutEffect(() => {
+    const visibleTitles = Array.from(scroll.current?.querySelectorAll<HTMLElement>("[data-archive-title]") ?? []);
+    const stillClosed = new Set(closed);
+    seen.current = new Set([...seen.current].filter(key => stillClosed.has(key)));
+    for (const title of visibleTitles) {
+      const key = title.dataset.archiveTitle!;
+      if (!stillClosed.has(key) || seen.current.has(key)) continue;
+      seen.current.add(key);
+      if (!reduced) title.animate?.([{ opacity: 0, transform: "translateX(-5px)" }, { opacity: 1, transform: "translateX(0)" }],
+        { duration: 320, easing: "ease-out" });
+    }
+  });
   useLayoutEffect(() => {
     const scroller = scroll.current;
     const writing = [...(scroller?.querySelectorAll<HTMLElement>("[data-recording]") ?? [])].at(-1);
@@ -49,9 +74,9 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
     }
     if (ended) {
       setFolders({ left: true, right: true });
-      setSessions(previous => ({ ...previous, [`left:${leftChapter}`]: true, [`right:${rightChapter}`]: true }));
+      setSessions(previous => ({ ...previous, [`left:${leftSession}`]: true, [`right:${rightSession}`]: true }));
     }
-  }, [leftReset, rightReset, ended, leftChapter, rightChapter, state.runId]);
+  }, [leftReset, rightReset, ended, leftSession, rightSession, state.runId]);
   useEffect(() => {
     if (replacement) setFolders(previous => ({ ...previous, [replacement.channel]: true }));
   }, [replacement]);
@@ -69,6 +94,10 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
         const memories = state.memories[channel];
         const loose = memories.filter(memory => !entries.some(entry => entry.beatIds.includes(memory.beatId)));
         const ritual = state.ritual[channel];
+        const current = state.context?.[channel];
+        const recordingSection = !ended && current !== undefined
+          && !entries.some(entry => entry.section === current);
+        const resetSession = channel === "left" ? leftReset : rightReset;
         const incoming = replacement?.channel === channel ? replacement.entry : undefined;
         const forget = memoryCapacity(state, channel) !== undefined
           ? (label: string) => onForget(channel, label) : undefined;
@@ -84,24 +113,30 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
                 data-replacement-option onClick={() => onReplace(memory.label)}>替换「{memory.label}」</button>)}
               <button type="button" className="memory-entry" onClick={onCancelReplacement}>[取消]</button>
             </div> : null}
-            {!entries.length && !loose.length ?  <div className="muted">└ 尚无记录</div> : null}
+            {!entries.length && !loose.length && !recordingSection ? <div className="muted">└ 尚无记录</div> : null}
             {loose.length ? <details className="archive-pending">
               <summary>[MEMORY] 当前会话 · {loose.length}</summary>
               {loose.map(memory => <ArchiveMemory key={memory.label} memory={memory} onForget={forget} />)}
             </details> : null}
             {entries.map(entry => {
-              const key = `${channel}:${entry.chapter}`;
-              const recording = ritual?.from === entry.chapter;
-              const duration = recording && !reduced ? ritualElapsed(ritual, now) : summaryDuration;
-              const title = script.chapters?.find(item => item.index === entry.chapter)?.title;
+              const session = entry.section ?? entry.chapter;
+              const key = `${channel}:${session}`;
+              const recording = resetSession === session;
+              if (entry.section === current && ritual?.contextTo !== undefined && ritual.phase === "mask") {
+                return <div key={key} className="archive-session muted">└ 收录中…</div>;
+              }
+              const duration = recording && ritual && !reduced ? ritualElapsed(ritual, now) : summaryDuration;
+              const title = entry.section === undefined
+                ? script.chapters?.find(item => item.index === entry.chapter)?.title : contextTitles[entry.section - 1];
               return <div key={key} className="archive-session" data-recording={recording || undefined}>
                 <button className="tree-toggle" aria-expanded={Boolean(sessions[key])} type="button"
                   onClick={() => setSessions(previous => ({ ...previous, [key]: !previous[key] }))}>
-                  <span aria-hidden="true">{sessions[key] ? "[-]" : "[+]"}</span> {title?.replace(/^第[一二三四五六七八九十\d]+[幕章]\s*·\s*/, "") ?? "会话记录"}
+                  <span aria-hidden="true">{sessions[key] ? "[-]" : "[+]"}</span> <span data-archive-title={key} className="archive-title">{title?.replace(/^第[一二三四五六七八九十\d]+[幕章]\s*·\s*/, "") ?? "会话记录"}</span>
                 </button>
                 {sessions[key] ? <ArchiveSession entry={entry} memories={memories} elapsed={duration} onForget={forget} /> : null}
               </div>;
             })}
+            {recordingSection ? <div className="archive-session muted" key={`${channel}:${current}`}>└ 收录中…</div> : null}
           </div> : null}
         </div>;
       })}

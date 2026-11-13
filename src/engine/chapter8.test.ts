@@ -21,7 +21,7 @@ it("第七幕旧存档继续进入第八幕，验证144种准备与矩阵组合�
   const { script, error } = loadBundledScript();
   if (!script) throw new Error(error ?? "剧本加载失败");
   const { beats, beatById } = script;
-  const completed = beats.filter(beat => (beat.chapter ?? 0) < 8).map(beat => beat.id);
+  const completed = beats.filter(beat => (beat.chapter ?? 0) < 8 && beat.ending !== "未交换微信").map(beat => beat.id);
   const memoryFor = (channel: Channel, index: number): MemoryEntry => {
     const label = labels[channel][index];
     const beat = beats.find(beat => beat.channel === channel && beat.记忆候选?.some(candidate => candidate.缩略标签 === label))!;
@@ -85,6 +85,11 @@ it("第七幕旧存档继续进入第八幕，验证144种准备与矩阵组合�
         played.map(id => beatById!.get(id)!.order).sort((a, b) => a! - b!),
       );
       expect(state.chapter).toEqual({ left: 8, right: 8 });
+      for (const channel of ["left", "right"] as const) {
+        const finale = state.archive?.[channel].filter(entry => (entry.section ?? 0) >= 7);
+        expect(finale?.map(entry => entry.section)).toEqual([7, 8, 9]);
+        expect(finale?.flatMap(entry => entry.beatIds)).toEqual(played.filter(id => beatById!.get(id)?.channel === channel));
+      }
     }
   }
 });

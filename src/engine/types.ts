@@ -1,3 +1,5 @@
+import type { ContextSection } from "./contextSections";
+
 export type Channel = "left" | "right";
 
 export type Delivery = "type" | "pop" | "image" | "thought";
@@ -69,6 +71,7 @@ export type WindowGate = {
 };
 
 export type Beat = {
+  context?: { section: ContextSection; time?: string; entryTime?: string };
   id: string;
   channel: Channel;
   /** Explicit silent causality/exit marker; never a missing dialogue. */
@@ -151,12 +154,13 @@ export type Pending =
   | { kind: "choices"; beatId: string }
   | { kind: "reply"; beatId: string; choiceIndex: number; memoryNext?: string };
 
-/** 跨章「上下文重置」仪式。存进 EngineState，刷新后可恢复，不再靠 React 局部 state。 */
-export type ArchiveEntry = { chapter: number; beatIds: string[] };
+export type ArchiveEntry = { chapter: number; section?: ContextSection; beatIds: string[] };
 
+/** 上下文重置仪式。存进 EngineState，刷新后可恢复。 */
 export type Ritual = {
   from: number;
   to: number;
+  contextTo?: ContextSection;
   phase: "mask" | "pause";
   /** Date.now() 截止时刻；到期由 ritual-tick 推进。 */
   until: number;
@@ -173,9 +177,10 @@ export type EngineState = {
   memories: Record<Channel, MemoryEntry[]>;
   /** 每窗当前章号，显式维护，不再从消息历史反推。 */
   chapter: Record<Channel, number>;
-  /** 持久化跨章仪式。 */
+  /** 持久化清屏仪式。 */
   ritual: Record<Channel, Ritual | null>;
   archive?: Record<Channel, ArchiveEntry[]>;
+  context?: Partial<Record<Channel, ContextSection>>;
   /** 已达成的终局 id。 */
   endings: string[];
   /** reducer 异常不再静默吞掉，写入这里供运行时观测。 */

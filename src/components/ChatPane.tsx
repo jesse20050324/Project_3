@@ -188,11 +188,17 @@ export function ChatPane({
       ? "locked"
       : "empty";
   const liveThought = outgoing?.delivery === "thought" ? outgoing : null;
-  const timeLabel = beat?.time ?? beat?.label ?? null;
-  const dayOf = (beatId: string) => beatOf(beatId)?.time?.match(/^交往第\d+天 周./)?.[0];
+  function divider(beatId: string, previousId?: string) {
+    const context = beatOf(beatId)?.context;
+    const previous = previousId ? beatOf(previousId)?.context : undefined;
+    if (!context || beatId === previousId) return undefined;
+    if (context.section !== previous?.section) return context.time ?? context.entryTime;
+    return context.time !== previous.time ? context.time : undefined;
+  }
   const lastMessage = visibleMessages.at(-1);
-  const lastDay = lastMessage ? dayOf(lastMessage.beatId) : undefined;
-  const outgoingDay = pending && dayOf(pending.beatId);
+  const currentBeat = beat ?? (lastMessage && beatOf(lastMessage.beatId));
+  const timeLabel = currentBeat?.context ? undefined : currentBeat?.time ?? currentBeat?.label;
+  const outgoingDay = pending && divider(pending.beatId, lastMessage?.beatId);
 
   useEffect(() => setShowMemoryCount(false), [state.runId, state.chapter[channel]]);
   useEffect(() => {
@@ -236,11 +242,10 @@ export function ChatPane({
 
       <div ref={scroller} className="messages" role="log" aria-label={`${title}的对话`}>
         {displayed.map((message, index) => {
-          const day = dayOf(message.beatId);
-          const previous = displayed[index - 1];
+          const day = divider(message.beatId, visibleMessages[dropped + index - 1]?.beatId);
           return (
             <div key={message.id} data-clear-row={message.id}>
-              {day && day !== (previous && dayOf(previous.beatId)) ? <div className="chat-date">{day}</div> : null}
+              {day ? <div className="chat-date">{day}</div> : null}
               <MessageBubble
                 from={message.from}
                 text={message.text}
@@ -258,7 +263,7 @@ export function ChatPane({
         })}
 
         {outgoing && outgoing.delivery !== "thought" && phase !== "idle"
-          && outgoingDay && outgoingDay !== lastDay ? <div className="chat-date">{outgoingDay}</div> : null}
+          && outgoingDay ? <div className="chat-date">{outgoingDay}</div> : null}
 
         {ritual && elapsed < RITUAL_MASK_MS + 500 && !reduced ? (
           <p className="system-line" data-clear-row="system" data-testid={`resetting-${channel}`} role="status">

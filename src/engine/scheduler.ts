@@ -5,7 +5,7 @@ import type {
 } from "./types";
 import { channelName } from "./validate";
 
-/** 跨章「上下文重置」仪式节奏（毫秒）。持久化在 EngineState，刷新后可恢复。 */
+/** 上下文重置仪式节奏（毫秒）。持久化在 EngineState，刷新后可恢复。 */
 export const RITUAL_MASK_MS = 2200;
 export const RITUAL_PAUSE_MS = 2000;
 
@@ -143,15 +143,16 @@ export function clearChannelMessages(state: EngineState, channel: Channel): Engi
   return { ...state, messages: state.messages.filter((message) => message.channel !== channel) };
 }
 
-/** 推进持久化仪式：mask → 清空本窗记录 + 切章 + pause → 结束。刷新后靠 until 恢复。 */
+/** 推进持久化仪式：mask → 清空本窗记录并进入下一段 → pause → 结束。 */
 export function ritualTick(state: EngineState, channel: Channel, now: number): EngineState {
   const ritual = state.ritual?.[channel];
   if (!ritual || now < ritual.until) return state;
   if (ritual.phase === "mask") {
-    const cleared = clearChannelMessages(recordContext(state, channel, ritual.from), channel);
+    const cleared = clearChannelMessages(state, channel);
     return {
       ...cleared,
       chapter: { ...cleared.chapter, [channel]: ritual.to },
+      ...(ritual.contextTo === undefined ? {} : { context: { ...cleared.context, [channel]: ritual.contextTo } }),
       ritual: {
         ...cleared.ritual,
         [channel]: { ...ritual, phase: "pause", until: now + RITUAL_PAUSE_MS },
@@ -282,20 +283,32 @@ export function openChannel(
   const beat = availableBeat(state, channel, beats);
   if (!beat) return state;
   const targetChapter = beat.chapter ?? state.chapter[channel];
-  if (targetChapter !== state.chapter[channel]) {
+  const targetSection = beat.context?.section;
+  const currentSection = state.context?.[channel];
+  const reset = targetSection === undefined
+    ? targetChapter !== state.chapter[channel]
+    : !beat.control && currentSection !== undefined && currentSection !== targetSection;
+  if (reset) {
     return {
-      ...recordContext(state, channel, state.chapter[channel]),
+      ...recordContext(state, channel, beats),
       ritual: {
         ...state.ritual,
         [channel]: {
           from: state.chapter[channel],
           to: targetChapter,
+          ...(targetSection === undefined ? {} : { contextTo: targetSection }),
           phase: "mask",
           until: now + RITUAL_MASK_MS,
           startedAt: now,
         },
       },
     };
+  }
+  if (targetChapter !== state.chapter[channel]) {
+    state = { ...state, chapter: { ...state.chapter, [channel]: targetChapter } };
+  }
+  if (!beat.control && targetSection !== undefined && targetSection !== currentSection) {
+    state = { ...state, context: { ...state.context, [channel]: targetSection } };
   }
   if (beat.lines.length === 0 && beat.choices && beat.choices.length > 0) {
     return withPending(state, channel, { kind: "choices", beatId: beat.id });
@@ -426,8 +439,8 @@ function completeBeat(
   };
   const endings = achievedEndings(nextState, beats);
   const finished = { ...nextState, endings };
-  if (!storyOutcome(finished)) return finished;
-  return recordContext(recordContext(finished, "left", finished.chapter.left), "right", finished.chapter.right);
+  if (!storyOutcome(finished) || storyOutcome(state)) return finished;
+  return recordContext(recordContext(finished, "left", beats), "right", beats);
 }
 
 function wipeMemories(

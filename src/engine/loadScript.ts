@@ -11,6 +11,7 @@ import type {
   Beat, Channel, Choice, Delivery, Ending, Line, MemoryCandidate,
   PacingValue, Scalar, Script, Speaker, WindowGate,
 } from "./types";
+import { contextForBeat } from "./contextSections";
 import { assignSchedule } from "./timeline";
 import { validateScript, type Validation } from "./validate";
 
@@ -48,7 +49,10 @@ export function loadBundledScript(): { script: Script | null; error: string | nu
 function mergeChapters(parts: Script[]): Script {
   const beats = parts.flatMap((part, index) => {
     const chapter = part.chapters?.[0]?.index ?? index + 1;
-    return part.beats.map((beat) => ({ ...beat, chapter: beat.chapter ?? chapter }));
+    return part.beats.map((beat) => {
+      const scheduled = { ...beat, chapter: beat.chapter ?? chapter };
+      return { ...scheduled, context: contextForBeat(scheduled) };
+    });
   });
   const axes: Record<number, string[]> = {};
   for (const part of parts) {

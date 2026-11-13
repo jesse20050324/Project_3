@@ -112,13 +112,42 @@ it.each([false, true])("使用真实章节从标题到第八幕结局，键鼠�
   expect(final.endings).toContain("分手");
   expect(screen.getByText("结局 · 分手")).toBeInTheDocument();
   expect([...seen].sort()).toEqual([1, 3, 4, 5, 6, 7, 8]);
-  expect(final.archive?.left.map(entry => entry.chapter)).toEqual([1, 3, 4, 5, 6, 7, 8]);
-  expect(final.archive?.right.map(entry => entry.chapter)).toEqual([1, 3, 4, 5, 6, 7, 8]);
+  for (const channel of ["left", "right"] as const) {
+    expect(final.archive?.[channel].map(entry => entry.section)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const tabletop = final.archive?.[channel][0].beatIds ?? [];
+    expect(tabletop.some(id => id.startsWith("3."))).toBe(true);
+    expect(tabletop.some(id => id.startsWith("4."))).toBe(true);
+  }
   expect(saved).toBeGreaterThan(0);
   if (mixed) {
     expect(keyboard).toBeGreaterThan(1);
     expect(gated).toBeGreaterThan(0);
   }
+});
+
+it("桌游聚会内保留聊天并标出小跳时，未交换微信时各窗只归档这一段", () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "开始游戏" }));
+  for (let step = 0; step < 40 && !stored().endings.includes("未交换微信"); step++) {
+    const state = stored();
+    const choices = screen.getAllByTestId("choice").filter(button => !button.hasAttribute("disabled"));
+    const stop = choices.find(button => /今天先放一放|暂时先不问/.test(button.textContent ?? ""));
+    fireEvent.click(stop ?? choices[0]);
+    expect(state.ritual).toEqual({ left: null, right: null });
+    if (!stored().endings.includes("未交换微信")) {
+      expect(within(screen.getByTestId("terminal-archive")).queryByText("桌游聚会")).toBeNull();
+    }
+  }
+  const state = stored();
+  expect(state.endings).toContain("未交换微信");
+  for (const channel of ["left", "right"] as const) {
+    expect(state.archive?.[channel].map(entry => entry.section)).toEqual([1]);
+    const pane = within(within(screen.getByTestId(`pane-${channel}`)).getByRole("log"));
+    for (const label of ["聚会当天 · 出发前", channel === "left" ? "到店前后" : "在路上", "散场后"]) {
+      expect(pane.getAllByText(label)).toHaveLength(1);
+    }
+  }
+  expect(within(screen.getByTestId("terminal-archive")).getAllByText("桌游聚会")).toHaveLength(2);
 });
 
 it("切换焦点不推进播放，回车可以完成唯一一条正在播的消息", () => {

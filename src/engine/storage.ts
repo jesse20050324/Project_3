@@ -1,5 +1,6 @@
-import { normalizeArchive } from "./archive";
-import { isRoot } from "./scheduler";
+import { migrateContext, normalizeArchive } from "./archive";
+import { isContextSection } from "./contextSections";
+import { availableBeat, isRoot } from "./scheduler";
 import type { Beat, Channel, EngineState, Ritual } from "./types";
 
 // GitHub Pages repositories under one account share an origin and localStorage.
@@ -65,7 +66,7 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       if (!isRoot(beat, beats) || completed.includes(beat.id) || activated.includes(beat.id) || superseded.has(beat.id)) continue;
       activated.push(beat.id);
     }
-    return {
+    const restored: EngineState = {
       ...state,
       activated,
       completed,
@@ -77,10 +78,12 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       chapter: normalizeChapter(state.chapter, beats),
       ritual: normalizeRitual(state.ritual),
       archive: normalizeArchive(state.archive, beats),
+      context: normalizeContext(state.context),
       endings: Array.isArray(state.endings) ? state.endings.filter((id) => typeof id === "string") : [],
       error: typeof state.error === "string" ? state.error : null,
       runId: typeof state.runId === "number" ? state.runId : 0,
     };
+    return migrateContext(restored, beats, channel => availableBeat(restored, channel, beats));
   } catch (error) {
     console.error("[存档] 读取失败", error);
     loadNotice = "存档读取失败，已从第一幕重新开始。";
@@ -143,6 +146,14 @@ function normalizeChapter(value: unknown, beats: Beat[]): Record<Channel, number
   return { left, right };
 }
 
+function normalizeContext(value: unknown): EngineState["context"] {
+  if (!isRecord(value)) return undefined;
+  const context: NonNullable<EngineState["context"]> = {};
+  if (isContextSection(value.left)) context.left = value.left;
+  if (isContextSection(value.right)) context.right = value.right;
+  return context;
+}
+
 function normalizeRitual(value: unknown): Record<Channel, Ritual | null> {
   const empty: Record<Channel, Ritual | null> = { left: null, right: null };
   if (!isRecord(value)) return empty;
@@ -154,6 +165,7 @@ function normalizeRitual(value: unknown): Record<Channel, Ritual | null> {
     empty[channel] = {
       from: item.from,
       to: item.to,
+      ...(isContextSection(item.contextTo) ? { contextTo: item.contextTo } : {}),
       phase: item.phase,
       until: item.until,
       ...(typeof item.startedAt === 'number' ? { startedAt: item.startedAt } : {}),

@@ -33,35 +33,39 @@ it("重置时刷新保留单侧归档及来源，原话只对持有的记忆可�
   vi.useFakeTimers();
   vi.setSystemTime(1000);
   const script = loadBundledScript().script!;
-  const beat = script.beats.find(item => item.id.startsWith("R1-"))!;
-  const memory = beat.记忆候选![0];
+  const beat = script.beats.find(item => item.id === "5m.2.5")!;
+  const memoryBeat = script.beatById!.get("5m.2.1")!;
+  const memory = memoryBeat.记忆候选![0];
   const state = createInitial(script.beats);
   saveProgress({
     ...state,
-    completed: [beat.id],
-    messages: [{ id: "old", beatId: beat.id, channel: "right", from: "girl", text: memory.短句, delivery: "pop" }],
-    memories: { left: [], right: [{ label: memory.缩略标签, text: memory.短句, beatId: beat.id }] },
-    archive: { left: [], right: [{ chapter: 1, beatIds: [beat.id] }] },
-    ritual: { left: null, right: { from: 1, to: 3, startedAt: 1000, until: 3200, phase: "mask" } },
+    completed: [memoryBeat.id, beat.id],
+    messages: [{ id: "old", beatId: memoryBeat.id, channel: "left", from: "boy", text: memory.短句, delivery: "pop" }],
+    memories: { left: [{ label: memory.缩略标签, text: memory.短句, beatId: memoryBeat.id }], right: [] },
+    chapter: { left: 5, right: 1 },
+    context: { left: 2 },
+    archive: { left: [{ chapter: 5, section: 2, beatIds: [memoryBeat.id, beat.id] }], right: [] },
+    ritual: { right: null, left: { from: 5, to: 5, contextTo: 3, startedAt: 1000, until: 3200, phase: "mask" } },
   });
   const first = render(<Game script={script} />);
   const archive = within(screen.getByTestId("terminal-archive"));
-  expect(archive.getByText("正在收录…", { exact: false })).toBeVisible();
-  expect(screen.queryByTestId("resetting-left")).toBeNull();
+  expect(archive.getAllByText(/收录中…/).length).toBeGreaterThan(0);
+  expect(archive.queryByText("加微信后")).toBeNull();
+  expect(screen.queryByTestId("resetting-right")).toBeNull();
   act(() => vi.advanceTimersByTime(1100));
   first.unmount();
   render(<Game script={script} />);
   act(() => vi.advanceTimersByTime(1200));
-  expect(screen.getByTestId("resetting-right")).toHaveTextContent("已清空");
+  expect(screen.getByTestId("resetting-left")).toHaveTextContent("已清空");
   act(() => vi.advanceTimersByTime(2100));
   const current = within(screen.getByTestId("terminal-archive"));
-  expect(current.getAllByText(/出发前/)).toHaveLength(1);
-  expect(current.getByText(/朋友约她去桌游店/)).toBeVisible();
+  expect(current.getAllByText("加微信后")).toHaveLength(1);
+  expect(current.queryByText("约见与表白")).toBeNull();
   const mark = current.getByText(`[MEM] ${memory.缩略标签}`);
   fireEvent.click(mark);
   expect(current.getByText(`「${memory.短句}」`)).toBeVisible();
   const stored = JSON.parse(localStorage.getItem("shuangxian.progress.v2")!).state as EngineState;
-  expect(stored.archive?.right).toEqual([{ chapter: 1, beatIds: [beat.id] }]);
+  expect(stored.archive?.left).toEqual([{ chapter: 5, section: 2, beatIds: [memoryBeat.id, beat.id] }]);
 });
 
 it("缩窗时整块画布等比缩小，大窗口保持原尺寸", () => {

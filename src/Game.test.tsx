@@ -91,8 +91,9 @@ describe("游戏主画面", () => {
     const script = loaded.script!;
     const state = {
       ...createInitial(script.beats),
+      context: { left: 1 },
       ritual: {
-        left: { from: 1, to: 3, phase: "mask" as const, until: Date.now() + 60_000 },
+        left: { from: 4, to: 5, contextTo: 2, phase: "mask" as const, until: Date.now() + 60_000 },
         right: null,
       },
     };

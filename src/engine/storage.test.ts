@@ -98,6 +98,36 @@ describe("存档 v2", () => {
     expect(loaded?.runId).toBe(0);
   });
 
+  it("旧档把聚会的多个章节归成一段，转换跨章仪式并保留两侧独立进度", () => {
+    const { script } = loadBundledScript();
+    if (!script) throw new Error("剧本加载失败");
+    const state = createInitial(script.beats);
+    const leftBeats = ["L1", "3.1.1-A", "4.2.1"];
+    saveProgress({
+      ...state,
+      completed: [...leftBeats, "R1-shiguang"],
+      activated: ["5m.1.1-A"],
+      flags: { 男生意向: "问", 女生意向: "问" },
+      chapter: { left: 4, right: 1 },
+      ritual: {
+        left: { from: 4, to: 5, phase: "mask", until: 3200 },
+        right: { from: 1, to: 3, phase: "mask", until: 3200 },
+      },
+      archive: {
+        left: leftBeats.map((id, index) => ({ chapter: [1, 3, 4][index], beatIds: [id] })),
+        right: [{ chapter: 1, beatIds: ["R1-shiguang"] }],
+      },
+    });
+    const migrated = loadProgress(script.beats)!;
+    expect(migrated.context).toEqual({ left: 1, right: 1 });
+    expect(migrated.ritual.right).toBeNull();
+    expect(migrated.archive?.right).toEqual([]);
+    expect(migrated.ritual.left).toMatchObject({ contextTo: 2, phase: "mask" });
+    expect(migrated.archive?.left).toEqual([{ chapter: 1, section: 1, beatIds: leftBeats }]);
+    saveProgress(migrated);
+    expect(loadProgress(script.beats)?.archive).toEqual(migrated.archive);
+  });
+
   it("第五幕旧档仅撤下停用候选，保留双窗进度和其余记忆", () => {
     const { script } = loadBundledScript();
     if (!script) throw new Error("剧本加载失败");
