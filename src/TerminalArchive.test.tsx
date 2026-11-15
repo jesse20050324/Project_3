@@ -29,6 +29,52 @@ it("候选摘要覆盖已载入所有可见节拍，分支文本只来自实播�
   ]);
 });
 
+it("桌游归档按实际初见分支只收一次，共用收尾另记实际动作", () => {
+  for (const [arrival, wrap] of [
+    ["3.2.2", "3.2.3"], ["3.2.2", "3.2.4"], ["3.3.1", "3.3.2"],
+    ["3.2.2-A", "3.2.3"], ["3.2.2-A", "3.2.4"], ["3.3.1-A", "3.3.2"],
+  ]) {
+    const rows = summariesFor({ chapter: 1, section: 1, beatIds: [arrival, wrap] });
+    const initial = rows.filter(row => row.text.includes("留意到"));
+    expect(initial).toHaveLength(1);
+    expect(initial[0].beatIds).toEqual([arrival]);
+    expect(initial[0].text.includes("眼妆")).toBe(arrival.endsWith("-A"));
+    expect(rows.find(row => row.beatIds.includes(wrap))?.text).toContain("下一局");
+  }
+});
+
+it("闺蜜和同桌路线按周六打算与周日转述分别收录", () => {
+  for (const variant of [
+    { suffix: "NO", friend: /闺蜜/, result: /还想不想见他/, intent: /决定找闺蜜/ },
+    { suffix: "YES", friend: /同桌/, result: /把自己介意的事告诉男友/, intent: /打算找同桌/ },
+  ]) {
+    const earlier = summariesFor({
+      chapter: 7, section: 5, beatIds: ["7f.COUSIN", "7f.COUSINSENT" + variant.suffix],
+    });
+    const later = summariesFor({
+      chapter: 7, section: 6, beatIds: ["7f.COUSINBACK" + variant.suffix, "7f.FCHOICE"],
+    });
+    const saturday = earlier.find(row => variant.friend.test(row.text))!;
+    const sunday = later.find(row => variant.friend.test(row.text))!;
+    expect(saturday.text).toMatch(variant.intent);
+    expect(earlier.map(row => row.text).join(" ")).not.toMatch(variant.result);
+    expect(sunday.text).toMatch(variant.result);
+    expect(later.map(row => row.text).join(" ")).not.toMatch(variant.intent);
+  }
+});
+
+it("散场共同摘要不替玩家选转托路线", () => {
+  for (const [outcome, fact] of [
+    ["4.2.3", /借舍友的名义/], ["4.2.3-direct", /当面问/], ["4.2.4", /决定先不问/],
+  ] as const) {
+    const rows = summariesFor({ chapter: 1, section: 1, beatIds: ["4.1.1", "4.2.1", "4.2.2", outcome] });
+    const shared = rows.find(row => row.beatIds.includes("4.2.2"))!;
+    expect(shared.text).toMatch(/交换微信.*怕开口/);
+    expect(shared.text).not.toMatch(/表妹|同桌|当面|不问/);
+    expect(rows.find(row => row.beatIds.includes(outcome))?.text).toMatch(fact);
+  }
+});
+
 it("重置时刷新保留单侧归档及来源，原话只对持有的记忆可展开", () => {
   vi.useFakeTimers();
   vi.setSystemTime(1000);
