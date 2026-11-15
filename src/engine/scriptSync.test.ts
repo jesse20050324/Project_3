@@ -31,6 +31,16 @@ const source = YAML.load(readFileSync(resolve(root, "docs/剧本审稿/第五幕
 const engine = YAML.load(readFileSync(resolve(root, "content/chapter-05.yaml"), "utf8")) as Engine;
 const byId = new Map((engine.beats ?? []).map((beat) => [beat.id, beat]));
 
+it("正式全剧的文字消息都逐字播放", () => {
+  const { script } = loadBundledScript();
+  expect(script).toBeDefined();
+  for (const beat of script!.beats) {
+    for (const line of beat.lines) {
+      expect(line.delivery, `${beat.id} ${line.from}`).not.toBe("pop");
+    }
+  }
+});
+
 it("第六、七幕生成物和已校验审稿源保持同步", () => {
   expect(() => execFileSync(process.execPath, ["tools/build-later-chapters.mjs", "--check"], {
     cwd: root,

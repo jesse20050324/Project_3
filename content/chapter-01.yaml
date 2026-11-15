@@ -79,7 +79,7 @@ beats:
     lines:
       - from: boy
         text: OK
-        delivery: pop
+        delivery: type
 
   # 女生第一轮。没有玩家选项。店名来自男生 L2 记下的 shop，所以必须等 L2 播完。
   - id: R1-shiguang
