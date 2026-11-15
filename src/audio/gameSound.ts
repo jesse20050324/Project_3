@@ -4,6 +4,8 @@ let context: AudioContext | undefined;
 let master: GainNode | undefined;
 let resumed: Promise<void> | undefined;
 let blip: Promise<AudioBuffer | undefined> | undefined;
+const masterLevel = 0.8;
+const notificationLevel = 0.46;
 const setting = "shuangxian.sound-muted";
 
 export function soundMuted() {
@@ -12,7 +14,7 @@ export function soundMuted() {
 
 export function setSoundMuted(muted: boolean) {
   try { localStorage.setItem(setting, String(muted)); } catch { /* storage unavailable */ }
-  if (master) master.gain.value = muted ? 0 : 1;
+  if (master) master.gain.value = muted ? 0 : masterLevel;
   if (!muted) unlockSound();
 }
 
@@ -22,7 +24,7 @@ export function unlockSound() {
     if (!context) {
       context = new AudioContext();
       master = context.createGain();
-      master.gain.value = soundMuted() ? 0 : 1;
+      master.gain.value = soundMuted() ? 0 : masterLevel;
       master.connect(context.destination);
     }
     const audio = context;
@@ -114,7 +116,7 @@ function playTones(notes: ReadonlyArray<readonly [number, number, number, number
     tone.type = "triangle";
     tone.frequency.value = freq;
     envelope.gain.setValueAtTime(0, at);
-    envelope.gain.linearRampToValueAtTime(level, at + 0.005);
+    envelope.gain.linearRampToValueAtTime(level * notificationLevel, at + 0.005);
     envelope.gain.exponentialRampToValueAtTime(0.0001, at + length);
     tone.connect(envelope);
     envelope.connect(master);
