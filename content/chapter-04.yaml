@@ -29,7 +29,7 @@ beats:
     requires: [3.4.4]
     lines:
       - from: boy
-        text: 我靠，我靠，我靠，你还记得我刚才给你说的那个女的吗？我感觉她绝对对我有意思！！！
+        text: 我靠，我靠，我靠，刚才打桌游的时候有个女生，我感觉她绝对对我有意思！！！
         delivery: type
       - from: ai
         text: 他一上来就说对方对他有意思，还没讲怎么回事。先听听两人在桌上说了什么，再判断他看到的是什么信号。
@@ -68,7 +68,7 @@ beats:
         text: 他想认识她，又怕开口时在妹妹面前显得太着急。可以给他一句跟桌游有关的开场，也可以建议他缓一缓，等自己觉得合适再开口。
         delivery: thought
     choices:
-      - thought: 请表妹先问问她
+      - thought: 请妹妹先问问她
         需记忆: 我妹的同桌
         reply: 你之前提过她可能是你妹妹的同桌。要是你妹妹确实认识她，可以请她先问问，对方愿不愿意加个微信。
         next: 4.2.3
@@ -92,22 +92,7 @@ beats:
     choices:
       - thought: 让他把谁想加说清楚
         reply: 你要是怕开口，可以让你妹先帮你问一声。不过最好说是你自己想加，不然她真告诉对方是你舍友想认识她，后面你反而得解释。
-        set: { 男生意向: 问 }
-
-  - id: 4.2.3-direct
-    channel: left
-    time: 散场后
-    lines:
-      - from: boy
-        text: 我直接问了，说下次玩还想叫她。她说可以加。她喊她同桌帮忙推一下，结果喊的是我妹。靠，问之前还觉得巨尴尬。
-        delivery: type
-      - from: ai
-        text: 他当面问了，对方答应加微信，随后由她的同桌推联系方式。可以肯定他已经把最难开口的一句说了，接下来等对方发过来就好。
-        delivery: thought
-    choices:
-      - thought: 肯定他已经当面问过
-        reply: 你当面问了，她也答应了。等你妹把微信推过来就行。真说出来以后，是不是比你刚才想的简单一点？
-        set: { 男生意向: 问 }
+        set: { 男生意向: 问, 当面问微信: false }
 
   - id: 4.2.4
     channel: left
@@ -122,7 +107,7 @@ beats:
     choices:
       - thought: 让这次聚会自然收尾
         reply: 有可能。你今天觉得她挺好相处，这个感受是真的。至于下次有没有机会再认识，留到下次一起玩再看吧。
-        set: { 男生意向: 不问 }
+        set: { 男生意向: 不问, 当面问微信: false }
 
   - id: 4.2.5
     channel: left
@@ -137,7 +122,7 @@ beats:
     choices:
       - thought: 顺着他回家收尾
         reply: 那今天就先到这儿。有人愿意接你的话，这局玩得也挺有意思。下次碰见，打个招呼就好。
-        set: { 男生意向: 不问 }
+        set: { 男生意向: 不问, 当面问微信: false }
 
   - id: 4.3.1
     channel: right
@@ -204,7 +189,7 @@ beats:
         delivery: thought
     choices:
       - thought: 先把这一句问出去
-        reply: 嗯，先把这句发给同桌，等她问到再说。你现在只是在问能不能加，还不用把加上以后聊什么都想好。
+        reply: 嗯，你可以先这么开口。等散场你有机会单独跟她说，再问就行。
         set: { 女生意向: 问 }
 
   - id: 4.3.5
@@ -221,6 +206,42 @@ beats:
       - thought: 让她先把这事放下
         reply: 那今天就先不问。觉得他不错，和现在就得加微信，是两件可以分开想的事。
         set: { 女生意向: 不问 }
+
+  - id: 4.2.3-direct
+    channel: left
+    time: 散场后
+    window:
+      channel: right
+      下界: [4.3.4, 4.3.5]
+      上界: []
+      说明: 女生先做出是否要主动询问的决定
+    lines:
+      - from: boy
+        text: 我直接问了，说下次玩还想叫她。她说可以加。她喊她同桌帮忙推一下，结果喊的是我妹。靠，问之前还觉得巨尴尬。
+        delivery: type
+      - from: ai
+        text: 他当面问了，对方答应加微信，随后由她的同桌推联系方式。可以肯定他已经把最难开口的一句说了，接下来等对方发过来就好。
+        delivery: thought
+    choices:
+      - thought: 肯定他已经当面问过
+        reply: 你当面问了，她也答应了。等你妹把微信推过来就行。真说出来以后，是不是比你刚才想的简单一点？
+        set: { 男生意向: 问, 当面问微信: true }
+
+  - id: 4.3.6-direct
+    channel: right
+    time: 散场后
+    when: { 当面问微信: true }
+    requires: [4.2.3-direct]
+    lines:
+      - from: girl
+        text: 我刚才还在想要不要问呢，他直接走过来，说下次玩还想叫我，问能不能加微信。我说可以，就叫我同桌帮我推一下。哎，省我开口了。
+        delivery: type
+      - from: ai
+        text: 他已经当面问过，她也答应了。现在只等同桌转发联系方式，可以回应她松了口气。
+        delivery: thought
+    choices:
+      - thought: 接住她松了口气
+        reply: 嗯，你们当面说好了。等你同桌把微信推过去，想聊的时候就能直接聊了。
 
   - id: 4.end-no-contact
     channel: left

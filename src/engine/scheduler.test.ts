@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   availableBeat, canArm, choose, commitLine, commitReply, createInitial,
-  detectWindowViolation, hasMemory, openChannel, playbackStep, ritualTick, saveMemory,
+  detectWindowViolation, hasMemory, memoryCapacity, openChannel, playbackStep, ritualTick, saveMemory,
 } from "./scheduler";
 import { assignSchedule } from "./timeline";
 import type { Beat, EngineState, Script } from "./types";
@@ -20,6 +20,39 @@ function prepare(beats: Beat[]): { script: Script; beats: Beat[]; initial: Engin
 }
 
 const fork = (id: string, next: string) => ({ thought: `想${id}`, reply: `回${id}`, next });
+
+it("按窗保留五段，三处提前清理不删除已存记忆", () => {
+  for (const id of ["new", "3.4.1", "4.1.1", "6m.M5"]) {
+    const context = (time: string) => ({ section: 1 as const, time });
+    const old = Array.from({ length: 5 }, (_, i) => mk(`old${i}`, "left", { context: context(`${i}`) }));
+    const other = { id: "other", beatId: "other", channel: "right" as const, from: "girl", text: "other", delivery: "pop" as const };
+    const { initial, beats } = prepare([...old, mk(id, "left", { context: context("5") })]);
+    const saved = { label: "saved", text: "old0", beatId: "old0" };
+    const state = openChannel({ ...initial, context: { left: 1 }, completed: old.map(beat => beat.id),
+      memories: { left: [saved], right: [] }, messages: [...old.map(beat => ({
+        id: beat.id, beatId: beat.id, channel: beat.channel, from: "boy", text: beat.id, delivery: "pop" as const,
+      })), other] }, "left", beats);
+    expect(state.messages.map(message => message.id)).toEqual(id === "new"
+      ? ["old1", "old2", "old3", "old4", "other"] : ["other"]);
+    expect(state.memories.left).toEqual([saved]);
+    expect(state.archive?.left).toEqual([]);
+  }
+});
+
+it("完成加微信开场时才同时清教学记忆和切换容量", () => {
+  const entry = mk("5m.1.1-A", "left", { chapter: 5, 清空记忆: "left" });
+  const { initial, beats } = prepare([entry]);
+  const saved = { label: "教学", text: "原话", beatId: "old" };
+  const state = openChannel({ ...initial, chapter: { left: 4, right: 4 },
+    memories: { left: [saved], right: [] }, ritual: { left: null, right: null },
+  }, "left", [{ ...beats[0], context: { section: 2 } }]);
+  expect(memoryCapacity(state, "left")).toBe(1);
+  expect(state.memories.left).toEqual([saved]);
+  const entered = commitLine(state, "left", beats);
+  expect(memoryCapacity(entered, "left")).toBe(5);
+  expect(memoryCapacity(entered, "right")).toBe(1);
+  expect(entered.memories.left).toEqual([]);
+});
 
 describe("全局时序调度", () => {
   it("按剧本排序键选下一拍，而不是固定左窗优先", () => {

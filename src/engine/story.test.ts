@@ -12,21 +12,32 @@ describe("CH1-CH5 剧本契约", () => {
     expect(script).not.toBeNull();
   });
 
-  it("章号为 1/3/4/5/6/7/8，第五章 40 拍、16 档时间轴", () => {
+  it("跳日不切会话，俩窗各保留五个日期，争执回来后各有时间提示", () => {
+    const beats = script!.orderedBeats!;
+    for (const [channel, days] of [["left", [2, 9, 10, 11]], ["right", [2, 3, 11, 12]]] as const) {
+      const actual = new Set(beats.filter(beat => beat.channel === channel && beat.context?.section === 2)
+        .map(beat => beat.context?.time));
+      expect([...actual]).toEqual(["加微信当天", ...days.map(day => `加微信后第 ${day} 天`)]);
+    }
+    expect(script!.beatById!.get("8m.M200")!.context).toMatchObject({ section: 8, time: "19:52" });
+    expect(script!.beatById!.get("8f.F200")!.context).toMatchObject({ section: 8, time: "20:12" });
+  });
+
+  it("章号为 1/3/4/5/6/7/8，第五章 42 拍、16 档时间轴", () => {
     if (!script) throw new Error("剧本没有加载");
     const chapters = [...new Set(script.beats.map((beat) => beat.chapter))];
     expect(chapters).toEqual([1, 3, 4, 5, 6, 7, 8]);
-    expect(script.beats.filter((beat) => beat.chapter === 5)).toHaveLength(40);
+    expect(script.beats.filter((beat) => beat.chapter === 5)).toHaveLength(42);
     expect(script.axes?.[5]).toHaveLength(16);
   });
 
-  it("第五章的 6 处真分叉、11 个区间拍、6 个入场变体、2 个终局拍都在", () => {
+  it("第五章的 6 处真分叉、11 个区间拍、8 个入场变体、2 个终局拍都在", () => {
     if (!script) throw new Error("剧本没有加载");
     const ch5 = script.beats.filter((beat) => beat.chapter === 5);
     const forks = ch5.filter((beat) => new Set((beat.choices ?? []).map((choice) => choice.next)).size > 1);
     expect(forks).toHaveLength(6);
     expect(ch5.filter((beat) => beat.window)).toHaveLength(11);
-    expect(ch5.filter((beat) => beat.when)).toHaveLength(6);
+    expect(ch5.filter((beat) => beat.when)).toHaveLength(8);
     expect(ch5.filter((beat) => beat.ending === "在一起")).toHaveLength(2);
     expect(script.endings?.map((ending) => ending.id)).toContain("在一起");
   });
@@ -35,7 +46,7 @@ describe("CH1-CH5 剧本契约", () => {
     if (!script) throw new Error("剧本没有加载");
     const byId = script.beatById!;
     const waits = script.beats.filter((beat) => beat.chapter === 5 && beat.requires);
-    expect(waits).toHaveLength(9);
+    expect(waits).toHaveLength(11);
     for (const beat of waits) {
       for (const id of beat.requires ?? []) {
         expect(byId.has(id)).toBe(true);
@@ -56,6 +67,23 @@ describe("CH1-CH5 剧本契约", () => {
     expect(all).toContain("我也想试试，只是我可能不太会谈恋爱");
     expect(all).not.toContain("特冷的笑话");
     expect(all).not.toContain("就五个字");
+  });
+
+  it("当面问在女窗两种散场决定之后发生，且两窗都进入当面问开场", () => {
+    const { beats, beatById } = script!;
+    const outcome = beatById!.get("4.2.3-direct")!;
+    const flag = outcome.choices![0].set!.当面问微信;
+    expect(windowState(outcome, new Set())).toBe("waiting");
+    for (const decision of ["4.3.4", "4.3.5"]) {
+      expect(windowState(outcome, new Set([decision]))).toBe("open");
+      const state = { ...createInitial(beats),
+        completed: [decision, outcome.id, "4.3.6-direct", "5m.1.2"],
+        activated: ["5m.1.1-D", "5f.1.1-D", "5m.1.1-A", "5m.1.1-B", "5f.1.1-A", "5f.1.1-C"],
+        flags: { 男生意向: "问", 女生意向: decision === "4.3.4" ? "问" : "不问", 当面问微信: flag },
+      };
+      expect(availableBeat(state, "left", beats)?.id).toBe("5m.1.1-D");
+      expect(availableBeat(state, "right", beats)?.id).toBe("5f.1.1-D");
+    }
   });
 
   it("旧版第五章已播男窗反馈的存档仍可打开女窗", () => {

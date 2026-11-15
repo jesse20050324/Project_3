@@ -6,7 +6,7 @@
 
 ## 打开游戏
 
-正式版：[He said, she said](https://jesse20050324.github.io/Project_3/)。推送到 `main` 后由 GitHub Actions 发布，部署进度见仓库的 Actions。游戏顶栏显示游戏名。
+正式试玩：[He said, she said](https://jesse20050324.github.io/he-said-she-said/play/)。Project_3 的 `main` 也由 GitHub Actions 构建。游戏按九个剧情段逐窗归档，段内保留最近五个时间小段。问路、散场和交往第一天当晚的指定窗口会提前清理聊天，已存记忆继续保留至对应的记忆池收口。
 
 进度存在该网址自己的 localStorage（v2 存档：章号、已完成拍、旗标、记忆池、章间仪式、终局）。刷新可恢复。要重来点右上角「重新开始」，有确认弹层。
 

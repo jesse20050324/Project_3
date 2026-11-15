@@ -99,7 +99,7 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
           && !entries.some(entry => entry.section === current);
         const resetSession = channel === "left" ? leftReset : rightReset;
         const incoming = replacement?.channel === channel ? replacement.entry : undefined;
-        const forget = memoryCapacity(state, channel) !== undefined
+        const forget = memoryCapacity(state, channel) === 5
           ? (label: string) => onForget(channel, label) : undefined;
         return <div className="archive-folder" key={channel}>
           <button className="tree-toggle" aria-expanded={folders[channel]} type="button"

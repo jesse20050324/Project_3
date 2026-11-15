@@ -49,6 +49,7 @@ beats:
     when:
       男生意向: 问
       女生意向: 问
+      当面问微信: false
     清空记忆: left
     lines:
       - from: boy
@@ -70,10 +71,11 @@ beats:
     when:
       男生意向: 问
       女生意向: 不问
+      当面问微信: false
     清空记忆: left
     lines:
       - from: boy
-        text: 微信到手了，我妹牵的线。我对着输入框抠半天了，第一句咋整？总不能发个你好吧，像上门推销的。
+        text: 微信到手了，我妹牵的线。上次桌游我还输给她了。我对着输入框抠半天了，第一句咋整？总不能发个你好吧，像上门推销的。
         delivery: pop
       - from: ai
         text: 联系方式有了，他卡在怎样开始。可以顺着他对桌游的印象给一句自嘲式开场，省去正式自我介绍的压力。
@@ -91,24 +93,47 @@ beats:
     when:
       男生意向: 不问
       女生意向: 问
+      当面问微信: false
     清空记忆: left
     lines:
       - from: boy
         text: 反转了兄弟，我还没想好咋开口呢，她先加我了！是不是我妹跟她说啥了？你说她这啥意思啊？
         delivery: pop
       - from: ai
-        text: 她主动加了好友，他却开始猜表妹有没有说过什么。能确定的是他们已经加上了，可以建议先打招呼，等她实际回应。
+        text: 她主动加了好友，他却开始猜妹妹有没有说过什么。能确定的是他们已经加上了，可以建议先打招呼，等她实际回应。
         delivery: thought
     choices:
       - thought: 先打招呼，看看怎么聊
         reply: 至少她愿意加你。你可以先发「嗨，上次桌游玩得挺开心的」。她为什么先加，等你们聊几句可能就明白了。
+        next: 5m.1.2
+  - id: 5m.1.1-D
+    channel: left
+    label: 开场·当面问
+    time: D1 傍晚（周日，互加当天）
+    timeRank: 0
+    order: 3
+    when:
+      当面问微信: true
+    requires:
+      - 4.3.6-direct
+    清空记忆: left
+    lines:
+      - from: boy
+        text: 加上了，我妹给推的。我刚才当面都敢问，怎么打个招呼又卡住了。你说第一句咋发？
+        delivery: pop
+      - from: ai
+        text: 他当面问到了联系方式，第一句反倒有点紧张。可以从两人一起玩的桌游开口。
+        delivery: thought
+    choices:
+      - thought: 给一句自然的开场
+        reply: 可以问一句「嗨，上次桌游坐你旁边的，还记得我吗？」你们已经见过了，提那天的事就行，不用再找个特别的由头。
         next: 5m.1.2
   - id: 5m.1.2
     channel: left
     label: 开场定稿·收敛拍（D1 傍晚，几分钟后）
     time: D1 傍晚（周日，互加当天）
     timeRank: 0
-    order: 3
+    order: 4
     lines:
       - from: boy
         text: 想了想，你给的那句我有点发不出来。我自己写了个：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。咋样，会不会有点傻？
@@ -127,7 +152,7 @@ beats:
     label: 慢回初显（D1 晚，发出约四十分钟后）
     time: D1 晚
     timeRank: 1
-    order: 7
+    order: 9
     节拍: 慢
     lines:
       - from: boy
@@ -149,6 +174,7 @@ beats:
         - 5f.1.1-A
         - 5f.1.1-B
         - 5f.1.1-C
+        - 5f.1.1-D
       上界:
         - 5f.1.2
       说明: 男方收到女方实际入场路线的首句
@@ -157,7 +183,7 @@ beats:
     label: 稳住一夜（分支A·D1深夜收住，D2白天复盘）
     time: D2 白天（周一）
     timeRank: 2
-    order: 8
+    order: 10
     lines:
       - from: boy
         text: 昨晚听你的，道了晚安就真睡了，还赶在十一点前，破天荒。今早她又找我聊了两句。也没啥事，就是我还想跟她多说会儿，老想点开那个框。
@@ -174,7 +200,7 @@ beats:
     label: 接住之后（分支B·D1晚热聊，D2白天复盘）
     time: D2 白天（周一）
     timeRank: 2
-    order: 9
+    order: 11
     lines:
       - from: boy
         text: 昨晚顺着翻盘那个梗还真聊起来了，聊到十一点多。十一点必睡，当天就倒了，笑死。她后来跟我说晚安。结果今天到现在一条没有……我昨晚是不是聊太多了？
@@ -191,7 +217,7 @@ beats:
     label: 渐入佳境（汇合·D2 晚）
     time: D2 晚
     timeRank: 3
-    order: 11
+    order: 13
     requires:
       - 5f.1.2
     lines:
@@ -210,7 +236,7 @@ beats:
     label: 聊热（D9，一周多后）
     time: D9（下周一）
     timeRank: 5
-    order: 15
+    order: 17
     lines:
       - from: boy
         text: 又聊了一个礼拜。她回得慢但都会回，我好像也习惯了。今天她在家加班，还给我发了张照片，配一个『困』。她的猫踩着键盘抢镜，叫煤球，特别敬业。你说她这算不算有点把我当自己人了？
@@ -232,7 +258,7 @@ beats:
     label: 上头自察（D10）
     time: D10（周二）
     timeRank: 6
-    order: 16
+    order: 18
     节拍: 快
     lines:
       - from: boy
@@ -253,7 +279,7 @@ beats:
     label: 收敛试验（分支A·D10 晚）
     time: D10 晚
     timeRank: 7
-    order: 17
+    order: 19
     lines:
       - from: boy
         text: 今天试着少发了，话打了删删了打，最后就发了句晚安。她回得跟平时一样，也没问我咋这么安静……我感觉我在演一个淡定的人。
@@ -270,7 +296,7 @@ beats:
     label: 照旧自嘲（分支B·D10 晚）
     time: D10 晚
     timeRank: 7
-    order: 18
+    order: 20
     lines:
       - from: boy
         text: 今天还是想找她就找了，发了好几回。她有时候一个『哈哈哈』隔俩小时才来。我有一阵真像在对着屏幕自己跟自己聊天，笑死。
@@ -287,7 +313,7 @@ beats:
     label: 缓冲·约线下（分支A·D11）
     time: D11（周三）
     timeRank: 8
-    order: 19
+    order: 21
     lines:
       - from: boy
         text: 今天还是这样，不找吧心里老惦记，找吧又怕她嫌烦。线上聊得再欢，她一忙我就在这儿干等着。咋整啊？
@@ -304,10 +330,10 @@ beats:
     label: 约局参谋（D12 晚，第二周）
     time: D12 晚
     timeRank: 11
-    order: 24
+    order: 26
     lines:
       - from: boy
-        text: 行，听人劝吃饱饭。我想约她周六出来吃个饭。直接问周六有空吗，会不会显得有点猴急？
+        text: 行，听人劝吃饱饭。我想约她周六出来吃个饭。上次桌游我还输给她了。直接问周六有空吗，会不会显得有点猴急？
         delivery: pop
       - from: ai
         text: 他已经决定约饭，想把邀请说得自然。可以用两人都知道的桌游输赢作由头，给出具体时间，让她有余地答复。
@@ -321,7 +347,7 @@ beats:
     label: 改期失落（D13 周五）
     time: D13（周五）
     timeRank: 12
-    order: 26
+    order: 28
     lines:
       - from: boy
         text: 她说周六来不了了，项目临时有个节点，问改周日行不行。还发了个不好意思的表情。我知道她说了周日，但我还是有点不得劲。会不会其实不想来啊？
@@ -338,7 +364,7 @@ beats:
     label: 见面复盘（D15 周日晚）
     time: D15（周日晚）
     timeRank: 13
-    order: 28
+    order: 30
     lines:
       - from: boy
         text: 见完了！吃饭散步聊了三个多小时，临走还拍了张合照。她问我下次想吃啥，说她想吃烤肉，下回带我吃。吃饭时她回了好几条工作消息，我坐那儿有点不知道干啥。还有个事，我跟她说，有次她半天没回，我半夜还刷她朋友圈，看她睡了没。她笑了下，说『你想得可真多』。我这话是不是说多了？
@@ -360,24 +386,24 @@ beats:
     label: 求确认（D15 当晚睡前）
     time: D15（周日晚）
     timeRank: 13
-    order: 30
+    order: 32
     lines:
       - from: boy
         text: 睡前最后问一句。就这两周，我还有戏吧？我上次这么上心，还是给我表妹辅导作业的时候。
         delivery: pop
       - from: ai
-        text: 他想知道这两周的来往有没有继续发展的可能。她主动找他聊，愿意见面，也提到下次，可以给有依据的判断，但不保证她会答应表白。
+        text: 他想知道这两周的来往有没有继续发展的可能。今天她和他聊了三个多小时，还主动提了下次吃烤肉。可以用今天的事回应他的担心。
         delivery: thought
     choices:
       - thought: 用已经发生的事给他判断
-        reply: 她晚上主动找过你，今天也聊得来，还提了下次一起吃烤肉。看得出她愿意继续和你相处。至于你们会不会谈恋爱，那得等你们真的说到这一步。
+        reply: 今天聊了三个多小时，她还提了下次一起吃烤肉，至少她愿意继续跟你见面。至于你们会不会谈恋爱，得等真的聊到这一步才知道。
         next: 5m.4.1
   - id: 5m.4.1
     channel: left
     label: 表白排练（D17，见面两天后）
     time: D17（周二）
     timeRank: 14
-    order: 32
+    order: 34
     lines:
       - from: boy
         text: 我想跟她表白。稿子打了删删了打，现在是『我挺喜欢你的，想跟你正经处对象，你考虑考虑』。读着怎么这么怪，你帮我改改。
@@ -399,7 +425,7 @@ beats:
     label: 直球发出（分支A·D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 33
+    order: 35
     节拍: 长停顿
     lines:
       - from: boy
@@ -417,7 +443,7 @@ beats:
     label: 含蓄发出（分支B·D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 34
+    order: 36
     节拍: 长停顿
     lines:
       - from: boy
@@ -435,7 +461,7 @@ beats:
     label: 表白结果（D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 38
+    order: 40
     节拍: 慢
     ending: 在一起
     lines:
@@ -468,10 +494,11 @@ beats:
     label: 开场·双问（D1 晚，收到他的消息）
     time: D1 晚
     timeRank: 1
-    order: 4
+    order: 5
     when:
       男生意向: 问
       女生意向: 问
+      当面问微信: false
     requires:
       - 5m.1.2
     清空记忆: right
@@ -491,10 +518,11 @@ beats:
     label: 开场·仅女问（D1 晚，收到他的消息）
     time: D1 晚
     timeRank: 1
-    order: 5
+    order: 6
     when:
       男生意向: 不问
       女生意向: 问
+      当面问微信: false
     requires:
       - 5m.1.2
     清空记忆: right
@@ -514,10 +542,11 @@ beats:
     label: 开场·仅男问（D1 晚，收到他的消息）
     time: D1 晚
     timeRank: 1
-    order: 6
+    order: 7
     when:
       男生意向: 问
       女生意向: 不问
+      当面问微信: false
     requires:
       - 5m.1.2
     清空记忆: right
@@ -532,12 +561,34 @@ beats:
       - thought: 先回一句，再看怎么聊
         reply: 可以回「记得，你也要到点睡了」。顺着他的梗逗一句就行，接下来想聊多少，看你自己舒服不舒服。
         next: 5f.1.2
+  - id: 5f.1.1-D
+    channel: right
+    label: 开场·当面问
+    time: D1 晚
+    timeRank: 1
+    order: 8
+    when:
+      当面问微信: true
+    requires:
+      - 5m.1.2
+    清空记忆: right
+    lines:
+      - from: girl
+        text: 那个刚才当面问我的男生，加上了。我同桌把我微信推给他了。他刚发：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。这人怎么连睡觉时间都一起报了，我咋回啊？
+        delivery: pop
+      - from: ai
+        text: 她已经收到他的第一条消息，觉得开场好笑。可以给一句轻松的回复，顺着十一点睡觉开个玩笑。
+        delivery: thought
+    choices:
+      - thought: 顺着十一点的梗回
+        reply: 回「记得，你也要到点睡了」就挺自然。你记得他，也能逗他一句，后面看你们聊到什么。
+        next: 5f.1.2
   - id: 5f.1.2
     channel: right
     label: 初聊反馈（D2 晚）
     time: D2 晚
     timeRank: 3
-    order: 10
+    order: 12
     lines:
       - from: girl
         text: 昨晚我先回了句『记得，你也要到点睡了』，本来就随口一逗。这两天聊下来比我想的舒服，有话就接，我没回他也没催。今天他发了几条，我忙着还没仔细回。晚上有空了，我去找他唠两句。
@@ -562,7 +613,7 @@ beats:
     label: 慢回真相（D3 晚）
     time: D3 晚（周二）
     timeRank: 4
-    order: 12
+    order: 14
     节拍: 慢
     lines:
       - from: girl
@@ -590,7 +641,7 @@ beats:
     label: 直说之后（分支A·D3 晚）
     time: D3 晚（周二）
     timeRank: 4
-    order: 13
+    order: 15
     节拍: 慢
     lines:
       - from: girl
@@ -615,7 +666,7 @@ beats:
     label: 表情包之后（分支B·D3 晚）
     time: D3 晚（周二）
     timeRank: 4
-    order: 14
+    order: 16
     节拍: 慢
     lines:
       - from: girl
@@ -640,7 +691,7 @@ beats:
     label: 她的热闹（D11）
     time: D11（周三）
     timeRank: 8
-    order: 20
+    order: 22
     requires:
       - 5m.2.2
     lines:
@@ -670,7 +721,7 @@ beats:
     label: 谈资受用（分支A·D11 晚）
     time: D11 晚
     timeRank: 9
-    order: 21
+    order: 23
     lines:
       - from: girl
         text: 晚上跟闺蜜吃饭，不知道怎么又说起他了。我说有个闷葫芦天天找我聊天，她们立马开始起哄。我还说就是普通朋友啊，结果回家路上自己一直笑。烦死了。
@@ -695,7 +746,7 @@ beats:
     label: 自问失落（分支B·D11 晚）
     time: D11 晚
     timeRank: 9
-    order: 22
+    order: 24
     lines:
       - from: girl
         text: 睡前又想了下你问的那个。还真想不出来。我累了就点个外卖，自己刷会儿手机，也不想找谁。明明平时跟谁都能聊，真想说点啥了好像又差一口气……说不上来，今晚有点怪怪的。
@@ -720,7 +771,7 @@ beats:
     label: 打岔（D12）
     time: D12（周四）
     timeRank: 10
-    order: 23
+    order: 25
     lines:
       - from: girl
         text: 他今天问我家是哪儿的、家里都有谁，我顺手聊别的去了。他也没接着问。这点我还挺喜欢的，换个人一通问我早烦了。
@@ -745,7 +796,7 @@ beats:
     label: 约局接收（D12 晚）
     time: D12 晚
     timeRank: 11
-    order: 25
+    order: 27
     requires:
       - 5m.3.1
     lines:
@@ -769,7 +820,7 @@ beats:
     label: 临时改期（D13 周五）
     time: D13（周五）
     timeRank: 12
-    order: 27
+    order: 29
     requires:
       - 5m.3.2
     lines:
@@ -788,7 +839,7 @@ beats:
     label: 见面复盘（D15 周日晚）
     time: D15（周日晚）
     timeRank: 13
-    order: 29
+    order: 31
     requires:
       - 5m.3.3
     lines:
@@ -816,7 +867,7 @@ beats:
     label: 替他找理由（D15 当晚睡前）
     time: D15（周日晚）
     timeRank: 13
-    order: 31
+    order: 33
     lines:
       - from: girl
         text: 躺下了又想起来，他啥都听我的，这点其实我有点介意。但跟他待着是真不用费脑子。前几天家里的事我没接着聊，他也就没问了。可能……我就是想跟一个相处起来不费劲的人待着吧。
@@ -833,7 +884,7 @@ beats:
     label: 表白收到（D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 35
+    order: 37
     节拍: 慢
     lines:
       - from: girl
@@ -863,7 +914,7 @@ beats:
     label: 说清恐惧（分支A·D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 36
+    order: 38
     节拍: 长停顿
     lines:
       - from: girl
@@ -881,7 +932,7 @@ beats:
     label: 轻装纠结（分支B·D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 37
+    order: 39
     节拍: 长停顿
     lines:
       - from: girl
@@ -899,7 +950,7 @@ beats:
     label: 答应收尾（D17 晚）
     time: D17 晚
     timeRank: 15
-    order: 39
+    order: 41
     requires:
       - 5m.4.4
     节拍: 慢

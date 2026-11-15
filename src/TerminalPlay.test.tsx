@@ -125,7 +125,7 @@ it.each([false, true])("使用真实章节从标题到第八幕结局，键鼠�
   }
 });
 
-it("桌游聚会内保留聊天并标出小跳时，未交换微信时各窗只归档这一段", () => {
+it("桌游聚会内各窗按各自时机清理聊天，未交换微信时仍只归档一段", () => {
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "开始游戏" }));
   for (let step = 0; step < 40 && !stored().endings.includes("未交换微信"); step++) {
@@ -142,8 +142,11 @@ it("桌游聚会内保留聊天并标出小跳时，未交换微信时各窗只�
   expect(state.endings).toContain("未交换微信");
   for (const channel of ["left", "right"] as const) {
     expect(state.archive?.[channel].map(entry => entry.section)).toEqual([1]);
+    expect(state.archive?.[channel][0].beatIds.some(id => id.startsWith(channel === "left" ? "L" : "R"))).toBe(true);
     const pane = within(within(screen.getByTestId(`pane-${channel}`)).getByRole("log"));
-    for (const label of ["聚会当天 · 出发前", channel === "left" ? "到店前后" : "在路上", "散场后"]) {
+    expect(pane.queryByText("聚会当天 · 出发前")).toBeNull();
+    const labels = channel === "left" ? ["散场后"] : ["在路上", "到店后 · 局间", "散场后"];
+    for (const label of labels) {
       expect(pane.getAllByText(label)).toHaveLength(1);
     }
   }

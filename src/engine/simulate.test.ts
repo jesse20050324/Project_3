@@ -39,12 +39,12 @@ describe("全剧本可达性仿真（CH1-CH8）", () => {
     expect(result.errors.filter((message) => !message.includes("播不到"))).toEqual([]);
   });
 
-  it("第五章的 40 拍都在仿真里出现过", () => {
+  it("第五章的 42 拍都在仿真里出现过", () => {
     const { script } = loadBundledScript();
     if (!script) throw new Error("剧本加载失败");
     const result = simulateScript(script, { autoSave: true });
     const chapter5 = script.beats.filter((beat) => beat.chapter === 5);
-    expect(chapter5.length).toBe(40);
+    expect(chapter5.length).toBe(42);
     const missing = chapter5.filter((beat) => !result.visitedBeats.has(beat.id)).map((beat) => beat.id);
     expect(missing).toEqual([]);
   });

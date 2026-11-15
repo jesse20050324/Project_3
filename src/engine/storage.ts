@@ -1,5 +1,5 @@
 import { migrateContext, normalizeArchive } from "./archive";
-import { isContextSection } from "./contextSections";
+import { isContextSection, retainRecentChat } from "./contextSections";
 import { availableBeat, isRoot } from "./scheduler";
 import type { Beat, Channel, EngineState, Ritual } from "./types";
 
@@ -68,6 +68,7 @@ export function loadProgress(beats: Beat[]): EngineState | null {
     }
     const restored: EngineState = {
       ...state,
+      flags: restoreContactRoute(state, completed),
       activated,
       completed,
       pending: {
@@ -83,13 +84,30 @@ export function loadProgress(beats: Beat[]): EngineState | null {
       error: typeof state.error === "string" ? state.error : null,
       runId: typeof state.runId === "number" ? state.runId : 0,
     };
-    return migrateContext(restored, beats, channel => availableBeat(restored, channel, beats));
+    let migrated = migrateContext(restored, beats, channel => availableBeat(restored, channel, beats));
+    for (const channel of ["left", "right"] as const) {
+      if (migrated.ritual[channel]) continue;
+      const id = migrated.pending[channel]?.beatId ?? migrated.messages.filter(message => message.channel === channel).at(-1)?.beatId;
+      const current = beats.find(beat => beat.id === id);
+      if (current) migrated = retainRecentChat(migrated, current, beats);
+    }
+    return migrated;
   } catch (error) {
     console.error("[存档] 读取失败", error);
     loadNotice = "存档读取失败，已从第一幕重新开始。";
     clearProgress();
     return null;
   }
+}
+
+function restoreContactRoute(state: EngineState, completed: string[]): EngineState["flags"] {
+  if ("当面问微信" in state.flags) return state.flags;
+  const hasStartedChat = completed.some(id => /^5[fm]\./.test(id))
+    || Object.values(state.pending).some(pending => pending && /^5[fm]\./.test(pending.beatId));
+  if (hasStartedChat) return { ...state.flags, 当面问微信: false };
+  if (completed.includes("4.2.3-direct")) return { ...state.flags, 当面问微信: true };
+  if (state.flags.男生意向 !== undefined) return { ...state.flags, 当面问微信: false };
+  return state.flags;
 }
 
 /** 已经播过的到店剧情不补播新版分支，未播完的路线继续走。 */

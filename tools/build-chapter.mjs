@@ -89,6 +89,7 @@ function engineId(number, owner) {
 
 function waitId(value) {
   const raw = String(value).trim();
+  if (/^(男生|女生)4\.\d+\.\d+(?:-[a-z]+)?$/.test(raw)) return raw.slice(2);
   const match = /^(男生|女生)(5\..+)$/.exec(raw);
   if (!match) fail(`等待「${raw}」无法解析（应形如 男生5.1.2）`);
   return engineId(match[2], match[1]);
@@ -289,8 +290,13 @@ assert(roots.length === entryIds.length, `根拍数量 ${roots.length} 与入场
 assert(new Set(roots).size === new Set(entryIds).size, "根拍集合与入场变体集合不一致");
 for (const id of entryIds) assert(roots.includes(id), `入场变体「${id}」不是根拍`);
 
+const previousBeats = new Map(readYaml(path.join(ROOT, "content/chapter-04.yaml"), "第四章").beats.map(beat => [beat.id, beat]));
 for (const beat of beats) {
   for (const required of beat.requires ?? []) {
+    if (previousBeats.has(required)) {
+      assert(previousBeats.get(required).channel !== beat.channel, `拍 ${beat.id} 的等待门必须指向对侧`);
+      continue;
+    }
     assert(seenIds.has(required), `拍 ${beat.id} 的等待门指向不存在的「${required}」`);
     assert(order.get(required) < beat.order, `拍 ${beat.id} 等的「${required}」排在它后面，会互相等死锁`);
   }

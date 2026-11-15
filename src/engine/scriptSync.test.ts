@@ -11,7 +11,7 @@ import { loadBundledScript } from "./loadScript";
  */
 type Turn = {
   编号: string; 所属: string; 时间: string; 用户消息: string; AI思考: string;
-  选项: string[]; AI回复: string | string[]; 等待?: string; 入场?: string;
+  选项: string | string[]; AI回复: string | string[]; 等待?: string; 入场?: string;
   终局?: string; 分叉?: Record<string, string>; 下一?: string;
 };
 type Source = { 时间轴?: string[]; 轮次?: Turn[] };
@@ -54,7 +54,7 @@ describe("第五章上线定稿 ↔ 引擎实现层", () => {
   it("时间轴与拍数逐项对齐", () => {
     expect(engine.时间轴).toEqual(source.时间轴);
     expect(engine.beats).toHaveLength(source.轮次?.length ?? 0);
-    expect(source.轮次).toHaveLength(40);
+    expect(source.轮次).toHaveLength(42);
     expect(source.时间轴).toHaveLength(16);
   });
 
@@ -86,7 +86,7 @@ describe("第五章上线定稿 ↔ 引擎实现层", () => {
         waits += 1;
         const owner = turn.等待.startsWith("男生") ? "5m" : "5f";
         const number = turn.等待.replace(/^(男生|女生)/, "");
-        expect(beat.requires, `${beat.id} 等待门`).toEqual([`${owner}.${number.slice(2)}`]);
+        expect(beat.requires, `${beat.id} 等待门`).toEqual([number.startsWith("4.") ? number : `${owner}.${number.slice(2)}`]);
       }
       if (turn.入场) expect(beat.when, `${beat.id} 入场旗标`).toBeDefined();
       if (turn.终局) {
@@ -94,7 +94,7 @@ describe("第五章上线定稿 ↔ 引擎实现层", () => {
         expect(beat.ending, `${beat.id} 终局`).toBe("在一起");
       }
     }
-    expect(waits).toBe(9);
+    expect(waits).toBe(11);
     expect(endings).toBe(2);
   });
 

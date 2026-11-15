@@ -67,13 +67,6 @@ export function ChatPane({
       .filter((candidate) => text.includes(candidate.短句))
       .map((candidate) => ({ text: candidate.短句, saved: savedLabels.has(candidate.缩略标签) }));
   };
-  const visibleCandidates = new Set<string>();
-  for (const message of messages) {
-    for (const candidate of beatOf(message.beatId)?.记忆候选 ?? []) {
-      if (message.text.includes(candidate.短句)) visibleCandidates.add(candidate.缩略标签);
-    }
-  }
-  const memoryTotal = visibleCandidates.size;
   const memorySaved = state.memories[channel].length;
   const capacity = memoryCapacity(state, channel);
 
@@ -211,10 +204,10 @@ export function ChatPane({
   }, [showMemoryCount]);
 
   function requestSave(entry: MemoryEntry) {
-    if (memorySaved >= (capacity ?? Infinity)) onMemoryFull(entry);
+    if (memorySaved >= capacity) onMemoryFull(entry);
     else dispatch({ type: "save-memory", channel, ...entry });
   }
-  const memoryCount = `${memorySaved}/${capacity ?? Math.max(memoryTotal, memorySaved)}`;
+  const memoryCount = `${memorySaved}/${capacity}`;
 
   return (
     <section className="pane terminal-column" data-testid={`pane-${channel}`} aria-label={title}

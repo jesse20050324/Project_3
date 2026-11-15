@@ -1,4 +1,5 @@
 import { recordContext } from "./archive";
+import { retainRecentChat } from "./contextSections";
 import { compareBeats, windowState, windowViolation } from "./timeline";
 import type {
   Beat, Channel, ChannelView, ChatMessage, Choice, Ending, EngineState, Scalar,
@@ -45,8 +46,12 @@ export function createInitial(beats: Beat[]): EngineState {
   };
 }
 
-export function memoryCapacity(state: EngineState, channel: Channel): number | undefined {
-  return state.chapter[channel] >= 5 ? 5 : undefined;
+export function memoryCapacity(state: EngineState, channel: Channel): number {
+  if (state.chapter[channel] < 5) return 1;
+  const entryPrefix = channel === "left" ? "5m.1.1-" : "5f.1.1-";
+  if (state.pending[channel]?.beatId.startsWith(entryPrefix)) return 1;
+  if (state.ritual[channel]?.contextTo === 2 && state.ritual[channel]?.phase === "pause") return 1;
+  return 5;
 }
 
 /** 满槽时必须由玩家指定要替换的记忆。存入和移出在一次更新中完成。 */
@@ -58,11 +63,11 @@ export function saveMemory(
 ): EngineState {
   const saved = state.memories[channel];
   if (entry.label.trim() === "" || saved.some(memory => memory.label === entry.label)) return state;
-  const full = saved.length >= (memoryCapacity(state, channel) ?? Infinity);
+  const full = saved.length >= memoryCapacity(state, channel);
   if (full && !replaceLabel) return state;
   if (replaceLabel && !saved.some(memory => memory.label === replaceLabel)) return state;
   const next = saved.filter(memory => memory.label !== replaceLabel);
-  if (next.length >= (memoryCapacity(state, channel) ?? Infinity)) return state;
+  if (next.length >= memoryCapacity(state, channel)) return state;
   return { ...state, memories: { ...state.memories, [channel]: [...next, entry] } };
 }
 
@@ -310,6 +315,7 @@ export function openChannel(
   if (!beat.control && targetSection !== undefined && targetSection !== currentSection) {
     state = { ...state, context: { ...state.context, [channel]: targetSection } };
   }
+  state = retainRecentChat(state, beat, beats);
   if (beat.lines.length === 0 && beat.choices && beat.choices.length > 0) {
     return withPending(state, channel, { kind: "choices", beatId: beat.id });
   }
