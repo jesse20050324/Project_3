@@ -72,7 +72,7 @@ export function TerminalStart({ entry, script, onTitle }: {
     const activeSounds: (() => void)[] = [];
     const sounds = lines.map(line => window.setTimeout(() => {
       const remaining = line.duration - Math.max(0, Date.now() - start - line.start);
-      const stop = playReplySound(remaining, 0.085);
+      const stop = playReplySound(remaining, { volume: 0.085, openingLevel: 1 });
       if (stop) activeSounds.push(stop);
     }, line.start));
     const boundaries = [logEnd, shellStart, workspaceReady, ready].map(at =>

@@ -36,7 +36,7 @@ export function unlockSound() {
   } catch { /* audio is optional if unavailable */ }
 }
 
-export function replyPulses(duration: number) {
+export function replyPulses(duration: number, openingLevel = 0.8) {
   const base = Math.round(75 + 15 * Math.max(0, Math.min(1, (duration - 1000) / 5000)));
   let seed = (Math.round(duration) * 2654435761) >>> 0;
   const rng = () => {
@@ -53,7 +53,7 @@ export function replyPulses(duration: number) {
   let at = 0;
   while (at + 40 <= duration) {
     const fade = Math.max(0, Math.min(1, (at - 1000) / 1500));
-    pulses.push({ at, level: 1 - 0.6 * fade });
+    pulses.push({ at, level: openingLevel * (1 - fade) + 0.4 * fade });
     at += base + Math.floor(rng() * 13) - 6;
     if (targets.length && at >= targets[0]) {
       targets.shift();
@@ -63,7 +63,7 @@ export function replyPulses(duration: number) {
   return pulses;
 }
 
-export function playReplySound(duration: number, volume = 0.12) {
+export function playReplySound(duration: number, { volume = 0.12, openingLevel = 0.8 } = {}) {
   const audio = context;
   if (!audio || !master || !blip || duration <= 0) return;
   const output = audio.createGain();
@@ -76,7 +76,7 @@ export function playReplySound(duration: number, volume = 0.12) {
     const elapsed = performance.now() - requestedAt;
     if (elapsed >= duration) return;
     const start = audio.currentTime + 0.008;
-    const pulses = duration < 40 ? [{ at: 0, level: 1 }] : replyPulses(duration);
+    const pulses = duration < 40 ? [{ at: 0, level: openingLevel }] : replyPulses(duration, openingLevel);
     for (const { at, level } of pulses) {
       if (at !== 0 && at < elapsed) continue;
       const time = start + Math.max(0, at - elapsed) / 1000;
