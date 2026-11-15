@@ -192,7 +192,7 @@ html:lang(en) :is(.archive-segment, .archive-memory p) { line-height: 1.2; }
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
-/* English dialogue shares one spacing and wrapping policy in both directions. */
+/* English dialogue shares a wrapping policy in both directions. */
 html:lang(en) .msg-row :is(.msg-user, .msg-ai):not(.message-wait-button) {
   text-align: start;
   word-spacing: normal;
@@ -202,6 +202,8 @@ html:lang(en) .msg-row :is(.msg-user, .msg-ai):not(.message-wait-button) {
   word-break: normal;
   overflow-wrap: anywhere;
 }
+.msg-row .msg-user:not(.message-wait-button) { line-height: 1.45; }
+html:lang(en) .msg-row .msg-user:not(.message-wait-button) { word-spacing: -.04em; }
 .message-wait .msg-direction { color: var(--accent); }
 .message-wait-button { padding: 0; text-align: inherit; color: var(--muted); font-size: 13px; line-height: 24px; }
 .think-progress { color: var(--accent); }
