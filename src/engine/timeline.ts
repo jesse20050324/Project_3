@@ -64,6 +64,15 @@ export function windowState(beat: Beat, completed: Set<string>): WindowState {
   return "open";
 }
 
+/** 对窗实际解锁当前拍的依赖。区间下界只取第一个已完成的分支，与区间放行语义一致。 */
+export function crossWindowPredecessors(beat: Beat, beats: Beat[], completed: string[], activated: string[]): string[] {
+  const lower = completed.find(id => beat.window?.下界.includes(id));
+  const required = new Set([...(beat.requires ?? []), ...(lower === undefined ? [] : [lower])]);
+  return beats.filter(other => other.channel !== beat.channel && (
+    required.has(other.id) || (other.window?.上界.includes(beat.id) && activated.includes(other.id))
+  )).map(other => other.id);
+}
+
 /** 区间越界的可行动报错，供仿真与运行时校验使用。 */
 export function windowViolation(beat: Beat, completed: Set<string>): string | null {
   if (windowState(beat, completed) !== "closed") return null;

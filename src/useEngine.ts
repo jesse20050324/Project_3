@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createReducer } from "./engine/reducer";
 import { createInitial, playbackStep } from "./engine/scheduler";
 import { consumeLoadNotice, loadProgress, saveProgress } from "./engine/storage";
@@ -9,6 +9,22 @@ export function useEngine(script: Script, reduceMotion = false, running = true) 
   const reducer = useMemo(() => createReducer(beats), [beats]);
   const [state, dispatch] = useReducer(reducer, beats, (initial) => loadProgress(initial) ?? createInitial(initial));
   const [notice] = useState(() => consumeLoadNotice());
+  const completedAt = useRef(new Map<string, number>());
+  const previous = useRef({ runId: state.runId, completed: state.completed });
+
+  // 已存档的拍视为已经等过。只记录本次播放实际完成的拍，包括无台词的控制拍。
+  useLayoutEffect(() => {
+    if (previous.current.runId !== state.runId) {
+      completedAt.current.clear();
+    } else if (previous.current.completed !== state.completed) {
+      const seen = new Set(previous.current.completed);
+      const now = performance.now();
+      for (const id of state.completed) {
+        if (!seen.has(id)) completedAt.current.set(id, now);
+      }
+    }
+    previous.current = { runId: state.runId, completed: state.completed };
+  }, [state.runId, state.completed]);
 
   // 存档只写一次；读档与兼容归一化都在 storage.ts 里一次性完成。
   // 旧版每次渲染都 dispatch sync-roots 的运行时补丁已移除。
@@ -59,5 +75,5 @@ export function useEngine(script: Script, reduceMotion = false, running = true) 
     if (step) dispatch({ type: "arm", channel: step.channel });
   }, [state, beats, running]);
 
-  return { state, dispatch, notice };
+  return { state, dispatch, notice, completedAt };
 }

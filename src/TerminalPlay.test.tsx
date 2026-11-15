@@ -230,3 +230,89 @@ it("思考自然打完就出选项，即使这拍配置了留白且另一窗还�
   expect(pane.queryByTestId("think-left")).toBeNull();
   expect(stored().pending.right).toMatchObject({ kind: "lines" });
 });
+
+it("段首虚线立即显示，段内普通接续等一次，跳时分开等线前与线后", () => {
+  setMotion(false);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+  const bundled = loadBundledScript().script!;
+  const original = bundled.beats.find(beat => beat.id === "L1")!;
+  const timing = { pauseBeforeMs: 0, indicatorMs: 160, typeIntervalMs: 215, afterMs: 900 };
+  const opening: Beat = { ...original, id: "test-start", next: "test-next", choices: undefined,
+    context: { section: 1, entryTime: "见面之后" },
+    lines: [{ from: "boy", text: "甲乙", delivery: "type", timing }] };
+  const next: Beat = { ...opening, id: "test-next", next: "test-jump",
+    context: { section: 1 }, lines: [{ ...opening.lines[0], text: "丙丁" }] };
+  const jump: Beat = { ...next, id: "test-jump", next: undefined,
+    context: { section: 1, time: "第二天" }, lines: [{ ...opening.lines[0], text: "戊己" }] };
+  const beats = [opening, next, jump];
+  render(<Game script={{ ...bundled, beats, beatById: new Map(beats.map(beat => [beat.id, beat])) }} />);
+  const advance = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+  const waiting = () => screen.queryByTestId("message-wait-left");
+
+  expect(screen.getByText("见面之后")).toBeInTheDocument();
+  expect(waiting()).toBeInTheDocument();
+  advance(2499);
+  expect(screen.queryByText("甲")).toBeNull();
+  advance(1);
+  expect(screen.getByText("甲")).toBeInTheDocument();
+  advance(100);
+  expect(screen.getByText("甲乙")).toBeInTheDocument();
+  advance(1049);
+  expect(waiting()).toBeNull();
+  advance(1);
+  expect(waiting()).toBeInTheDocument();
+  advance(100);
+  expect(screen.getByText("丙")).toBeInTheDocument();
+  advance(100);
+  expect(screen.getByText("丙丁")).toBeInTheDocument();
+
+  advance(3999);
+  expect(screen.queryByText("第二天")).toBeNull();
+  expect(waiting()).toBeNull();
+  advance(1);
+  expect(screen.getByText("第二天")).toBeInTheDocument();
+  expect(waiting()).toBeInTheDocument();
+  advance(2499);
+  expect(screen.queryByText("戊")).toBeNull();
+  advance(1);
+  expect(screen.getByText("戊")).toBeInTheDocument();
+});
+
+it.each([
+  { gate: "requires", divider: false, wait: 2000 },
+  { gate: "requires", divider: true, wait: 4000 },
+  { gate: "lower", divider: false, wait: 2000 },
+  { gate: "upper", divider: false, wait: 2000 },
+])("跨窗 $gate 和本窗间隔同时计时（虚线 $divider）", ({ gate, divider, wait }) => {
+  setMotion(false);
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+  const bundled = loadBundledScript().script!;
+  const original = bundled.beats.find(beat => beat.id === "L1")!;
+  const timing = { pauseBeforeMs: 0, indicatorMs: 0, typeIntervalMs: 215, afterMs: 0 };
+  const left: Beat = { ...original, id: "test-left", next: undefined, choices: undefined,
+    window: gate === "upper" ? { channel: "right", 下界: [], 上界: ["test-result"] } : undefined,
+    context: { section: 1 }, lines: [{ from: "boy", text: "甲乙", delivery: "type", timing }] };
+  const right: Beat = { ...left, id: "test-right", channel: "right", next: "test-result", window: undefined,
+    lines: [{ from: "girl", text: "丙丁", delivery: "type", timing }] };
+  const result: Beat = { ...right, id: "test-result", next: undefined, requires: gate === "requires" ? [left.id] : undefined,
+    window: gate === "lower" ? { channel: "left", 下界: [left.id], 上界: [] } : undefined,
+    context: { section: 1, ...(divider ? { time: "第二天" } : {}) },
+    lines: [{ ...right.lines[0], text: "戊己", timing: { ...timing, indicatorMs: 160 } }] };
+  const beats = [left, right, result];
+  saveProgress({ ...createInitial(beats), pending: {
+    left: { kind: "lines", beatId: left.id, lineIndex: 0 }, right: { kind: "lines", beatId: right.id, lineIndex: 0 },
+  } });
+  render(<Game script={{ ...bundled, beats, beatById: new Map(beats.map(beat => [beat.id, beat])) }} />);
+  const advance = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+  advance(100);
+  expect(screen.getByText("甲乙")).toBeInTheDocument();
+  expect(screen.getByText("丙丁")).toBeInTheDocument();
+  advance(wait - 1);
+  expect(screen.queryByTestId("message-wait-right")).toBeNull();
+  expect(screen.queryByText("第二天")).toBeNull();
+  advance(1);
+  expect(screen.getByTestId("message-wait-right")).toBeInTheDocument();
+  if (divider) expect(screen.getByText("第二天")).toBeInTheDocument();
+  advance(divider ? 2500 : 100);
+  expect(screen.getByText("戊")).toBeInTheDocument();
+});

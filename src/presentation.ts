@@ -1,14 +1,18 @@
-import type { Beat, Delivery, PacingValue, Timing } from "./engine/types";
+import type { Delivery, PacingValue, Timing } from "./engine/types";
 
 export const PLAYBACK_SPEEDS = {
   incoming: 2.15,
-  reply: 2.75,
+  reply: 2.45,
   thought: 1.70,
   indicator: 1.60,
-  after: 0.85,
-  sameTime: 0.95,
-  timeJump: 0.45,
 } as const;
+
+export const PLAYBACK_GAPS = {
+  messageGap: 1.05,
+  beforeDivider: 4,
+  afterDivider: 2.5,
+} as const;
+export const CROSS_WINDOW_GAP_MS = 2000;
 
 /**
  * 逐消息节拍的唯一调参入口。
@@ -42,14 +46,6 @@ export const ZERO_TIMING: Timing = {
   typeIntervalMs: 0,
   afterMs: 0,
 };
-
-/** Gap from the end of one line to the first feedback for the next. */
-export function playbackGapMs(previous: Beat["context"], next: Beat["context"], random = Math.random): number {
-  // Entering a new section already has its own clearing animation and pause.
-  if (!previous || !next || previous.section !== next.section) return 0;
-  if (next.time && previous.time !== next.time) return 2200;
-  return 800 + Math.round(random() * 400);
-}
 
 export function shouldType(delivery: Delivery, reduceMotion: boolean): boolean {
   return delivery === "type" && !reduceMotion;

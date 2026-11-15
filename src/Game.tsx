@@ -18,7 +18,7 @@ type Cursor = { channel: Channel; beatId?: string; index: number };
 export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () => void; intro?: WorkspaceIntro }) {
   const running = !intro;
   const reduced = useReducedMotion();
-  const { state, dispatch, notice } = useEngine(script, reduced, running);
+  const { state, dispatch, notice, completedAt } = useEngine(script, reduced, running);
   const outcome = storyOutcome(state);
   const { t } = useLanguage();
   const [speeds, setSpeeds] = useState<PlaybackSpeeds>({});
@@ -133,7 +133,7 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
       {t(outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : `结局 · ${outcome}`, englishEndings[outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : outcome] ?? outcome)}
     </div> : null}
     <div className="duo">
-      {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch}
+      {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch} completedAt={completedAt}
         active={Boolean(state.pending[channel])} focused={focused === channel} selected={selected(channel)}
         skipRefs={skipRefs} running={running} speeds={tuning ? speeds : undefined}
         onMemoryFull={entry => setReplacement({ channel, entry })}

@@ -6,10 +6,11 @@ import { TerminalSpinner } from "./TerminalSpinner";
 import { ProgressiveText } from "./ProgressiveText";
 import { terminalUsers } from "../terminalIdentity";
 import type { Action } from "../engine/reducer";
+import { crossWindowPredecessors } from "../engine/timeline";
 import type {
   Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
 } from "../engine/types";
-import { DEFAULT_PACING, PACING, PLAYBACK_SPEEDS, playbackGapMs, resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
+import { CROSS_WINDOW_GAP_MS, DEFAULT_PACING, PACING, PLAYBACK_GAPS, PLAYBACK_SPEEDS, resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
 import type { PlaybackSpeeds } from "./PlaybackTuner";
 
@@ -20,6 +21,7 @@ type Props = {
   channel: Channel;
   state: EngineState;
   dispatch: (action: Action) => void;
+  completedAt: RefObject<ReadonlyMap<string, number>>;
   active: boolean;
   focused: boolean;
   selected: number;
@@ -47,7 +49,7 @@ type Outgoing = {
 type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 
 export function ChatPane({
-  script, channel, state, dispatch, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds, onMemoryFull,
+  script, channel, state, dispatch, completedAt, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds, onMemoryFull,
 }: Props) {
   const { language, t } = useLanguage();
   const { name, id } = terminalUsers[channel];
@@ -97,13 +99,13 @@ export function ChatPane({
   const phase = playback?.token === token ? playback.phase : "idle";
   const currentSpeeds = useRef(speeds);
   currentSpeeds.current = speeds;
+  const currentOutgoing = useRef(original);
+  currentOutgoing.current = original;
   const commitRef = useRef<() => void>(() => {});
   const stateRef = useRef(state);
   const doneToken = useRef<string | null>(null);
   const timers = useRef<number[]>([]);
-  const afterMsRef = useRef(0);
-  const finishedAt = useRef<number | undefined>(undefined);
-  const lastPlayback = useRef<{ runId: EngineState["runId"]; beatId: string; finishedAt: number } | null>(null);
+  const lastPlayback = useRef<{ runId: EngineState["runId"]; id: string; finishedAt: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const rowPositions = useRef(new Map<string, number>());
   useLayoutEffect(() => {
@@ -149,29 +151,26 @@ export function ChatPane({
     const currentToken = `${stateRef.current.runId}|${current.beatId}:${current.kind}:${"lineIndex" in current ? current.lineIndex : "choiceIndex" in current ? current.choiceIndex : 0}`;
     if (doneToken.current === currentToken) return;
     doneToken.current = currentToken;
-    lastPlayback.current = {
-      runId: stateRef.current.runId,
-      beatId: current.beatId,
-      finishedAt: finishedAt.current ?? performance.now(),
-    };
+    const played = currentOutgoing.current;
+    if (played && played.delivery !== "thought") {
+      lastPlayback.current = { runId: stateRef.current.runId, id: played.id, finishedAt: performance.now() };
+    }
     dispatch(current.kind === "lines" ? { type: "commit-line", channel } : { type: "commit-reply", channel });
   }, [channel, clearTimers, dispatch]);
   commitRef.current = commit;
 
-  const finishTyping = useCallback(() => {
-    finishedAt.current = performance.now();
-    later(() => commitRef.current(), afterMsRef.current / (currentSpeeds.current?.after ?? PLAYBACK_SPEEDS.after));
-  }, [later]);
-
-  const skip = useCallback(() => commitRef.current(), []);
+  const finishTyping = useCallback(() => commitRef.current(), []);
   useEffect(() => {
     const refs = skipRefs.current;
-    refs[channel] = skip;
+    refs[channel] = finishTyping;
     return () => { delete refs[channel]; };
-  }, [channel, skip, skipRefs]);
+  }, [channel, finishTyping, skipRefs]);
 
-  // 一次消息 = pauseBefore（停顿感）→ indicator（三点）→ 逐字/整条 → afterMs（留白）→ commit。
-  // 自动接续补足段内或跨虚线的留白，已读完后的停顿和等待对窗的时间都计入。
+  const lastMessage = visibleMessages.at(-1);
+  const outgoingDay = outgoing && outgoing.delivery !== "thought" && divider(outgoing.beatId, lastMessage?.beatId);
+  const hasDivider = Boolean(outgoingDay);
+
+  // 虚线和接收提示一起出现。普通接续和带虚线接续分别计算，已等待的时间计入线前间隔。
   useEffect(() => {
     clearTimers();
     const setPhase = (phase: Phase) => setPlayback({ token, phase });
@@ -184,25 +183,37 @@ export function ChatPane({
     const previous = lastPlayback.current;
     const current = stateRef.current;
     const isReply = current.pending[channel]?.kind === "reply";
-    const speedForTime = currentSpeeds.current;
     let pauseBeforeMs = isReply ? 0 : timing.pauseBeforeMs;
-    if (!reduced && !isReply && previous?.runId === current.runId) {
-      const previousContext = beatOf(previous.beatId)?.context;
-      const nextContext = beatOf(outgoing.beatId)?.context;
-      const gapSpeed = nextContext?.time && nextContext.time !== previousContext?.time
-        ? speedForTime?.timeJump ?? PLAYBACK_SPEEDS.timeJump
-        : speedForTime?.sameTime ?? PLAYBACK_SPEEDS.sameTime;
-      const gap = playbackGapMs(previousContext, nextContext) / gapSpeed;
-      if (gap > 0) {
-        const deliberatePause = timing.pauseBeforeMs > PACING[DEFAULT_PACING].pauseBeforeMs ? timing.pauseBeforeMs : 0;
-        pauseBeforeMs = Math.max(deliberatePause, gap - (performance.now() - previous.finishedAt));
+    if (!reduced && !isReply) {
+      const elapsed = previous?.runId === current.runId && previous.id === lastMessage?.id
+        ? performance.now() - previous.finishedAt : undefined;
+      if (hasDivider) {
+        const gap = currentSpeeds.current?.beforeDivider ?? PLAYBACK_GAPS.beforeDivider;
+        pauseBeforeMs = elapsed === undefined ? 0 : Math.max(0, gap * 1000 - elapsed);
+      } else if (elapsed !== undefined) {
+        const gap = currentSpeeds.current?.messageGap ?? PLAYBACK_GAPS.messageGap;
+        const scriptedMinimum = timing.pauseBeforeMs > PACING[DEFAULT_PACING].pauseBeforeMs ? timing.pauseBeforeMs : 0;
+        pauseBeforeMs = Math.max(0, Math.max(scriptedMinimum, gap * 1000) - elapsed);
+      }
+      const nextBeat = beatOf(outgoing.beatId);
+      const pending = current.pending[channel];
+      if (nextBeat && pending?.kind === "lines" && pending.lineIndex === 0) {
+        const clock = performance.now();
+        const predecessors = crossWindowPredecessors(nextBeat, script.beats, current.completed, current.activated);
+        for (const id of predecessors) {
+          const finishedAt = completedAt.current.get(id);
+          if (finishedAt !== undefined) {
+            pauseBeforeMs = Math.max(pauseBeforeMs, finishedAt + CROSS_WINDOW_GAP_MS - clock);
+          }
+        }
       }
     }
-    finishedAt.current = undefined;
-    afterMsRef.current = outgoing.delivery === "thought" ? 0 : timing.afterMs;
     setPhase("pause");
     later(() => {
       setPhase("indicator");
+      const indicatorMs = hasDivider && !reduced
+        ? (currentSpeeds.current?.afterDivider ?? PLAYBACK_GAPS.afterDivider) * 1000
+        : timing.indicatorMs / (currentSpeeds.current?.indicator ?? PLAYBACK_SPEEDS.indicator);
       later(() => {
         if ((!reduced && outgoing.delivery === "thought") || shouldType(outgoing.delivery, reduced)) {
           setPhase("typing");
@@ -210,10 +221,10 @@ export function ChatPane({
           setPhase("shown");
           finishTyping();
         }
-      }, timing.indicatorMs / (currentSpeeds.current?.indicator ?? PLAYBACK_SPEEDS.indicator));
+      }, indicatorMs);
     }, pauseBeforeMs);
     return clearTimers;
-  }, [token, channel, clearTimers, finishTyping, later, outgoing?.delivery, reduced]);
+  }, [token, channel, clearTimers, completedAt, finishTyping, hasDivider, later, outgoing?.delivery, reduced]);
 
   useEffect(() => {
     const el = scroller.current;
@@ -236,10 +247,8 @@ export function ChatPane({
       : context.time !== previous.time ? context.time : undefined;
     return time && t(time, /^\d{2}:\d{2}$/.test(time) ? time : englishBeats[beatId]?.time ?? time);
   }
-  const lastMessage = visibleMessages.at(-1);
   const currentBeat = beat ?? (lastMessage && beatOf(lastMessage.beatId));
   const timeLabel = currentBeat?.context ? undefined : currentBeat?.time ?? currentBeat?.label;
-  const outgoingDay = pending && divider(pending.beatId, lastMessage?.beatId);
 
   useEffect(() => setShowMemoryCount(false), [state.runId, state.chapter[channel]]);
   useEffect(() => {
@@ -303,7 +312,7 @@ export function ChatPane({
           );
         })}
 
-        {outgoing && outgoing.delivery !== "thought" && phase !== "idle"
+        {phase !== "idle" && phase !== "pause"
           && outgoingDay ? <div className="chat-date">{outgoingDay}</div> : null}
 
         {ritual && elapsed < RITUAL_MASK_MS + 500 && !reduced ? (
@@ -315,7 +324,7 @@ export function ChatPane({
           <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"} message-wait`} data-testid={`message-wait-${channel}`}>
             <span className="msg-direction"><TerminalSpinner /></span>
             <button type="button" className={`${outgoing.from === "ai" ? "msg-ai" : "msg-user"} message-wait-button`}
-              data-testid="skip" onClick={skip} aria-label={t("跳过当前播放", "Skip current playback")}>
+              data-testid="skip" onClick={finishTyping} aria-label={t("跳过当前播放", "Skip current playback")}>
               {outgoing.from === "ai" ? t("正在发送", "Sending") : t("正在接收", "Receiving")}
             </button>
           </div>
@@ -336,7 +345,7 @@ export function ChatPane({
               const el = scroller.current;
               if (el) el.scrollTop = el.scrollHeight;
             }}
-            onSkip={skip}
+            onSkip={finishTyping}
           />
         ) : null}
       </div>
