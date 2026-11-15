@@ -9,7 +9,7 @@ import type { Action } from "../engine/reducer";
 import type {
   Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
 } from "../engine/types";
-import { resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
+import { DEFAULT_PACING, PACING, playbackGapMs, resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
 
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
@@ -98,6 +98,8 @@ export function ChatPane({
   const doneToken = useRef<string | null>(null);
   const timers = useRef<number[]>([]);
   const afterMsRef = useRef(0);
+  const finishedAt = useRef<number | undefined>(undefined);
+  const lastPlayback = useRef<{ runId: EngineState["runId"]; beatId: string; finishedAt: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const rowPositions = useRef(new Map<string, number>());
   useLayoutEffect(() => {
@@ -143,11 +145,17 @@ export function ChatPane({
     const currentToken = `${stateRef.current.runId}|${current.beatId}:${current.kind}:${"lineIndex" in current ? current.lineIndex : "choiceIndex" in current ? current.choiceIndex : 0}`;
     if (doneToken.current === currentToken) return;
     doneToken.current = currentToken;
+    lastPlayback.current = {
+      runId: stateRef.current.runId,
+      beatId: current.beatId,
+      finishedAt: finishedAt.current ?? performance.now(),
+    };
     dispatch(current.kind === "lines" ? { type: "commit-line", channel } : { type: "commit-reply", channel });
   }, [channel, clearTimers, dispatch]);
   commitRef.current = commit;
 
   const finishTyping = useCallback(() => {
+    finishedAt.current = performance.now();
     later(() => commitRef.current(), afterMsRef.current);
   }, [later]);
 
@@ -159,7 +167,7 @@ export function ChatPane({
   }, [channel, skip, skipRefs]);
 
   // 一次消息 = pauseBefore（停顿感）→ indicator（三点）→ 逐字/整条 → afterMs（留白）→ commit。
-  // 所有时长都来自该条消息解析后的定值 Timing，不再是全局常量匀速蹦。
+  // 自动接续补足段内或跨虚线的留白，已读完后的停顿和等待对窗的时间都计入。
   useEffect(() => {
     clearTimers();
     const setPhase = (phase: Phase) => setPlayback({ token, phase });
@@ -169,6 +177,18 @@ export function ChatPane({
     }
 
     const timing = reduced ? { ...ZERO_TIMING } : outgoing.timing;
+    const previous = lastPlayback.current;
+    const current = stateRef.current;
+    const isReply = current.pending[channel]?.kind === "reply";
+    let pauseBeforeMs = isReply ? 0 : timing.pauseBeforeMs;
+    if (!reduced && !isReply && previous?.runId === current.runId) {
+      const gap = playbackGapMs(beatOf(previous.beatId)?.context, beatOf(outgoing.beatId)?.context);
+      if (gap > 0) {
+        const deliberatePause = timing.pauseBeforeMs > PACING[DEFAULT_PACING].pauseBeforeMs ? timing.pauseBeforeMs : 0;
+        pauseBeforeMs = Math.max(deliberatePause, gap - (performance.now() - previous.finishedAt));
+      }
+    }
+    finishedAt.current = undefined;
     afterMsRef.current = outgoing.delivery === "thought" ? 0 : timing.afterMs;
     setPhase("pause");
     later(() => {
@@ -178,12 +198,12 @@ export function ChatPane({
           setPhase("typing");
         } else {
           setPhase("shown");
-          later(() => commitRef.current(), afterMsRef.current);
+          finishTyping();
         }
       }, timing.indicatorMs);
-    }, timing.pauseBeforeMs);
+    }, pauseBeforeMs);
     return clearTimers;
-  }, [token, clearTimers, later, outgoing?.delivery, reduced]);
+  }, [token, channel, clearTimers, finishTyping, later, outgoing?.delivery, reduced]);
 
   useEffect(() => {
     const el = scroller.current;

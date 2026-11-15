@@ -1,4 +1,4 @@
-import type { Delivery, PacingValue, Timing } from "./engine/types";
+import type { Beat, Delivery, PacingValue, Timing } from "./engine/types";
 
 /**
  * 逐消息节拍的唯一调参入口。
@@ -32,6 +32,14 @@ export const ZERO_TIMING: Timing = {
   typeIntervalMs: 0,
   afterMs: 0,
 };
+
+/** Gap from the end of one line to the first feedback for the next. */
+export function playbackGapMs(previous: Beat["context"], next: Beat["context"], random = Math.random): number {
+  // Entering a new section already has its own clearing animation and pause.
+  if (!previous || !next || previous.section !== next.section) return 0;
+  if (next.time && previous.time !== next.time) return 2200;
+  return 800 + Math.round(random() * 400);
+}
 
 export function shouldType(delivery: Delivery, reduceMotion: boolean): boolean {
   return delivery === "type" && !reduceMotion;

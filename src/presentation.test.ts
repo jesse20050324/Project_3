@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PACING, PACING, pacingError, resolveTiming, ZERO_TIMING } from "./presentation";
+import { DEFAULT_PACING, PACING, pacingError, playbackGapMs, resolveTiming, ZERO_TIMING } from "./presentation";
 import type { PacingValue } from "./engine/types";
 
 describe("逐消息节拍的三层解析", () => {
@@ -33,4 +33,16 @@ describe("逐消息节拍的三层解析", () => {
     expect(pacingError("正常")).toBeNull();
     expect(pacingError({ afterMs: 1200 })).toBeNull();
   });
+});
+
+it("连续消息浮动，跨虚线固定，切段交给清屏", () => {
+  const evening = { section: 2, time: "晚上" } as const;
+  const morning = { section: 2, time: "第二天早上" } as const;
+  expect(playbackGapMs(evening, evening, () => 0)).toBe(800);
+  expect(playbackGapMs(evening, evening, () => 0.5)).toBe(1000);
+  expect(playbackGapMs(evening, evening, () => 0.999)).toBe(1200);
+  expect(playbackGapMs(evening, morning, () => 0)).toBe(2200);
+  expect(playbackGapMs(evening, morning, () => 0.999)).toBe(2200);
+  expect(playbackGapMs(evening, { ...morning, section: 3 })).toBe(0);
+  expect(playbackGapMs(undefined, evening)).toBe(0);
 });
