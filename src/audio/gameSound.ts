@@ -2,6 +2,7 @@ import blipUrl from "./character-blip.wav";
 
 let context: AudioContext | undefined;
 let master: GainNode | undefined;
+let resumed: Promise<void> | undefined;
 let blip: Promise<AudioBuffer | undefined> | undefined;
 const setting = "shuangxian.sound-muted";
 
@@ -25,7 +26,7 @@ export function unlockSound() {
       master.connect(context.destination);
     }
     const audio = context;
-    void audio.resume().catch(() => {});
+    resumed = audio.resume().catch(() => {});
     blip ??= fetch(blipUrl).then(response => {
       if (!response.ok) throw Error("Could not load the character sound");
       return response.arrayBuffer();
@@ -60,23 +61,27 @@ export function replyPulses(duration: number) {
   return pulses;
 }
 
-export function playReplySound(duration: number) {
+export function playReplySound(duration: number, volume = 0.12) {
   const audio = context;
-  if (!audio || !master || !blip || audio.state !== "running" || duration < 40) return;
+  if (!audio || !master || !blip || duration <= 0) return;
   const output = audio.createGain();
-  const start = audio.currentTime + 0.012;
+  const requestedAt = performance.now();
   const sources: AudioBufferSourceNode[] = [];
   let stopped = false;
   output.connect(master);
-  void blip.then(buffer => {
-    if (!buffer || stopped) return;
-    for (const { at, level } of replyPulses(duration)) {
-      const time = start + at / 1000;
-      if (time < audio.currentTime) continue;
+  void Promise.all([blip, resumed]).then(([buffer]) => {
+    if (!buffer || stopped || audio.state !== "running") return;
+    const elapsed = performance.now() - requestedAt;
+    if (elapsed >= duration) return;
+    const start = audio.currentTime + 0.008;
+    const pulses = duration < 40 ? [{ at: 0, level: 1 }] : replyPulses(duration);
+    for (const { at, level } of pulses) {
+      if (at !== 0 && at < elapsed) continue;
+      const time = start + Math.max(0, at - elapsed) / 1000;
       const source = audio.createBufferSource();
       source.buffer = buffer;
       const gain = audio.createGain();
-      gain.gain.value = 0.12 * level;
+      gain.gain.value = volume * level;
       source.connect(gain);
       gain.connect(output);
       source.start(time);
@@ -90,11 +95,19 @@ export function playReplySound(duration: number) {
   };
 }
 
+export function playIncomingSound() {
+  playTones([[0, 515, 0.075, 0.085]]);
+}
+
 export function playMemorySound() {
+  playTones([[0, 390, 0.09, 0.17], [0.095, 585, 0.17, 0.21]]);
+}
+
+function playTones(notes: ReadonlyArray<readonly [number, number, number, number]>) {
   const audio = context;
   if (!audio || !master || audio.state !== "running") return;
   const start = audio.currentTime + 0.012;
-  for (const [offset, freq, length, level] of [[0, 390, 0.09, 0.17], [0.095, 585, 0.17, 0.21]]) {
+  for (const [offset, freq, length, level] of notes) {
     const at = start + offset;
     const tone = audio.createOscillator();
     const envelope = audio.createGain();
@@ -107,5 +120,6 @@ export function playMemorySound() {
     envelope.connect(master);
     tone.start(at);
     tone.stop(at + length + 0.006);
+    tone.onended = () => envelope.disconnect();
   }
 }
