@@ -130,6 +130,11 @@ p { margin: 0; }
 .choice-cursor { display: inline-block; }
 
 .archive-scroll { flex: 1; padding-top: 8px; font-size: 14px; }
+html:lang(en) .archive-scroll {
+  line-height: 1.36;
+  word-spacing: -.12em;
+}
+html:lang(en) .archive-scroll button { word-spacing: inherit; }
 .archive-folder { margin-bottom: 9px; }
 .archive-branches { padding: 3px 0 2px 12px; }
 .archive-session { margin: 3px 0; }
@@ -185,6 +190,16 @@ p { margin: 0; }
   word-break: normal;
   overflow-wrap: anywhere;
   text-wrap: pretty;
+}
+/* English dialogue shares one spacing and wrapping policy in both directions. */
+html:lang(en) .msg-row :is(.msg-user, .msg-ai):not(.message-wait-button) {
+  text-align: start;
+  word-spacing: normal;
+  white-space: pre-line;
+  text-wrap: wrap;
+  line-break: auto;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .message-wait .msg-direction { color: var(--accent); }
 .message-wait-button { padding: 0; text-align: inherit; color: var(--muted); font-size: 13px; line-height: 24px; }
