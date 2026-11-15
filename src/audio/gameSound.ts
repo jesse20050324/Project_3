@@ -96,7 +96,7 @@ export function playReplySound(duration: number, volume = 0.12) {
 }
 
 export function playIncomingSound() {
-  playTones([[0, 515, 0.075, 0.085]]);
+  playTones([[0, 530, 0.065, 0.22], [0.092, 720, 0.105, 0.20]]);
 }
 
 export function playMemorySound() {
