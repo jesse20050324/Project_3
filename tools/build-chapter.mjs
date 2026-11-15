@@ -179,7 +179,7 @@ for (const [index, turn] of turns.entries()) {
 
   const human = owner === "男生" ? "boy" : "girl";
   const lines = [
-    { from: human, text: turn.用户消息, delivery: "pop", ...lineOverride(0) },
+    { from: human, text: turn.用户消息, delivery: "type", ...lineOverride(0) },
     { from: "ai", text: turn.AI思考, delivery: "thought", ...lineOverride(1) },
   ];
 

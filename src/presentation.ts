@@ -1,5 +1,15 @@
 import type { Beat, Delivery, PacingValue, Timing } from "./engine/types";
 
+export const PLAYBACK_SPEEDS = {
+  incoming: 2.15,
+  reply: 2.75,
+  thought: 1.70,
+  indicator: 1.60,
+  after: 0.85,
+  sameTime: 0.95,
+  timeJump: 0.45,
+} as const;
+
 /**
  * 逐消息节拍的唯一调参入口。
  * 三层覆盖：全局预设（本文件） → 章默认（YAML 顶层 默认节拍）

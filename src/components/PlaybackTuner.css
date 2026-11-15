@@ -1,0 +1,23 @@
+.playback-tuner {
+  position: relative;
+  z-index: 3;
+}
+
+.playback-tuner-controls {
+  position: absolute;
+  inset-block-start: calc(100% + 12px);
+  inset-inline-end: 0;
+  width: 380px;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  background: var(--terminal);
+  box-shadow: 0 8px 28px #0006;
+  display: grid;
+  gap: 12px;
+}
+
+.playback-tuner-controls p { color: var(--muted); }
+.playback-tuner-controls label { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
+.playback-tuner-controls input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.playback-tuner-value { color: var(--accent); font-variant-numeric: tabular-nums; }
+.playback-tuner-controls button { justify-self: end; }

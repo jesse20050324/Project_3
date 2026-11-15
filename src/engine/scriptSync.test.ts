@@ -64,6 +64,7 @@ describe("第五章上线定稿 ↔ 引擎实现层", () => {
       expect(beat, `缺少 ${idOf(turn)}`).toBeDefined();
       if (!beat) continue;
       expect(beat.lines[0].text, `${beat.id} ①`).toBe(turn.用户消息);
+      expect(beat.lines[0].delivery, `${beat.id} 来信逐字播放`).toBe("type");
       expect(beat.lines[1].text, `${beat.id} ②`).toBe(turn.AI思考);
       const options = Array.isArray(turn.选项) ? turn.选项 : [turn.选项];
       const replies = Array.isArray(turn.AI回复) ? turn.AI回复 : [turn.AI回复];

@@ -1,5 +1,5 @@
 import { LanguageSwitch, englishEndings, useLanguage } from "./language";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
 import { TerminalArchive, type MemoryReplacement } from "./components/TerminalArchive";
 import { TerminalFrame, type WorkspaceIntro } from "./components/TerminalFrame";
@@ -8,6 +8,9 @@ import { choiceMemoryGate, storyOutcome } from "./engine/scheduler";
 import type { Channel, Script } from "./engine/types";
 import { useAnimationClock, useReducedMotion } from "./terminalMotion";
 import { useEngine } from "./useEngine";
+import type { PlaybackSpeeds } from "./components/PlaybackTuner";
+
+const PlaybackTuner = import.meta.env.DEV ? lazy(() => import("./components/PlaybackTuner")) : null;
 
 const channels = ["left", "right"] as const;
 type Cursor = { channel: Channel; beatId?: string; index: number };
@@ -18,6 +21,8 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
   const { state, dispatch, notice } = useEngine(script, reduced, running);
   const outcome = storyOutcome(state);
   const { t } = useLanguage();
+  const [speeds, setSpeeds] = useState<PlaybackSpeeds>({});
+  const tuning = PlaybackTuner && new URLSearchParams(window.location.search).get("tune") === "1";
   const [askRestart, setAskRestart] = useState(false);
   const [requestedReplacement, setReplacement] = useState<MemoryReplacement>();
   const replacement = requestedReplacement && !state.ritual[requestedReplacement.channel] && state.messages.some(
@@ -116,6 +121,9 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
       <span className="topbar-title" data-testid="game-title">He said, she said</span>
       <span className="topbar-tag">{t("助手 · 双会话", "Assistant · Dual Sessions")}</span>
       <div className="topbar-actions"><LanguageSwitch />
+        {tuning && PlaybackTuner && <Suspense fallback={null}>
+          <PlaybackTuner speeds={speeds} onChange={setSpeeds} />
+        </Suspense>}
         <button type="button" data-testid="restart" onClick={() => setAskRestart(true)}>[{t("重新开始", "Restart")}]</button>
         {onTitle ? <button type="button" onClick={onTitle}>[{t("返回标题", "Title Menu")}]</button> : null}
       </div>
@@ -127,7 +135,8 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
     <div className="duo">
       {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch}
         active={Boolean(state.pending[channel])} focused={focused === channel} selected={selected(channel)}
-        skipRefs={skipRefs} running={running} onMemoryFull={entry => setReplacement({ channel, entry })}
+        skipRefs={skipRefs} running={running} speeds={tuning ? speeds : undefined}
+        onMemoryFull={entry => setReplacement({ channel, entry })}
         onMove={index => moveTo(channel, index)} onPick={index => pick(channel, index)} now={now} reduced={reduced} />)}
       <TerminalArchive script={script} state={state} now={now} reduced={reduced} replacement={replacement}
         onCancelReplacement={() => setReplacement(undefined)}

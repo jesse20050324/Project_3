@@ -54,7 +54,7 @@ beats:
     lines:
       - from: boy
         text: 我妹说，那女生也找她要过我微信！那不就是我俩想到一块去了？现在加上了，我第一句发啥啊，别显得我准备半天似的。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 两人都问过联系方式，他兴奋，也怕第一句显得太刻意。可以用桌游做开头，有共同话题，对方也容易接。
         delivery: thought
@@ -76,7 +76,7 @@ beats:
     lines:
       - from: boy
         text: 微信到手了，我妹牵的线。上次桌游我还输给她了。我对着输入框抠半天了，第一句咋整？总不能发个你好吧，像上门推销的。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 联系方式有了，他卡在怎样开始。可以顺着他对桌游的印象给一句自嘲式开场，省去正式自我介绍的压力。
         delivery: thought
@@ -98,7 +98,7 @@ beats:
     lines:
       - from: boy
         text: 反转了兄弟，我还没想好咋开口呢，她先加我了！是不是我妹跟她说啥了？你说她这啥意思啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她主动加了好友，他却开始猜妹妹有没有说过什么。能确定的是他们已经加上了，可以建议先打招呼，等她实际回应。
         delivery: thought
@@ -120,7 +120,7 @@ beats:
     lines:
       - from: boy
         text: 加上了，我妹给推的。我刚才当面都敢问，怎么打个招呼又卡住了。你说第一句咋发？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他当面问到了联系方式，第一句反倒有点紧张。可以从两人一起玩的桌游开口。
         delivery: thought
@@ -137,7 +137,7 @@ beats:
     lines:
       - from: boy
         text: 想了想，你给的那句我有点发不出来。我自己写了个：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。咋样，会不会有点傻？
-        delivery: pop
+        delivery: type
         节拍:
           pauseBeforeMs: 1500
       - from: ai
@@ -157,7 +157,7 @@ beats:
     lines:
       - from: boy
         text: 发了！四十来分钟才回，就一句『记得，你也要到点睡了』。我看了半天，这算是想聊还是在跟我说晚安啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他在用等待的时间猜对方态度。原话既回应了自我介绍，也顺着他提到了睡觉。可以自然道晚安，也可以用桌游接一句。
         delivery: thought
@@ -187,7 +187,7 @@ beats:
     lines:
       - from: boy
         text: 昨晚听你的，道了晚安就真睡了，还赶在十一点前，破天荒。今早她又找我聊了两句。也没啥事，就是我还想跟她多说会儿，老想点开那个框。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 道晚安之后，女生仍主动联系。他惦记的是没聊够，可以肯定这个感受，同时用今早的情况帮他放下对昨晚收尾的顾虑。
         delivery: thought
@@ -204,7 +204,7 @@ beats:
     lines:
       - from: boy
         text: 昨晚顺着翻盘那个梗还真聊起来了，聊到十一点多。十一点必睡，当天就倒了，笑死。她后来跟我说晚安。结果今天到现在一条没有……我昨晚是不是聊太多了？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 昨晚聊得投入，今天暂时安静，他把两件事联系起来了。先指出昨晚有正常收尾，今天的沉默还不足以判断她的态度。
         delivery: thought
@@ -223,7 +223,7 @@ beats:
     lines:
       - from: boy
         text: 刚聊完！她晚上主动来找我了，一聊就一个多钟头。其实也没啥大事，东一句西一句的，还挺舒服。我白天还在那儿瞎想，现在感觉也不用老算她多久回了。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他收到女生的主动联系，注意力从回复间隔回到了聊天本身。可以回应这次体验，让他把舒服的来往当作参考。
         delivery: thought
@@ -240,7 +240,7 @@ beats:
     lines:
       - from: boy
         text: 又聊了一个礼拜。她回得慢但都会回，我好像也习惯了。今天她在家加班，还给我发了张照片，配一个『困』。她的猫踩着键盘抢镜，叫煤球，特别敬业。你说她这算不算有点把我当自己人了？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她主动分享加班和猫的照片。他把稳定的来往理解成亲近，可以肯定这个具体变化，再建议顺着她发来的内容回应。
         delivery: thought
@@ -263,7 +263,7 @@ beats:
     lines:
       - from: boy
         text: 我现在一天能给她发八百条『在干嘛』。她有时候隔俩小时才回，我就又点开那个框看，明明啥都没响。客观说，我是不是有点上头？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他开始留意自己的消息频率，也发现等待让他不安。可以试着少发重复问候，或保留自然分享，同时给对方留出回话的时间。
         delivery: thought
@@ -283,7 +283,7 @@ beats:
     lines:
       - from: boy
         text: 今天试着少发了，话打了删删了打，最后就发了句晚安。她回得跟平时一样，也没问我咋这么安静……我感觉我在演一个淡定的人。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他减少了发消息的次数，对方的回复没有明显变化。他仍然不舒服，可以帮他区分想聊的心情和刻意压住自己的做法。
         delivery: thought
@@ -300,7 +300,7 @@ beats:
     lines:
       - from: boy
         text: 今天还是想找她就找了，发了好几回。她有时候一个『哈哈哈』隔俩小时才来。我有一阵真像在对着屏幕自己跟自己聊天，笑死。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他继续主动联系，回复的节奏还是不同。现在已经有了一段日常往来，可以建议约一次见面，让他看看两人当面相处的感觉。
         delivery: thought
@@ -317,7 +317,7 @@ beats:
     lines:
       - from: boy
         text: 今天还是这样，不找吧心里老惦记，找吧又怕她嫌烦。线上聊得再欢，她一忙我就在这儿干等着。咋整啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 控制发消息的频率没有解决他的顾虑。他想要一次能专心相处的机会，可以把见面作为具体建议，让对方按自己的时间答复。
         delivery: thought
@@ -334,7 +334,7 @@ beats:
     lines:
       - from: boy
         text: 行，听人劝吃饱饭。我想约她周六出来吃个饭。上次桌游我还输给她了。直接问周六有空吗，会不会显得有点猴急？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他已经决定约饭，想把邀请说得自然。可以用两人都知道的桌游输赢作由头，给出具体时间，让她有余地答复。
         delivery: thought
@@ -351,7 +351,7 @@ beats:
     lines:
       - from: boy
         text: 她说周六来不了了，项目临时有个节点，问改周日行不行。还发了个不好意思的表情。我知道她说了周日，但我还是有点不得劲。会不会其实不想来啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 原来的约定改了，他有些失落。她给出了具体的替代日期，这能回应他担心约会取消的问题，仍无法从一句话确定她的心情。
         delivery: thought
@@ -368,7 +368,7 @@ beats:
     lines:
       - from: boy
         text: 见完了！吃饭散步聊了三个多小时，临走还拍了张合照。她问我下次想吃啥，说她想吃烤肉，下回带我吃。吃饭时她回了好几条工作消息，我坐那儿有点不知道干啥。还有个事，我跟她说，有次她半天没回，我半夜还刷她朋友圈，看她睡了没。她笑了下，说『你想得可真多』。我这话是不是说多了？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他既高兴她主动提下次，又担心自己那句坦白让她不舒服。她回了工作消息，也有继续见面的表示。可以分别回应这两件事，先不替她解释那声笑。
         delivery: thought
@@ -390,7 +390,7 @@ beats:
     lines:
       - from: boy
         text: 睡前最后问一句。就这两周，我还有戏吧？我上次这么上心，还是给我表妹辅导作业的时候。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他想知道这两周的来往有没有继续发展的可能。今天她和他聊了三个多小时，还主动提了下次吃烤肉。可以用今天的事回应他的担心。
         delivery: thought
@@ -407,7 +407,7 @@ beats:
     lines:
       - from: boy
         text: 我想跟她表白。稿子打了删删了打，现在是『我挺喜欢你的，想跟你正经处对象，你考虑考虑』。读着怎么这么怪，你帮我改改。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他希望表达喜欢，又担心措辞生硬。「考虑考虑」听着像催人回一个决定。可以直接问是否交往，也可以先说感受，请她说说自己的想法。
         delivery: thought
@@ -430,7 +430,7 @@ beats:
     lines:
       - from: boy
         text: 发了！就用你改的那句。发完我就想把手机扔了。她一会儿在输入，一会儿又没了，我盯得心脏一抽一抽的。你说这是在想怎么回，还是想拒绝我啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他已经发出了直接问要不要在一起的话，现在把输入状态当成了答案的线索。能知道的只有她还没回，建议他离开屏幕一会儿，等实际回复。
         delivery: thought
@@ -448,7 +448,7 @@ beats:
     lines:
       - from: boy
         text: 你改的那句发了。我特别想撤回，又怕撤回更显得我有事。她要回一句『你说啥呢哈哈』，我下半辈子咋做人啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他提前想象对方用玩笑带过，正在犹豫要不要撤回。可以说明他已经把感受说清楚，等对方实际回应后再决定怎么接。
         delivery: thought
@@ -467,7 +467,7 @@ beats:
     lines:
       - from: boy
         text: 她回了！！我以为凉了，结果她说『我也想试试，只是我可能不太会谈恋爱，你多担待』。我先回了三个感叹号。她这是答应了对吧？那个『只是』后面的是啥意思啊？
-        delivery: pop
+        delivery: type
         节拍:
           pauseBeforeMs: 1200
       - from: ai
@@ -505,7 +505,7 @@ beats:
     lines:
       - from: girl
         text: 我同桌说，她表哥也找她要过我微信。等于我俩互相问了一遍？刚加上，他就发：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。这人怎么连睡觉时间都一起报了，我咋回啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她发现对方也主动问过联系方式，对他的开场觉得好笑。可以给一句轻松的回复，既回答还记不记得，也顺着十一点睡觉开个玩笑。
         delivery: thought
@@ -529,7 +529,7 @@ beats:
     lines:
       - from: girl
         text: 磨半天终于把他加上了，开场白还没憋出来呢，他先发来了：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。行吧，省得我想了。咋接？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她先加了好友，又因为对方先开口松了口气。对方已经提供了见面和睡觉两个话题，可以直接接他的句子。
         delivery: thought
@@ -553,7 +553,7 @@ beats:
     lines:
       - from: girl
         text: 我同桌那个表哥加我了。我刚点通过，他消息就来了：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。这人是有多着急，哈哈。回啥好啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他发消息的速度让她觉得好笑，她也在考虑怎么回应。可以给一句低压力的答复，聊天要不要继续，等她自己感受。
         delivery: thought
@@ -575,7 +575,7 @@ beats:
     lines:
       - from: girl
         text: 那个刚才当面问我的男生，加上了。我同桌把我微信推给他了。他刚发：『hi，上次桌游坐你旁边的，还记得我不？提前说一声，我作息特别老年，十一点必睡』。这人怎么连睡觉时间都一起报了，我咋回啊？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她已经收到他的第一条消息，觉得开场好笑。可以给一句轻松的回复，顺着十一点睡觉开个玩笑。
         delivery: thought
@@ -592,7 +592,7 @@ beats:
     lines:
       - from: girl
         text: 昨晚我先回了句『记得，你也要到点睡了』，本来就随口一逗。这两天聊下来比我想的舒服，有话就接，我没回他也没催。今天他发了几条，我忙着还没仔细回。晚上有空了，我去找他唠两句。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她觉得这几次聊天没有催促，也有了主动继续聊的意愿。可以肯定她想联系就去联系，按她现在有空的节奏开始。
         delivery: thought
@@ -618,7 +618,7 @@ beats:
     lines:
       - from: girl
         text: 他回消息也太勤快了……我下班一看攒了一堆。不是不想理他，就是累，连回啥都懒得想。对了，他头像是只小熊，看着挺憨。哎，今晚我就想回个什么，让他知道我看见了。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她看见了消息，也想让对方知道，但下班后没有精力长聊。可以建议直接说明今天很累，或用一个表示累了的表情先回应。
         delivery: thought
@@ -646,7 +646,7 @@ beats:
     lines:
       - from: girl
         text: 我真照你说的说累了。结果他秒回一大段，什么『好好休息』『别太拼』『记得吃晚饭』……排比句都出来了。我本来就回不动，看见那一大段更不知道说啥，就回了个嗯。我是不是有点不知好歹？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她直说累了，对方给了很多关心，她反而一时不知道怎么接。可以肯定她已经回应过，接不动时先休息，也不必现在评价这份关心。
         delivery: thought
@@ -671,7 +671,7 @@ beats:
     lines:
       - from: girl
         text: 丢了个摊倒的表情过去，他正经回我『你早点休息』，还带了个他自己的表情包，土得掉渣。就是……有点可爱。算了，我洗漱去了。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她用一个表情回应了消息，对方也顺着聊了两句。她觉得那份认真有点可爱，现在想收尾，可以轻松接一句。
         delivery: thought
@@ -697,7 +697,7 @@ beats:
     lines:
       - from: girl
         text: 这一周多一直断断续续聊着。他今天突然夸我开朗，说『跟你聊天不累』。那是，我不在办公室他们都没那么热闹，周末也老有人叫我出去。他坐那儿话倒不多，手机上还天天找我。反正听他夸我还挺开心的，嘿嘿。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她喜欢被他说聊天不累，也享受自己能让大家聊起来。可以回应这份开心，也可以借机问问，累的时候她更愿意怎么和人相处。
         delivery: thought
@@ -725,7 +725,7 @@ beats:
     lines:
       - from: girl
         text: 晚上跟闺蜜吃饭，不知道怎么又说起他了。我说有个闷葫芦天天找我聊天，她们立马开始起哄。我还说就是普通朋友啊，结果回家路上自己一直笑。烦死了。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她嘴上坚持普通朋友，回家路上却还在笑。她来分享的是被说中心事的有趣，可以顺着玩笑回应，不替她确定两人的关系。
         delivery: thought
@@ -750,7 +750,7 @@ beats:
     lines:
       - from: girl
         text: 睡前又想了下你问的那个。还真想不出来。我累了就点个外卖，自己刷会儿手机，也不想找谁。明明平时跟谁都能聊，真想说点啥了好像又差一口气……说不上来，今晚有点怪怪的。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她认真想了白天的问题，发现平时热闹和疲惫时想找谁是两回事。她还说不清这份失落，可以先回应她的发现，不急着建议她改变交友方式。
         delivery: thought
@@ -775,7 +775,7 @@ beats:
     lines:
       - from: girl
         text: 他今天问我家是哪儿的、家里都有谁，我顺手聊别的去了。他也没接着问。这点我还挺喜欢的，换个人一通问我早烦了。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她觉得被尊重，因为把话题转开后对方没有追问。可以肯定具体的分寸感，不需要由这一次聊天判断两人整体相处得怎样。
         delivery: thought
@@ -802,7 +802,7 @@ beats:
     lines:
       - from: girl
         text: 他问我『周六晚上有空吗，桌游输你的局还没讨回来，请你吃个饭』。我答应了，还挺会找台阶的。我同桌就是他表妹，兜了一圈还真约上了。就是明天项目有个节点，搞不好得加班。要真累成那样我也不想临时鸽他。还有，见面我要注意啥吗？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她已经答应见面，也想到工作可能影响安排。可以给一个轻松的见面建议，再提醒如果时间有变，早点告诉对方。
         delivery: thought
@@ -826,7 +826,7 @@ beats:
     lines:
       - from: girl
         text: 乌鸦嘴，项目真炸了。周六去不了，我跟他说改周日行不行。他就回了句『行，周日，你忙你的』。我看了好几遍，怎么有点像不高兴？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 他同意改到周日，回复短，她担心改期让他失望。情绪还无法确认，可以建议她补一句自己仍期待见面，让对方知道这次变动是工作所致。
         delivery: thought
@@ -845,7 +845,7 @@ beats:
     lines:
       - from: girl
         text: 吃完了！本来还怕见了尴尬，结果吃饭散步聊了三个多小时，临走还拍了张合照。饭吃到一半我还回了好几条工作消息，回完他也能接上。散步的时候他跟我说，有次我半天没回，他半夜还在刷我朋友圈，看我睡了没。我愣了一下，笑着说『你想得可真多』。不过我后来还在想，是不是家里给了特别多爱，才这么会关心人？吃啥逛啥他都听我的，也挺省心。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她觉得见面舒服，也把他的关注往关心上想。她听到半夜刷朋友圈时确实愣了一下。可以同时回应这两种感受，家庭情况要等他自己说。
         delivery: thought
@@ -871,7 +871,7 @@ beats:
     lines:
       - from: girl
         text: 躺下了又想起来，他啥都听我的，这点其实我有点介意。但跟他待着是真不用费脑子。前几天家里的事我没接着聊，他也就没问了。可能……我就是想跟一个相处起来不费劲的人待着吧。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她喜欢不用费力维持气氛，也还没确定自己是否喜欢一直由她拿主意。可以把这两个感受分开回应，后面相处时再看她最在意哪一点。
         delivery: thought
@@ -889,7 +889,7 @@ beats:
     lines:
       - from: girl
         text: 他跟我表白了。说喜欢我，问我怎么想。我盯屏幕得有十分钟了。说不心动是假的，但我一想到真要谈了就怕，之前一认真就搞砸。你说我这种，能谈好吗？
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她对他有好感，也怕认真交往以后把事情搞砸。她需要的是眼下怎么回答，可以建议她把顾虑说清楚，也可以先从一句愿意试试开始。
         delivery: thought
@@ -919,7 +919,7 @@ beats:
     lines:
       - from: girl
         text: 我把那句打出来了：『我也想试试，只是我可能不太会谈恋爱，你多担待』。打完又盯着看了半天。越看越觉得这话有点重，像把我自己交出去了。发还是不发，你帮我看看。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 她已经把愿意和顾虑都写出来，犹豫是因为这句话很坦白。可以帮她确认句子表达了现在的想法，把是否发送留给她。
         delivery: thought
@@ -937,7 +937,7 @@ beats:
     lines:
       - from: girl
         text: 我按你说的先打了『我们先试试』，又给删了。就觉得少了点啥，好像现在不说，我以后搞砸了又得怪自己。也可能是我想太远了，他就是问我要不要试试。
-        delivery: pop
+        delivery: type
       - from: ai
         text: 简短的答复让她容易开口，但她仍想说明自己没把握。可以补上这层顾虑，让她按真正想表达的意思回复，不必预先为以后发生的事负责。
         delivery: thought
@@ -958,7 +958,7 @@ beats:
     lines:
       - from: girl
         text: 发了！『我也想试试，只是我可能不太会谈恋爱，你多担待』。我手一直抖，跟考试交卷似的。他秒回了三个感叹号……好家伙。发出去那一下反倒没那么吓人了。
-        delivery: pop
+        delivery: type
         节拍:
           pauseBeforeMs: 1800
       - from: ai

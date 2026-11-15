@@ -9,8 +9,9 @@ import type { Action } from "../engine/reducer";
 import type {
   Channel, Delivery, EngineState, MemoryCandidate, MemoryEntry, Script, Timing,
 } from "../engine/types";
-import { DEFAULT_PACING, PACING, playbackGapMs, resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
+import { DEFAULT_PACING, PACING, PLAYBACK_SPEEDS, playbackGapMs, resolveTiming, shouldType, ZERO_TIMING } from "../presentation";
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
+import type { PlaybackSpeeds } from "./PlaybackTuner";
 
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
 
@@ -28,6 +29,7 @@ type Props = {
   now: number;
   reduced: boolean;
   running: boolean;
+  speeds?: PlaybackSpeeds;
   onMemoryFull: (entry: MemoryEntry) => void;
 };
 
@@ -45,7 +47,7 @@ type Outgoing = {
 type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 
 export function ChatPane({
-  script, channel, state, dispatch, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, onMemoryFull,
+  script, channel, state, dispatch, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds, onMemoryFull,
 }: Props) {
   const { language, t } = useLanguage();
   const { name, id } = terminalUsers[channel];
@@ -93,6 +95,8 @@ export function ChatPane({
   };
   const token = outgoing?.token ?? "";
   const phase = playback?.token === token ? playback.phase : "idle";
+  const currentSpeeds = useRef(speeds);
+  currentSpeeds.current = speeds;
   const commitRef = useRef<() => void>(() => {});
   const stateRef = useRef(state);
   const doneToken = useRef<string | null>(null);
@@ -156,7 +160,7 @@ export function ChatPane({
 
   const finishTyping = useCallback(() => {
     finishedAt.current = performance.now();
-    later(() => commitRef.current(), afterMsRef.current);
+    later(() => commitRef.current(), afterMsRef.current / (currentSpeeds.current?.after ?? PLAYBACK_SPEEDS.after));
   }, [later]);
 
   const skip = useCallback(() => commitRef.current(), []);
@@ -180,9 +184,15 @@ export function ChatPane({
     const previous = lastPlayback.current;
     const current = stateRef.current;
     const isReply = current.pending[channel]?.kind === "reply";
+    const speedForTime = currentSpeeds.current;
     let pauseBeforeMs = isReply ? 0 : timing.pauseBeforeMs;
     if (!reduced && !isReply && previous?.runId === current.runId) {
-      const gap = playbackGapMs(beatOf(previous.beatId)?.context, beatOf(outgoing.beatId)?.context);
+      const previousContext = beatOf(previous.beatId)?.context;
+      const nextContext = beatOf(outgoing.beatId)?.context;
+      const gapSpeed = nextContext?.time && nextContext.time !== previousContext?.time
+        ? speedForTime?.timeJump ?? PLAYBACK_SPEEDS.timeJump
+        : speedForTime?.sameTime ?? PLAYBACK_SPEEDS.sameTime;
+      const gap = playbackGapMs(previousContext, nextContext) / gapSpeed;
       if (gap > 0) {
         const deliberatePause = timing.pauseBeforeMs > PACING[DEFAULT_PACING].pauseBeforeMs ? timing.pauseBeforeMs : 0;
         pauseBeforeMs = Math.max(deliberatePause, gap - (performance.now() - previous.finishedAt));
@@ -200,7 +210,7 @@ export function ChatPane({
           setPhase("shown");
           finishTyping();
         }
-      }, timing.indicatorMs);
+      }, timing.indicatorMs / (currentSpeeds.current?.indicator ?? PLAYBACK_SPEEDS.indicator));
     }, pauseBeforeMs);
     return clearTimers;
   }, [token, channel, clearTimers, finishTyping, later, outgoing?.delivery, reduced]);
@@ -318,7 +328,9 @@ export function ChatPane({
             delivery={outgoing.delivery}
             caption={outgoing.caption}
             animate={phase === "typing"}
-            typeIntervalMs={outgoing.timing.typeIntervalMs}
+            typeIntervalMs={outgoing.timing.typeIntervalMs / (outgoing.from === "ai"
+              ? speeds?.reply ?? PLAYBACK_SPEEDS.reply
+              : speeds?.incoming ?? PLAYBACK_SPEEDS.incoming)}
             onFinished={phase === "typing" ? finishTyping : undefined}
             onProgress={() => {
               const el = scroller.current;
@@ -335,7 +347,8 @@ export function ChatPane({
             <span className="think-block-head">[THINKING]</span>{" "}
             {liveThought && phase === "indicator" ? <span className="think-progress"><TerminalSpinner /> {t("正在思考", "Thinking")}</span>
               : liveThought && phase === "typing" ? <ProgressiveText key={liveThought.token} text={liveThought.text}
-                interval={Math.max(15, Math.min(31, liveThought.timing.typeIntervalMs))} onFinished={finishTyping} />
+                interval={Math.max(15, Math.min(31, liveThought.timing.typeIntervalMs)) / (speeds?.thought ?? PLAYBACK_SPEEDS.thought)}
+                onFinished={finishTyping} />
                 : (liveThought?.text ?? (thought && display(thought)))}
           </div>
         ) : null}

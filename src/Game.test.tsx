@@ -41,6 +41,7 @@ describe("游戏主画面", () => {
     expect(screen.queryByTestId("debug-panel")).toBeNull();
     expect(screen.queryByTestId("speed-1")).toBeNull();
     expect(screen.queryByTestId("speed-4")).toBeNull();
+    expect(screen.queryByRole("button", { name: "[节奏调试]" })).toBeNull();
     expect(screen.queryByText("结构")).toBeNull();
     expect(screen.queryByText("调试")).toBeNull();
     const text = document.body.textContent ?? "";
@@ -48,6 +49,35 @@ describe("游戏主画面", () => {
     expect(text).not.toContain("无法自由输入");
     expect(text).not.toContain("游戏开始后");
     expect(screen.queryByTestId("girl-banner")).toBeNull();
+  });
+
+  it("仅显式打开本地调速入口时显示面板，三种文本速度可独立恢复", async () => {
+    const url = window.location.href;
+    window.history.replaceState(null, "", "?tune=1");
+    try {
+      const { script } = loadBundledScript();
+      render(<Game script={script!} />);
+      const toggle = await screen.findByRole("button", { name: "[节奏调试]" });
+      fireEvent.click(toggle);
+      const incoming = screen.getByRole("slider", { name: "来信逐字" });
+      const reply = screen.getByRole("slider", { name: "AI 回复逐字" });
+      const thinking = screen.getByRole("slider", { name: "Thinking 逐字" });
+      expect(incoming).toHaveValue("2.15");
+      expect(reply).toHaveValue("2.75");
+      fireEvent.change(incoming, { target: { value: "2" } });
+      fireEvent.change(reply, { target: { value: "3" } });
+      expect(incoming).toHaveValue("2");
+      expect(reply).toHaveValue("3");
+      expect(thinking).toHaveValue("1.7");
+      fireEvent.click(screen.getByRole("button", { name: "[恢复默认]" }));
+      expect(incoming).toHaveValue("2.15");
+      expect(reply).toHaveValue("2.75");
+      fireEvent.keyDown(incoming, { key: "Escape" });
+      expect(toggle).toHaveFocus();
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+    } finally {
+      window.history.replaceState(null, "", url);
+    }
   });
 
   it("非开局章节的顶栏也只显示游戏名", () => {
