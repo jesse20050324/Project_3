@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LanguageContext, useLanguage, type Language } from "./language";
 import { loadBundledScript } from "./engine/loadScript";
 import { TerminalMenu, TerminalStart } from "./components/TerminalStart";
+import { unlockSound } from "./audio/gameSound";
 import { clearProgress, hasProgress } from "./engine/storage";
 
 export function App() {
@@ -23,6 +24,7 @@ function LocalizedApp() {
   const [entry, setEntry] = useState<"new" | "resume">("new");
   const toTitle = useCallback(() => setPage("title"), []);
   const begin = useCallback((mode: "new" | "resume") => {
+    unlockSound();
     if (mode === "new") clearProgress();
     setEntry(mode);
     setPage("boot");

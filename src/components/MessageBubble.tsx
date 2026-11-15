@@ -1,5 +1,6 @@
 import { useLanguage } from "../language";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { playReplySound } from "../audio/gameSound";
 import { useProgressiveText } from "./ProgressiveText";
 import type { Delivery } from "../engine/types";
 
@@ -43,6 +44,10 @@ export function MessageBubble({
   const typing = animate && delivery === "type";
   const mine = from === "ai";
   const visible = useProgressiveText(text, typing, typeIntervalMs, onFinished, onProgress);
+
+  useEffect(() => {
+    if (typing && mine) return playReplySound((text.length - 1) * typeIntervalMs);
+  }, [typing, mine, text, typeIntervalMs]);
 
   if (delivery === "thought") return null;
   const renderWithMarks = (value: string) => {

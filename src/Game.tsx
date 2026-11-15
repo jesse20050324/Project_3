@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
 import { TerminalArchive, type MemoryReplacement } from "./components/TerminalArchive";
 import { TerminalFrame, type WorkspaceIntro } from "./components/TerminalFrame";
+import { playMemorySound, setSoundMuted, soundMuted } from "./audio/gameSound";
 import { clearProgress } from "./engine/storage";
 import { choiceMemoryGate, storyOutcome } from "./engine/scheduler";
 import type { Channel, Script } from "./engine/types";
@@ -21,6 +22,17 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
   const { state, dispatch, notice, completedAt } = useEngine(script, reduced, running);
   const outcome = storyOutcome(state);
   const { t } = useLanguage();
+  const [muted, setMuted] = useState(soundMuted);
+  const priorMemories = useRef({ runId: state.runId, memories: state.memories });
+  useEffect(() => {
+    const previous = priorMemories.current;
+    priorMemories.current = { runId: state.runId, memories: state.memories };
+    if (state.runId !== previous.runId) return;
+    if (channels.some(channel => state.memories[channel].some(entry =>
+      !previous.memories[channel].some(old => old.label === entry.label && old.beatId === entry.beatId),
+    ))) playMemorySound();
+  }, [state.memories, state.runId]);
+
   const [speeds, setSpeeds] = useState<PlaybackSpeeds>({});
   const tuning = PlaybackTuner && new URLSearchParams(window.location.search).get("tune") === "1";
   const [askRestart, setAskRestart] = useState(false);
@@ -121,6 +133,10 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
       <span className="topbar-title" data-testid="game-title">He said, she said</span>
       <span className="topbar-tag">{t("助手 · 双会话", "Assistant · Dual Sessions")}</span>
       <div className="topbar-actions"><LanguageSwitch />
+        <button type="button" aria-pressed={!muted} onClick={() => {
+          setSoundMuted(!muted);
+          setMuted(!muted);
+        }}>[{muted ? t("声音关", "Sound Off") : t("声音开", "Sound On")}]</button>
         {tuning && PlaybackTuner && <Suspense fallback={null}>
           <PlaybackTuner speeds={speeds} onChange={setSpeeds} />
         </Suspense>}

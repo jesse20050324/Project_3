@@ -14,6 +14,7 @@ import { CROSS_WINDOW_GAP_MS, DEFAULT_PACING, PACING, PLAYBACK_GAPS, PLAYBACK_SP
 import { ChoicePanel, type ComposerMode } from "./ChoicePanel";
 import type { PlaybackSpeeds } from "./PlaybackTuner";
 
+import { playIncomingSound } from "../audio/gameSound";
 import { MessageBubble, type MemoryMark } from "./MessageBubble";
 
 type Props = {
@@ -215,6 +216,7 @@ export function ChatPane({
         ? (currentSpeeds.current?.afterDivider ?? PLAYBACK_GAPS.afterDivider) * 1000
         : timing.indicatorMs / (currentSpeeds.current?.indicator ?? PLAYBACK_SPEEDS.indicator);
       later(() => {
+        if (outgoing.from !== "ai" && outgoing.delivery !== "thought") playIncomingSound();
         if ((!reduced && outgoing.delivery === "thought") || shouldType(outgoing.delivery, reduced)) {
           setPhase("typing");
         } else {

@@ -1,5 +1,6 @@
 import { LanguageSwitch, useLanguage, type Language } from "../language";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { playReplySound } from "../audio/gameSound";
 import { Game } from "../Game";
 import type { Script } from "../engine/types";
 import { TerminalFrame } from "./TerminalFrame";
@@ -56,7 +57,7 @@ export function TerminalStart({ entry, script, onTitle }: {
   const reduced = useReducedMotion();
   const [elapsed, setElapsed] = useState(0);
   const { language, t } = useLanguage();
-  const lines = sequence(entry, language);
+  const lines = useMemo(() => sequence(entry, language), [entry, language]);
   const last = lines.at(-1)!;
   const logEnd = last.start + last.duration;
   const shellStart = logEnd + profileHold;
@@ -68,6 +69,12 @@ export function TerminalStart({ entry, script, onTitle }: {
     if (reduced) { setElapsed(ready); return; }
     const start = Date.now();
     const tick = window.setInterval(() => setElapsed(Math.min(ready, Date.now() - start)), 20);
+    const activeSounds: (() => void)[] = [];
+    const sounds = lines.map(line => window.setTimeout(() => {
+      const remaining = line.duration - Math.max(0, Date.now() - start - line.start);
+      const stop = playReplySound(remaining, 0.085);
+      if (stop) activeSounds.push(stop);
+    }, line.start));
     const boundaries = [logEnd, shellStart, workspaceReady, ready].map(at =>
       window.setTimeout(() => {
         setElapsed(Math.min(ready, Date.now() - start));
@@ -76,8 +83,10 @@ export function TerminalStart({ entry, script, onTitle }: {
     return () => {
       window.clearInterval(tick);
       boundaries.forEach(timer => window.clearTimeout(timer));
+      sounds.forEach(timer => window.clearTimeout(timer));
+      activeSounds.forEach(stop => stop());
     };
-  }, [reduced, logEnd, shellStart, workspaceReady, ready]);
+  }, [reduced, lines, logEnd, shellStart, workspaceReady, ready]);
 
   if (reduced || elapsed >= shellStart) {
     return <Game script={script} onTitle={onTitle} intro={reduced || elapsed >= ready ? undefined : {
