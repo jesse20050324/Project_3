@@ -146,6 +146,7 @@ html:lang(en) .archive-scroll button { word-spacing: inherit; }
 .archive-memory { margin: 3px 0; }
 .archive-memory summary { cursor: pointer; color: var(--memory); }
 .archive-memory p { margin: 2px 0 4px 13px; overflow-wrap: anywhere; }
+html:lang(en) :is(.archive-segment, .archive-memory p) { line-height: 1.2; }
 .archive-pending summary { cursor: pointer; color: var(--muted); }
 
 .notice { padding: 3px 0; flex: none; color: var(--accent); font-size: 13px; }
