@@ -1,3 +1,4 @@
+import { LanguageSwitch, useLanguage, type Language } from "../language";
 import { useEffect, useState } from "react";
 import { Game } from "../Game";
 import type { Script } from "../engine/types";
@@ -13,7 +14,7 @@ const lineTime = 900;
 const columnTime = 420;
 const workspaceHold = 1500;
 
-function sequence(entry: Entry): BootLine[] {
+function sequence(entry: Entry, language: Language): BootLine[] {
   const left = terminalUsers.left;
   const right = terminalUsers.right;
   const fields = (user: typeof left) => `      性别 ${user.gender} / ${user.age} 岁 / ${user.work} / ${user.city}`;
@@ -27,9 +28,17 @@ function sequence(entry: Entry): BootLine[] {
     [entry === "new" ? "[MEM] 初始化两路独立记忆区 … OK" : "[MEM] 恢复两路上下文与记忆 … OK", 25, 135],
     ["[CTX] 建立会话与摘要目录", 26, 0],
   ];
+  const english = [
+    "[BOOT] Check session modules … OK", "[SYS] Import assistant prompts … OK",
+    "[USER 01] Load user profile · Him", "      Male / 21 / University student / Xi'an",
+    "[USER 02] Load user profile · Her", "      Female / 22 / University student and intern / Xi'an",
+    entry === "new" ? "[MEM] Initialize separate memory stores … OK" : "[MEM] Restore both sessions and memory … OK",
+    "[CTX] Prepare session archive",
+  ];
   let start = 90;
-  return lines.map(([text, interval, pause]) => {
-    const duration = text.length * interval;
+  return lines.map(([original, interval, pause], index) => {
+    const text = language === "en" ? english[index] : original;
+    const duration = original.length * interval;
     const line = { text, start, duration };
     start += duration + pause;
     return line;
@@ -46,7 +55,8 @@ export function TerminalStart({ entry, script, onTitle }: {
 }) {
   const reduced = useReducedMotion();
   const [elapsed, setElapsed] = useState(0);
-  const lines = sequence(entry);
+  const { language, t } = useLanguage();
+  const lines = sequence(entry, language);
   const last = lines.at(-1)!;
   const logEnd = last.start + last.duration;
   const shellStart = logEnd + profileHold;
@@ -80,7 +90,7 @@ export function TerminalStart({ entry, script, onTitle }: {
   }
 
   return <TerminalFrame>
-    <div className="boot-console" data-testid="boot-console" data-hold={elapsed >= logEnd || undefined} aria-label="正在启动">
+    <div className="boot-console" data-testid="boot-console" data-hold={elapsed >= logEnd || undefined} aria-label={t("正在启动", "Starting up")}>
       {lines.filter(line => elapsed >= line.start).map(line => {
         const count = Math.min(line.text.length, Math.floor((elapsed - line.start) * line.text.length / line.duration));
         return <div key={line.text} className={line.text.startsWith("[USER") ? "boot-user" : undefined}>
@@ -92,11 +102,12 @@ export function TerminalStart({ entry, script, onTitle }: {
 }
 
 export function TerminalMenu({ hasSave, onBegin }: { hasSave: boolean; onBegin: (entry: Entry) => void }) {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState(0);
   const [confirm, setConfirm] = useState(false);
   const items: { label: string; action: () => void }[] = [
-    { label: "开始游戏", action: () => hasSave ? setConfirm(true) : onBegin("new") },
-    ...(hasSave ? [{ label: "继续游戏", action: () => onBegin("resume") }] : []),
+    { label: t("开始游戏", "Start Game"), action: () => hasSave ? setConfirm(true) : onBegin("new") },
+    ...(hasSave ? [{ label: t("继续游戏", "Continue"), action: () => onBegin("resume") }] : []),
   ];
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
@@ -119,13 +130,13 @@ export function TerminalMenu({ hasSave, onBegin }: { hasSave: boolean; onBegin: 
   }, [selected, confirm, hasSave, onBegin]);
   return <TerminalFrame>
     <header className="topbar ascii-rule title-bar">
-      <span>[SYS] 双会话助手</span><span>{hasSave ? "[CTX] 已有存档" : "[LINK] 等待接入"}</span>
+      <span>{t("[SYS] 双会话助手", "[SYS] Dual-session assistant")}</span><span>{hasSave ? t("[CTX] 已有存档", "[CTX] Saved game found") : t("[LINK] 等待接入", "[LINK] Awaiting connection")}</span><LanguageSwitch />
     </header>
     <div className="title-grid">
       <div className="terminal-menu">
-        <div className="menu-system">/ 会话入口</div>
+        <div className="menu-system">{t("/ 会话入口", "/ Session Entry")}</div>
         <h1>He said,<br />she said<span aria-hidden="true">_</span></h1>
-        <div className="menu-commands" aria-label="主菜单">
+        <div className="menu-commands" aria-label={t("主菜单", "Main menu")}>
           {items.map((item, index) => <button type="button" key={item.label}
             className="menu-choice choice-line" data-current={selected === index || undefined}
             onMouseEnter={() => setSelected(index)} onFocus={() => setSelected(index)} onClick={item.action}>
@@ -133,24 +144,24 @@ export function TerminalMenu({ hasSave, onBegin }: { hasSave: boolean; onBegin: 
           </button>)}
         </div>
       </div>
-      <aside className="title-sessions" aria-label="会话入口信息">
-        <div className="ascii-rule title-session-head">[LINK] 用户通道</div>
+      <aside className="title-sessions" aria-label={t("会话入口信息", "Session information")}>
+        <div className="ascii-rule title-session-head">{t("[LINK] 用户通道", "[LINK] User channels")}</div>
         {Object.values(terminalUsers).map(user => <div className="title-user" key={user.id}>
-          <span className="title-id">[USER {user.id}]</span><b>{user.name}</b><span>待接入</span>
+          <span className="title-id">[USER {user.id}]</span><b>{t(user.name, user.id === "01" ? "Him" : "Her")}</b><span>{t("待接入", "Awaiting connection")}</span>
         </div>)}
         <div className="title-memory ascii-rule">
-          <div>[MEM] 分窗记忆</div>
-          <p>上下文独立 · 摘要按窗收录</p>
+          <div>{t("[MEM] 分窗记忆", "[MEM] Separate memory stores")}</div>
+          <p>{t("上下文独立 · 摘要按窗收录", "Each session keeps its own context and archive")}</p>
         </div>
       </aside>
     </div>
-    <footer className="title-keys ascii-rule"><span>↑ ↓ 选择</span><span>Enter 确认</span></footer>
-    {confirm ? <div className="overlay" role="dialog" aria-modal="true" aria-label="开始新游戏">
+    <footer className="title-keys ascii-rule"><span>{t("↑ ↓ 选择", "↑ ↓ Select")}</span><span>{t("Enter 确认", "Enter Confirm")}</span></footer>
+    {confirm ? <div className="overlay" role="dialog" aria-modal="true" aria-label={t("开始新游戏", "Start New Game")}>
       <div className="dialog">
-        <h2>开始新游戏？</h2><p>当前两条线的进度都会清空。</p>
+        <h2>{t("开始新游戏？", "Start a new game?")}</h2><p>{t("当前两条线的进度都会清空。", "Both sessions will be reset.")}</p>
         <div className="dialog-actions">
-          <button type="button" autoFocus onClick={() => setConfirm(false)}>[取消]</button>
-          <button type="button" onClick={() => onBegin("new")}>[开始新游戏]</button>
+          <button type="button" autoFocus onClick={() => setConfirm(false)}>[{t("取消", "Cancel")}]</button>
+          <button type="button" onClick={() => onBegin("new")}>[{t("开始新游戏", "Start New Game")}]</button>
         </div>
       </div>
     </div> : null}

@@ -26,6 +26,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 it("开机停留 1.5 秒，先画线再从左到右开窗，完整界面等 1.5 秒才启动第一条", () => {
   setMotion(false);
   vi.useFakeTimers();
+  localStorage.setItem("shuangxian.language", "zh");
   render(<App />);
   expect(screen.getByRole("button", { name: "开始游戏" })).toHaveAttribute("data-current", "true");
   fireEvent.keyDown(window, { key: "Enter" });
@@ -74,6 +75,7 @@ it("开机停留 1.5 秒，先画线再从左到右开窗，完整界面等 1.5 
   expect(stored().pending.left).toMatchObject({ kind: "lines", beatId: "L1" });
 });
 it.each([false, true])("使用真实章节从标题到第八幕结局，键鼠混用=%s", (mixed) => {
+  localStorage.setItem("shuangxian.language", "zh");
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "开始游戏" }));
   const seen = new Set<number>();
@@ -126,6 +128,7 @@ it.each([false, true])("使用真实章节从标题到第八幕结局，键鼠�
 });
 
 it("桌游聚会内各窗按各自时机清理聊天，未交换微信时仍只归档一段", () => {
+  localStorage.setItem("shuangxian.language", "zh");
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "开始游戏" }));
   for (let step = 0; step < 40 && !stored().endings.includes("未交换微信"); step++) {

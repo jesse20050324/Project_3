@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { englishBeats, messageText, useLanguage } from "../language";
 import { channelView, choiceMemoryGate, memoryCapacity, messagesFor, RITUAL_MASK_MS } from "../engine/scheduler";
 import { ritualElapsed } from "../terminalMotion";
 import { TerminalSpinner } from "./TerminalSpinner";
@@ -32,6 +33,8 @@ type Props = {
 
 type Outgoing = {
   token: string;
+  id: string;
+  beatId: string;
   from: string;
   text: string;
   delivery: Delivery;
@@ -44,7 +47,14 @@ type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 export function ChatPane({
   script, channel, state, dispatch, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, onMemoryFull,
 }: Props) {
-  const { name: title, id } = terminalUsers[channel];
+  const { language, t } = useLanguage();
+  const { name, id } = terminalUsers[channel];
+  const title = t(name, channel === "left" ? "Him" : "Her");
+  const display = (message: Parameters<typeof messageText>[0]) =>
+    language === "en" ? messageText(message) : message.text;
+  const markText = (beatId: string, candidate: MemoryCandidate) => language === "en"
+    ? englishBeats[beatId]?.memories.find(item => item.label === candidate.缩略标签)?.quote[1] ?? candidate.短句
+    : candidate.短句;
   const pending = state.pending[channel];
   const messages = messagesFor(state, channel);
   const visibleMessages = messages.filter((message) => message.delivery !== "thought");
@@ -65,7 +75,7 @@ export function ChatPane({
     const candidates: MemoryCandidate[] = beatOf(beatId)?.记忆候选 ?? [];
     return candidates
       .filter((candidate) => text.includes(candidate.短句))
-      .map((candidate) => ({ text: candidate.短句, saved: savedLabels.has(candidate.缩略标签) }));
+      .map((candidate) => ({ text: markText(beatId, candidate), saved: savedLabels.has(candidate.缩略标签) }));
   };
   const memorySaved = state.memories[channel].length;
   const capacity = memoryCapacity(state, channel);
@@ -73,7 +83,14 @@ export function ChatPane({
   const [showMemoryCount, setShowMemoryCount] = useState(false);
   const memoryCounter = useRef<HTMLButtonElement>(null);
   const [playback, setPlayback] = useState<{ token: string; phase: Phase }>();
-  const outgoing = running ? resolveOutgoing(script, state, channel) : null;
+  const original = running ? resolveOutgoing(script, state, channel) : null;
+  const translated = original ? display(original) : "";
+  const outgoing = original && {
+    ...original,
+    text: translated,
+    timing: { ...original.timing, typeIntervalMs: original.timing.typeIntervalMs
+      * original.text.length / Math.max(1, translated.length) },
+  };
   const token = outgoing?.token ?? "";
   const phase = playback?.token === token ? playback.phase : "idle";
   const commitRef = useRef<() => void>(() => {});
@@ -185,8 +202,9 @@ export function ChatPane({
     const context = beatOf(beatId)?.context;
     const previous = previousId ? beatOf(previousId)?.context : undefined;
     if (!context || beatId === previousId) return undefined;
-    if (context.section !== previous?.section) return context.time ?? context.entryTime;
-    return context.time !== previous.time ? context.time : undefined;
+    const time = context.section !== previous?.section ? context.time ?? context.entryTime
+      : context.time !== previous.time ? context.time : undefined;
+    return time && t(time, /^\d{2}:\d{2}$/.test(time) ? time : englishBeats[beatId]?.time ?? time);
   }
   const lastMessage = visibleMessages.at(-1);
   const currentBeat = beat ?? (lastMessage && beatOf(lastMessage.beatId));
@@ -226,14 +244,14 @@ export function ChatPane({
             onClick={() => setShowMemoryCount(value => !value)}
             onBlur={() => setShowMemoryCount(false)}
             aria-expanded={showMemoryCount}
-            aria-label={`Memory 数量：${memoryCount}`}
+            aria-label={t(`Memory 数量：${memoryCount}`, `Memory count: ${memoryCount}`)}
           >
-            {showMemoryCount ? `[Memory 数量：${memoryCount}]` : `[MEM ${memoryCount}]`}
+            {showMemoryCount ? `[${t("Memory 数量：", "Memory count: ")}${memoryCount}]` : `[MEM ${memoryCount}]`}
           </button>
         </div>
       </header>
 
-      <div ref={scroller} className="messages" role="log" aria-label={`${title}的对话`}>
+      <div ref={scroller} className="messages" role="log" aria-label={t(`${title}的对话`, `${title} · Chat`)}>
         {displayed.map((message, index) => {
           const day = divider(message.beatId, visibleMessages[dropped + index - 1]?.beatId);
           return (
@@ -241,12 +259,12 @@ export function ChatPane({
               {day ? <div className="chat-date">{day}</div> : null}
               <MessageBubble
                 from={message.from}
-                text={message.text}
+                text={display(message)}
                 delivery={message.delivery}
                 caption={message.caption}
                 marks={marksFor(message.beatId, message.text)}
                 onSaveMark={ritual ? undefined : (text) => {
-                  const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => item.短句 === text);
+                  const candidate = (beatOf(message.beatId)?.记忆候选 ?? []).find((item) => markText(message.beatId, item) === text);
                   if (!candidate) return;
                   requestSave({ label: candidate.缩略标签, text: candidate.短句, beatId: message.beatId });
                 }}
@@ -260,15 +278,15 @@ export function ChatPane({
 
         {ritual && elapsed < RITUAL_MASK_MS + 500 && !reduced ? (
           <p className="system-line" data-clear-row="system" data-testid={`resetting-${channel}`} role="status">
-            [SYS] {ritual.phase === "mask" ? "正在清空上下文…" : "已清空"}
+            [SYS] {ritual.phase === "mask" ? t("正在清空上下文…", "Clearing context…") : t("已清空", "Context cleared")}
           </p>
         ) : null}
         {phase === "indicator" && outgoing && outgoing.delivery !== "thought" ? (
           <div className={`msg-row ${outgoing.from === "ai" ? "right" : "left"} message-wait`} data-testid={`message-wait-${channel}`}>
             <span className="msg-direction"><TerminalSpinner /></span>
             <button type="button" className={`${outgoing.from === "ai" ? "msg-ai" : "msg-user"} message-wait-button`}
-              data-testid="skip" onClick={skip} aria-label="跳过当前播放">
-              {outgoing.from === "ai" ? "正在发送" : "正在接收"}
+              data-testid="skip" onClick={skip} aria-label={t("跳过当前播放", "Skip current playback")}>
+              {outgoing.from === "ai" ? t("正在发送", "Sending") : t("正在接收", "Receiving")}
             </button>
           </div>
         ) : null}
@@ -295,13 +313,15 @@ export function ChatPane({
         {thought || liveThought ? (
           <div className="think-block" data-testid={`think-${channel}`}>
             <span className="think-block-head">[THINKING]</span>{" "}
-            {liveThought && phase === "indicator" ? <span className="think-progress"><TerminalSpinner /> 正在思考</span>
+            {liveThought && phase === "indicator" ? <span className="think-progress"><TerminalSpinner /> {t("正在思考", "Thinking")}</span>
               : liveThought && phase === "typing" ? <ProgressiveText key={liveThought.token} text={liveThought.text}
                 interval={Math.max(15, Math.min(31, liveThought.timing.typeIntervalMs))} onFinished={finishTyping} />
-                : (liveThought ?? thought)?.text}
+                : (liveThought?.text ?? (thought && display(thought)))}
           </div>
         ) : null}
-        <ChoicePanel mode={composerMode} choices={showChoices ? beat?.choices ?? [] : []}
+        <ChoicePanel mode={composerMode} choices={showChoices ? beat.choices!.map((choice, index) => ({
+          ...choice, thought: t(choice.thought, englishBeats[beat.id]?.choices[index]?.thought[1] ?? choice.thought),
+        })) : []}
           selected={selected} onMove={onMove} onPick={onPick}
           memoryGate={choice => choiceMemoryGate(state, channel, choice)} />
       </div> : null}
@@ -318,7 +338,8 @@ function resolveOutgoing(script: Script, state: EngineState, channel: Channel): 
     const line = beat.lines[pending.lineIndex];
     if (!line) return null;
     return {
-      token: `${state.runId}|${beat.id}:line:${pending.lineIndex}`,
+      token: `${state.runId}|${beat.id}:${pending.lineIndex}`,
+      id: `${beat.id}:${pending.lineIndex}`, beatId: beat.id,
       from: line.from,
       text: line.text,
       delivery: line.delivery,
@@ -330,6 +351,7 @@ function resolveOutgoing(script: Script, state: EngineState, channel: Channel): 
   if (!choice) return null;
   return {
     token: `${state.runId}|${beat.id}:reply:${pending.choiceIndex}`,
+    id: `${beat.id}:reply:${pending.choiceIndex}`, beatId: beat.id,
     from: "ai",
     text: choice.reply,
     delivery: "type",

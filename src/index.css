@@ -43,6 +43,9 @@ p { margin: 0; }
   flex: none; font-size: 14px;
 }
 .topbar-title { font-weight: 700; font-size: 20px; letter-spacing: .015em; }
+.language-switch { display: inline-flex; gap: 4px; }
+.language-switch button { padding: 1px 6px; }
+.language-switch button[aria-pressed="true"] { background: var(--ink); color: var(--terminal); }
 .topbar-tag, .muted { color: var(--muted); }
 .topbar-actions { margin-inline-start: auto; display: flex; gap: 10px; }
 .topbar-actions button:hover, .tree-toggle:hover, .memory-entry:hover, .dialog-actions button:hover { color: var(--accent); }

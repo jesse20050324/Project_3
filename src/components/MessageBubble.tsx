@@ -1,3 +1,4 @@
+import { useLanguage } from "../language";
 import type { ReactNode } from "react";
 import { useProgressiveText } from "./ProgressiveText";
 import type { Delivery } from "../engine/types";
@@ -38,6 +39,7 @@ export function MessageBubble({
   onProgress,
   onSkip,
 }: Props) {
+  const { t } = useLanguage();
   const typing = animate && delivery === "type";
   const mine = from === "ai";
   const visible = useProgressiveText(text, typing, typeIntervalMs, onFinished, onProgress);
@@ -58,11 +60,11 @@ export function MessageBubble({
       nodes.push(
         mark.saved ? (
           <span key={`${at}-${mark.text}`} data-testid="memory-mark" data-saved="true" className="memory-mark-saved">
-            {mark.text}<span className="memory-tag"> [MEM] 已存</span>
+            {mark.text}<span className="memory-tag"> [MEM] {t("已存", "Saved")}</span>
           </span>
         ) : (
           <button key={`${at}-${mark.text}`} type="button" data-testid="memory-mark" data-saved="false"
-            className="memory-mark" disabled={!onSaveMark} aria-label={`存记忆：${mark.text}`} onClick={() => onSaveMark?.(mark.text)}>
+            className="memory-mark" disabled={!onSaveMark} aria-label={t(`存记忆：${mark.text}`, `Save memory: ${mark.text}`)} onClick={() => onSaveMark?.(mark.text)}>
             {mark.text} [+]
           </button>
         ),
@@ -78,7 +80,7 @@ export function MessageBubble({
       <div className={`msg-row ${mine ? "right" : "left"}`} data-from={from} data-delivery={delivery}>
         <span className="msg-direction" aria-hidden="true">{mine ? "OUT<" : "IN>"}</span>
         <figure className="msg-image">
-          <img src={text} alt={caption ?? "图片"} />
+          <img src={text} alt={caption ?? t("图片", "Image")} />
           {caption ? <figcaption>{caption}</figcaption> : null}
         </figure>
       </div>
@@ -92,7 +94,7 @@ export function MessageBubble({
         className={mine ? "msg-ai" : "msg-user"}
         data-testid="bubble-text"
         onClick={typing ? onSkip : undefined}
-        title={typing ? "点击跳过" : undefined}
+        title={typing ? t("点击跳过", "Click to skip") : undefined}
       >
         {mine ? <span className="msg-ink">{renderWithMarks(visible)}</span> : renderWithMarks(visible)}
         {typing && visible.length < text.length ? <span className="caret" aria-hidden="true" /> : null}

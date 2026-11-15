@@ -1,3 +1,4 @@
+import { englishSummaries, englishTitles, memoryDisplay, useLanguage } from "../language";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ArchiveEntry, Channel, EngineState, MemoryEntry, Script } from "../engine/types";
 import { contextTitles } from "../engine/contextSections";
@@ -19,6 +20,7 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
   onReplace: (label: string) => void;
   onForget: (channel: Channel, label: string) => void;
 }) {
+  const { t } = useLanguage();
   const [folders, setFolders] = useState({ left: true, right: true });
   const [sessions, setSessions] = useState<Record<string, boolean>>({});
   function resettingSession(channel: Channel) {
@@ -104,18 +106,18 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
         return <div className="archive-folder" key={channel}>
           <button className="tree-toggle" aria-expanded={folders[channel]} type="button"
             onClick={() => setFolders(previous => ({ ...previous, [channel]: !previous[channel] }))}>
-            <span aria-hidden="true">{folders[channel] ? "[-]" : "[+]"}</span> USER {terminalUsers[channel].id} / {terminalUsers[channel].name}
+            <span aria-hidden="true">{folders[channel] ? "[-]" : "[+]"}</span> USER {terminalUsers[channel].id} / {t(terminalUsers[channel].name, channel === "left" ? "Him" : "Her")}
           </button>
           {folders[channel] ? <div className="archive-branches">
-            {incoming ? <div className="archive-replacement" aria-label="替换记忆">
-              <p>[MEM] 已满 · 选择一条替换为「{incoming.label}」</p>
+            {incoming ? <div className="archive-replacement" aria-label={t("替换记忆", "Replace memory")}>
+              <p>{t("[MEM] 已满 · 选择一条替换为", "[MEM] Full · Replace one with")} 「{t(incoming.label, memoryDisplay(incoming).label)}」</p>
               {memories.map(memory => <button key={memory.label} type="button" className="tree-toggle"
-                data-replacement-option onClick={() => onReplace(memory.label)}>替换「{memory.label}」</button>)}
-              <button type="button" className="memory-entry" onClick={onCancelReplacement}>[取消]</button>
+                data-replacement-option onClick={() => onReplace(memory.label)}>{t(`替换「${memory.label}」`, `Replace “${memoryDisplay(memory).label}”`)}</button>)}
+              <button type="button" className="memory-entry" onClick={onCancelReplacement}>[{t("取消", "Cancel")}]</button>
             </div> : null}
-            {!entries.length && !loose.length && !recordingSection ? <div className="muted">└ 尚无记录</div> : null}
+            {!entries.length && !loose.length && !recordingSection ? <div className="muted">{t("└ 尚无记录", "└ No records")}</div> : null}
             {loose.length ? <details className="archive-pending">
-              <summary>[MEMORY] 当前会话 · {loose.length}</summary>
+              <summary>{t("[MEMORY] 当前会话 · ", "[MEMORY] Current session · ")}{loose.length}</summary>
               {loose.map(memory => <ArchiveMemory key={memory.label} memory={memory} onForget={forget} />)}
             </details> : null}
             {entries.map(entry => {
@@ -123,7 +125,7 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
               const key = `${channel}:${session}`;
               const recording = resetSession === session;
               if (entry.section === current && ritual?.contextTo !== undefined && ritual.phase === "mask") {
-                return <div key={key} className="archive-session muted">└ 收录中…</div>;
+                return <div key={key} className="archive-session muted">{t("└ 收录中…", "└ Recording…")}</div>;
               }
               const duration = recording && ritual && !reduced ? ritualElapsed(ritual, now) : summaryDuration;
               const title = entry.section === undefined
@@ -131,12 +133,12 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
               return <div key={key} className="archive-session" data-recording={recording || undefined}>
                 <button className="tree-toggle" aria-expanded={Boolean(sessions[key])} type="button"
                   onClick={() => setSessions(previous => ({ ...previous, [key]: !previous[key] }))}>
-                  <span aria-hidden="true">{sessions[key] ? "[-]" : "[+]"}</span> <span data-archive-title={key} className="archive-title">{title?.replace(/^第[一二三四五六七八九十\d]+[幕章]\s*·\s*/, "") ?? "会话记录"}</span>
+                  <span aria-hidden="true">{sessions[key] ? "[-]" : "[+]"}</span> <span data-archive-title={key} className="archive-title">{t(title?.replace(/^第[一二三四五六七八九十\d]+[幕章]\s*·\s*/, "") ?? "会话记录", englishTitles[(entry.section ?? 0) - 1] ?? "Session record")}</span>
                 </button>
                 {sessions[key] ? <ArchiveSession entry={entry} memories={memories} elapsed={duration} onForget={forget} /> : null}
               </div>;
             })}
-            {recordingSection ? <div className="archive-session muted" key={`${channel}:${current}`}>└ 收录中…</div> : null}
+            {recordingSection ? <div className="archive-session muted" key={`${channel}:${current}`}>{t("└ 收录中…", "└ Recording…")}</div> : null}
           </div> : null}
         </div>;
       })}
@@ -147,12 +149,15 @@ export function TerminalArchive({ script, state, now, reduced, replacement, onCa
 function ArchiveSession({ entry, memories, elapsed, onForget }: {
   entry: ArchiveEntry; memories: MemoryEntry[]; elapsed: number; onForget?: (label: string) => void;
 }) {
-  const summaries = useMemo(() => summariesFor(entry), [entry]);
+  const { t, language } = useLanguage();
+  const summaries = useMemo(() => summariesFor(entry).map(summary => ({
+    ...summary, text: language === "en" ? englishSummaries[summary.text] ?? summary.text : summary.text,
+  })), [entry, language]);
   const segments = useMemo(() => summaries.map(summary => Array.from(summary.text)), [summaries]);
   const total = segments.reduce((sum, chars) => sum + chars.length + 3, 0);
   let budget = Math.floor(Math.max(0, Math.min(1, elapsed / summaryDuration)) * total);
   return <div className="archive-segments">
-    {elapsed < summaryDuration ? <p className="archive-writing"><span aria-hidden="true">[CTX]</span> 正在收录…</p> : null}
+    {elapsed < summaryDuration ? <p className="archive-writing"><span aria-hidden="true">[CTX]</span> {t("正在收录…", "Recording…")}</p> : null}
     {summaries.map((summary, index) => {
       const chars = segments[index];
       const count = Math.max(0, Math.min(budget, chars.length));
@@ -172,10 +177,12 @@ function ArchiveSession({ entry, memories, elapsed, onForget }: {
 }
 
 function ArchiveMemory({ memory, onForget }: { memory: MemoryEntry; onForget?: (label: string) => void }) {
+  const { t } = useLanguage();
+  const translated = memoryDisplay(memory);
   return <details className="archive-memory">
-    <summary>[MEM] {memory.label}</summary>
-    <p>「{memory.text}」</p>
+    <summary>[MEM] {t(memory.label, translated.label)}</summary>
+    <p>{t(`「${memory.text}」`, `“${translated.text}”`)}</p>
     {onForget ? <button type="button" className="memory-entry memory-action"
-      aria-label={`舍弃「${memory.label}」`} onClick={() => onForget(memory.label)}>[舍弃]</button> : null}
+      aria-label={t(`舍弃「${memory.label}」`, `Discard “${translated.label}”`)} onClick={() => onForget(memory.label)}>[{t("舍弃", "Discard")}]</button> : null}
   </details>;
 }

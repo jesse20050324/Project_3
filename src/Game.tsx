@@ -1,3 +1,4 @@
+import { LanguageSwitch, englishEndings, useLanguage } from "./language";
 import { useEffect, useRef, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
 import { TerminalArchive, type MemoryReplacement } from "./components/TerminalArchive";
@@ -16,6 +17,7 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
   const reduced = useReducedMotion();
   const { state, dispatch, notice } = useEngine(script, reduced, running);
   const outcome = storyOutcome(state);
+  const { t } = useLanguage();
   const [askRestart, setAskRestart] = useState(false);
   const [requestedReplacement, setReplacement] = useState<MemoryReplacement>();
   const replacement = requestedReplacement && !state.ritual[requestedReplacement.channel] && state.messages.some(
@@ -112,15 +114,15 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
   return <TerminalFrame intro={intro}>
     <header className="topbar ascii-rule">
       <span className="topbar-title" data-testid="game-title">He said, she said</span>
-      <span className="topbar-tag">助手 · 双会话</span>
-      <div className="topbar-actions">
-        <button type="button" data-testid="restart" onClick={() => setAskRestart(true)}>[重新开始]</button>
-        {onTitle ? <button type="button" onClick={onTitle}>[返回标题]</button> : null}
+      <span className="topbar-tag">{t("助手 · 双会话", "Assistant · Dual Sessions")}</span>
+      <div className="topbar-actions"><LanguageSwitch />
+        <button type="button" data-testid="restart" onClick={() => setAskRestart(true)}>[{t("重新开始", "Restart")}]</button>
+        {onTitle ? <button type="button" onClick={onTitle}>[{t("返回标题", "Title Menu")}]</button> : null}
       </div>
     </header>
     {notice ? <div className="notice" role="status">{notice}</div> : null}
     {outcome ? <div className="notice" role="status">
-      {outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : `结局 · ${outcome}`}
+      {t(outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : `结局 · ${outcome}`, englishEndings[outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : outcome] ?? outcome)}
     </div> : null}
     <div className="duo">
       {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch}
@@ -136,13 +138,13 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
         }}
         onForget={(channel, label) => dispatch({ type: "forget-memory", channel, label })} />
     </div>
-    {askRestart ? <div className="overlay" role="dialog" aria-modal="true" aria-label="确定重来">
+    {askRestart ? <div className="overlay" role="dialog" aria-modal="true" aria-label={t("确定重来", "Confirm restart")}>
       <div className="dialog">
-        <h2>确定重来？</h2>
-        <p>当前两条线的进度都会清空，回到第一幕开头。</p>
+        <h2>{t("确定重来？", "Restart the game?")}</h2>
+        <p>{t("当前两条线的进度都会清空，回到第一幕开头。", "Both sessions will reset to the beginning.")}</p>
         <div className="dialog-actions">
-          <button type="button" autoFocus onClick={() => setAskRestart(false)}>[取消]</button>
-          <button type="button" data-testid="restart-confirm" onClick={restart}>[确定重来]</button>
+          <button type="button" autoFocus onClick={() => setAskRestart(false)}>[{t("取消", "Cancel")}]</button>
+          <button type="button" data-testid="restart-confirm" onClick={restart}>[{t("确定重来", "Restart Game")}]</button>
         </div>
       </div>
     </div> : null}
