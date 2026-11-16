@@ -136,7 +136,7 @@ it("缩窗时整块画布等比缩小，大窗口保持原尺寸", () => {
   } finally { resize(ow, oh); }
 });
 
-it("满槽时在 Context Store 换掉或舍弃同一用户的记忆", () => {
+it("满槽时展开本窗记忆，舍弃后须再次点保存", () => {
   const script = loadBundledScript().script!;
   const beat = script.beats.find(item => item.id === "5m.2.1")!;
   const memory = beat.记忆候选![0];
@@ -152,13 +152,19 @@ it("满槽时在 Context Store 换掉或舍弃同一用户的记忆", () => {
   render(<Game script={fixture} />);
   const left = within(screen.getByTestId("pane-left"));
   const archive = within(screen.getByTestId("terminal-archive"));
-  fireEvent.click(archive.getByRole("button", { name: "USER 01 / 男生" }));
+  const folder = archive.getByRole("button", { name: "USER 01 / 男生" });
+  expect(folder).toHaveTextContent("▾");
+  fireEvent.click(folder);
+  expect(folder).toHaveTextContent("▸");
   fireEvent.click(left.getByRole("button", { name: `存记忆：${memory.短句}` }));
   expect(screen.queryByRole("dialog")).toBeNull();
-  fireEvent.click(archive.getByRole("button", { name: "替换「测试旧记忆0」" }));
-  expect(left.getByTestId("memory-mark")).toHaveAttribute("data-saved", "true");
-  fireEvent.click(archive.getByText("[MEMORY] 当前会话 · 5"));
-  fireEvent.click(archive.getByText(`[MEM] ${memory.缩略标签}`));
-  fireEvent.click(archive.getByRole("button", { name: `舍弃「${memory.缩略标签}」` }));
+  expect(left.getByText("记忆已满，请先舍弃一条。")).toBeInTheDocument();
+  expect(archive.queryByRole("button", { name: /舍弃|替换/ })).toBeNull();
+  fireEvent.click(left.getByRole("button", { name: "舍弃「测试旧记忆0」" }));
   expect(left.getByTestId("memory-counter-left")).toHaveTextContent("[MEM 4/5]");
+  expect(left.getByTestId("memory-mark")).not.toHaveAttribute("data-saved", "true");
+  fireEvent.pointerDown(left.getByRole("button", { name: `存记忆：${memory.短句}` }));
+  fireEvent.click(left.getByRole("button", { name: `存记忆：${memory.短句}` }));
+  expect(left.getByTestId("memory-mark")).toHaveAttribute("data-saved", "true");
+  expect(left.getByTestId("memory-counter-left")).toHaveTextContent("[MEM 5/5]");
 });

@@ -71,6 +71,19 @@ p { margin: 0; }
 .pane-head-right { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .pane-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-entry { flex: none; padding: 0 2px; color: var(--memory); font-size: 13px; }
+.pane-memory { flex: none; }
+.pane-memory-list {
+  position: absolute; z-index: 2; inset: 100% 0 auto auto; width: min(100%, 380px);
+  max-height: 420px; overflow: auto; overscroll-behavior: contain;
+  padding: 10px 12px; border: 1px solid var(--rule); background: var(--terminal);
+  box-shadow: 0 6px 16px #0005; font-size: 13px; overflow-wrap: anywhere;
+}
+.pane-memory-list > p { color: var(--memory); }
+.pane-memory-list ul { padding: 0; margin: 0; list-style: none; }
+.pane-memory-list li { display: flex; align-items: start; justify-content: space-between; gap: 10px; padding-block: 6px; }
+.pane-memory-list li + li { border-top: 1px solid var(--rule); }
+.pane-memory-list strong { color: var(--memory); }
+.pane-memory-list li p { color: var(--muted); }
 .head-state { color: var(--accent); font-size: 12px; white-space: nowrap; padding: 0; }
 .terminal-spinner { width: 1ch; display: inline-block; }
 
@@ -247,10 +260,6 @@ html:lang(en) .msg-row .msg-user:not(.message-wait-button) { word-spacing: -.04e
 }
 .game-canvas[data-intro] > .notice { visibility: hidden; }
 .archive-kind { margin-inline-start: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
-.archive-replacement { color: var(--memory); margin-block: 5px 10px; }
-.archive-replacement p { margin-bottom: 4px; }
-.archive-replacement .tree-toggle { color: inherit; }
-.archive-memory .memory-action { display: block; margin: 0 0 4px 13px; }
 /* 光标独立于回复正文宽度，避免光标消失时造成额外换行。 */
 .msg-ai .caret {
   display: inline; position: relative; margin-left: 0; vertical-align: baseline;

@@ -11,7 +11,7 @@ export type Action =
   | { type: "commit-line"; channel: Channel }
   | { type: "choose"; channel: Channel; index: number }
   | { type: "commit-reply"; channel: Channel }
-  | { type: "save-memory"; channel: Channel; label: string; text: string; beatId: string; replaceLabel?: string }
+  | { type: "save-memory"; channel: Channel; label: string; text: string; beatId: string }
   | { type: "forget-memory"; channel: Channel; label: string }
   | { type: "clear-messages"; channel: Channel }
   | { type: "ritual-tick"; channel: Channel; now: number }
@@ -51,7 +51,7 @@ export function createReducer(beats: Beat[]) {
             label: action.label,
             text: action.text,
             beatId: action.beatId,
-          }, action.replaceLabel));
+          }));
         }
         case "forget-memory":
           return settle(forgetMemory(state, action.channel, action.label));

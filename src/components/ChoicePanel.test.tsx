@@ -14,11 +14,11 @@ describe("终端选项", () => {
     const onPick = vi.fn();
     const onMove = vi.fn();
     render(<ChoicePanel mode="active" choices={choices} selected={0}
-      memoryGate={() => null} onMove={onMove} onPick={onPick} />);
+      memoryGate={() => null} matchedMemories={() => []} onMove={onMove} onPick={onPick} />);
     const buttons = screen.getAllByTestId("choice");
     expect(buttons[0]).toHaveAttribute("data-current", "true");
     expect(buttons[1]).not.toHaveAttribute("data-current");
-    expect(buttons[0]).toHaveTextContent("[MEM]");
+    expect(buttons[0]).toHaveTextContent("[MEM · 店的位置]");
     fireEvent.mouseEnter(buttons[1]);
     expect(onMove).toHaveBeenCalledWith(1);
     fireEvent.click(buttons[1]);
@@ -28,10 +28,11 @@ describe("终端选项", () => {
   it("缺记忆的选项标记且不可发送，普通选项仍可用", () => {
     const onPick = vi.fn();
     render(<ChoicePanel mode="active" choices={choices} selected={1}
-      memoryGate={choice => choice.需记忆 ?? null} onMove={() => {}} onPick={onPick} />);
+      memoryGate={choice => choice.需记忆 ?? null} matchedMemories={() => []} onMove={() => {}} onPick={onPick} />);
     const buttons = screen.getAllByTestId("choice");
     expect(buttons[0]).toBeDisabled();
     expect(buttons[0]).toHaveTextContent("[MEM]");
+    expect(buttons[0]).not.toHaveAttribute("title");
     fireEvent.click(buttons[0]);
     expect(onPick).not.toHaveBeenCalled();
     fireEvent.click(buttons[1]);

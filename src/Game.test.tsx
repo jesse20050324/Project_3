@@ -159,7 +159,8 @@ describe("游戏主画面", () => {
     expect(counter).toHaveTextContent("[MEM");
     fireEvent.click(counter);
     expect(counter).toHaveAttribute("aria-expanded", "true");
-    expect(counter).toHaveTextContent("Memory 数量");
+    expect(counter).toHaveTextContent("[MEM 0/1]");
+    expect(screen.getByText("暂无已存记忆")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(counter);
     expect(counter).toHaveAttribute("aria-expanded", "false");
@@ -167,7 +168,7 @@ describe("游戏主画面", () => {
     fireEvent.pointerDown(screen.getByTestId("terminal-archive"));
     expect(counter).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(counter);
-    fireEvent.blur(counter);
+    fireEvent.keyDown(counter, { key: "Escape" });
     expect(counter).toHaveAttribute("aria-expanded", "false");
   });
 });

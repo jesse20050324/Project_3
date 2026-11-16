@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { englishBeats, messageText, useLanguage } from "../language";
-import { channelView, choiceMemoryGate, memoryCapacity, messagesFor, RITUAL_MASK_MS } from "../engine/scheduler";
+import { englishBeats, memoryDisplay, messageText, useLanguage } from "../language";
+import { channelView, choiceMemoryGate, matchingMemoryRoute, memoryCapacity, messagesFor, RITUAL_MASK_MS } from "../engine/scheduler";
 import { ritualElapsed } from "../terminalMotion";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { ProgressiveText } from "./ProgressiveText";
@@ -33,7 +33,6 @@ type Props = {
   reduced: boolean;
   running: boolean;
   speeds?: PlaybackSpeeds;
-  onMemoryFull: (entry: MemoryEntry) => void;
 };
 
 type Outgoing = {
@@ -50,7 +49,7 @@ type Outgoing = {
 type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 
 export function ChatPane({
-  script, channel, state, dispatch, completedAt, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds, onMemoryFull,
+  script, channel, state, dispatch, completedAt, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds,
 }: Props) {
   const { language, t } = useLanguage();
   const { name, id } = terminalUsers[channel];
@@ -85,7 +84,8 @@ export function ChatPane({
   const memorySaved = state.memories[channel].length;
   const capacity = memoryCapacity(state, channel);
 
-  const [showMemoryCount, setShowMemoryCount] = useState(false);
+  const [memoryMenu, setMemoryMenu] = useState<"open" | "full">();
+  const memoryMenuRoot = useRef<HTMLDivElement>(null);
   const memoryCounter = useRef<HTMLButtonElement>(null);
   const [playback, setPlayback] = useState<{ token: string; phase: Phase }>();
   const original = running ? resolveOutgoing(script, state, channel) : null;
@@ -252,19 +252,21 @@ export function ChatPane({
   const currentBeat = beat ?? (lastMessage && beatOf(lastMessage.beatId));
   const timeLabel = currentBeat?.context ? undefined : currentBeat?.time ?? currentBeat?.label;
 
-  useEffect(() => setShowMemoryCount(false), [state.runId, state.chapter[channel]]);
+  useEffect(() => setMemoryMenu(undefined), [state.runId, state.chapter[channel], state.context?.[channel]]);
   useEffect(() => {
-    if (!showMemoryCount) return;
+    if (!memoryMenu) return;
     const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !memoryCounter.current?.contains(event.target)) setShowMemoryCount(false);
+      if (event.target instanceof Node && !memoryMenuRoot.current?.contains(event.target)) setMemoryMenu(undefined);
     };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
-  }, [showMemoryCount]);
+  }, [memoryMenu]);
 
   function requestSave(entry: MemoryEntry) {
-    if (memorySaved >= capacity) onMemoryFull(entry);
-    else dispatch({ type: "save-memory", channel, ...entry });
+    if (memorySaved >= capacity) {
+      setMemoryMenu("full");
+      memoryCounter.current?.focus();
+    } else dispatch({ type: "save-memory", channel, ...entry });
   }
   const memoryCount = `${memorySaved}/${capacity}`;
 
@@ -277,18 +279,47 @@ export function ChatPane({
         <span className="pane-name">{title}</span>
         <div className="pane-head-right">
           {timeLabel ? <span className="pane-meta" data-testid={`time-${channel}`}>{timeLabel}</span> : null}
-          <button
-            type="button"
-            className="memory-entry"
-            data-testid={`memory-counter-${channel}`}
-            ref={memoryCounter}
-            onClick={() => setShowMemoryCount(value => !value)}
-            onBlur={() => setShowMemoryCount(false)}
-            aria-expanded={showMemoryCount}
-            aria-label={t(`Memory 数量：${memoryCount}`, `Memory count: ${memoryCount}`)}
-          >
-            {showMemoryCount ? `[${t("Memory 数量：", "Memory count: ")}${memoryCount}]` : `[MEM ${memoryCount}]`}
-          </button>
+          <div className="pane-memory" ref={memoryMenuRoot} onKeyDown={event => {
+            if (event.key !== "Escape" || !memoryMenu) return;
+            event.stopPropagation();
+            setMemoryMenu(undefined);
+            memoryCounter.current?.focus();
+          }}>
+            <button
+              type="button"
+              className="memory-entry"
+              data-testid={`memory-counter-${channel}`}
+              ref={memoryCounter}
+              onClick={() => setMemoryMenu(value => value ? undefined : "open")}
+              aria-expanded={Boolean(memoryMenu)}
+              aria-controls={memoryMenu ? `saved-memory-${channel}` : undefined}
+              aria-label={t(`Memory 数量：${memoryCount}`, `Memory count: ${memoryCount}`)}
+            >
+              [MEM {memoryCount}] <span aria-hidden="true">{memoryMenu ? "▾" : "▸"}</span>
+            </button>
+            {memoryMenu ? <div className="pane-memory-list" id={`saved-memory-${channel}`}>
+              {memoryMenu === "full" && memorySaved >= capacity ? <p role="status">
+                {capacity === 5
+                  ? t("记忆已满，请先舍弃一条。", "Memory full. Discard an entry first.")
+                  : t("教学记忆槽已满。", "The tutorial memory slot is full.")}
+              </p> : null}
+              {memorySaved === 0 ? <p>{t("暂无已存记忆", "No saved memories")}</p> : <ul>
+                {state.memories[channel].map(memory => {
+                  const translated = memoryDisplay(memory);
+                  const label = t(memory.label, translated.label);
+                  return <li key={memory.label}>
+                    <div><strong>{label}</strong><p>{t(memory.text, translated.text)}</p></div>
+                    {capacity === 5 ? <button type="button" className="memory-entry"
+                      aria-label={t(`舍弃「${label}」`, `Discard “${label}”`)} onClick={() => {
+                        dispatch({ type: "forget-memory", channel, label: memory.label });
+                        setMemoryMenu("open");
+                        memoryCounter.current?.focus();
+                      }}>[{t("舍弃", "Discard")}]</button> : null}
+                  </li>;
+                })}
+              </ul>}
+            </div> : null}
+          </div>
         </div>
       </header>
 
@@ -367,7 +398,8 @@ export function ChatPane({
           ...choice, thought: t(choice.thought, englishBeats[beat.id]?.choices[index]?.thought[1] ?? choice.thought),
         })) : []}
           selected={selected} onMove={onMove} onPick={onPick}
-          memoryGate={choice => choiceMemoryGate(state, channel, choice)} />
+          memoryGate={choice => choiceMemoryGate(state, channel, choice)}
+          matchedMemories={choice => matchingMemoryRoute(state, channel, choice)?.all ?? []} />
       </div> : null}
     </section>
   );

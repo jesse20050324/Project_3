@@ -1,7 +1,7 @@
 import { LanguageSwitch, englishEndings, useLanguage } from "./language";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
-import { TerminalArchive, type MemoryReplacement } from "./components/TerminalArchive";
+import { TerminalArchive } from "./components/TerminalArchive";
 import { TerminalFrame, type WorkspaceIntro } from "./components/TerminalFrame";
 import { playMemorySound, setSoundMuted, soundMuted } from "./audio/gameSound";
 import { clearProgress } from "./engine/storage";
@@ -36,10 +36,6 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
   const [speeds, setSpeeds] = useState<PlaybackSpeeds>({});
   const tuning = PlaybackTuner && new URLSearchParams(window.location.search).get("tune") === "1";
   const [askRestart, setAskRestart] = useState(false);
-  const [requestedReplacement, setReplacement] = useState<MemoryReplacement>();
-  const replacement = requestedReplacement && !state.ritual[requestedReplacement.channel] && state.messages.some(
-    message => message.channel === requestedReplacement.channel && message.beatId === requestedReplacement.entry.beatId,
-  ) ? requestedReplacement : undefined;
   const [cursor, setCursor] = useState<Cursor>();
   const submitted = useRef<Partial<Record<Channel, string>>>({});
   const skipRefs = useRef<Partial<Record<Channel, () => void>>>({});
@@ -124,7 +120,6 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
     clearProgress();
     dispatch({ type: "reset" });
     setCursor(undefined);
-    setReplacement(undefined);
     setAskRestart(false);
   }
 
@@ -152,16 +147,8 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
       {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch} completedAt={completedAt}
         active={Boolean(state.pending[channel])} focused={focused === channel} selected={selected(channel)}
         skipRefs={skipRefs} running={running} speeds={tuning ? speeds : undefined}
-        onMemoryFull={entry => setReplacement({ channel, entry })}
         onMove={index => moveTo(channel, index)} onPick={index => pick(channel, index)} now={now} reduced={reduced} />)}
-      <TerminalArchive script={script} state={state} now={now} reduced={reduced} replacement={replacement}
-        onCancelReplacement={() => setReplacement(undefined)}
-        onReplace={label => {
-          if (!replacement) return;
-          dispatch({ type: "save-memory", channel: replacement.channel, ...replacement.entry, replaceLabel: label });
-          setReplacement(undefined);
-        }}
-        onForget={(channel, label) => dispatch({ type: "forget-memory", channel, label })} />
+      <TerminalArchive script={script} state={state} now={now} reduced={reduced} />
     </div>
     {askRestart ? <div className="overlay" role="dialog" aria-modal="true" aria-label={t("确定重来", "Confirm restart")}>
       <div className="dialog">
