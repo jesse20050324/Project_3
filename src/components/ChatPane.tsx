@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { englishBeats, memoryDisplay, messageText, useLanguage } from "../language";
-import { channelView, choiceMemoryGate, matchingMemoryRoute, memoryCapacity, messagesFor, RITUAL_MASK_MS } from "../engine/scheduler";
+import { channelView, choiceMemoryGate, matchingMemoryRoute, memoryCapacity, messagesFor, RITUAL_MASK_MS, type storyOutcome } from "../engine/scheduler";
+import { EndingRecap } from "./EndingRecap";
 import { ritualElapsed } from "../terminalMotion";
 import { TerminalSpinner } from "./TerminalSpinner";
 import { ProgressiveText } from "./ProgressiveText";
@@ -32,6 +33,7 @@ type Props = {
   now: number;
   reduced: boolean;
   running: boolean;
+  outcome?: ReturnType<typeof storyOutcome>;
   speeds?: PlaybackSpeeds;
 };
 
@@ -49,7 +51,7 @@ type Outgoing = {
 type Phase = "idle" | "pause" | "indicator" | "typing" | "shown";
 
 export function ChatPane({
-  script, channel, state, dispatch, completedAt, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, speeds,
+  script, channel, state, dispatch, completedAt, active, focused, selected, skipRefs, onMove, onPick, now, reduced, running, outcome, speeds,
 }: Props) {
   const { language, t } = useLanguage();
   const { name, id } = terminalUsers[channel];
@@ -231,7 +233,7 @@ export function ChatPane({
   useEffect(() => {
     const el = scroller.current;
     if (el && !ritual) el.scrollTop = el.scrollHeight;
-  }, [visibleMessages.length, phase, token, ritual]);
+  }, [visibleMessages.length, phase, token, ritual, outcome]);
 
   const beat = pending ? beatOf(pending.beatId) : undefined;
   const showChoices = running && pending?.kind === "choices" && beat?.choices && beat.choices.length > 0;
@@ -381,6 +383,7 @@ export function ChatPane({
             onSkip={finishTyping}
           />
         ) : null}
+        {outcome ? <EndingRecap outcome={outcome} state={state} script={script} channel={channel} /> : null}
       </div>
 
       {!ritual && (showChoices || (liveThought && phase !== "idle" && phase !== "pause")) ? <div className="composer">

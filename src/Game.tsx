@@ -1,4 +1,4 @@
-import { LanguageSwitch, englishEndings, useLanguage } from "./language";
+import { LanguageSwitch, useLanguage } from "./language";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ChatPane } from "./components/ChatPane";
 import { TerminalArchive } from "./components/TerminalArchive";
@@ -140,12 +140,9 @@ export function Game({ script, onTitle, intro }: { script: Script; onTitle?: () 
       </div>
     </header>
     {notice ? <div className="notice" role="status">{notice}</div> : null}
-    {outcome ? <div className="notice" role="status">
-      {t(outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : `结局 · ${outcome}`, englishEndings[outcome === "未交换微信" ? "桌游局结束后，两人没有交换微信。" : outcome] ?? outcome)}
-    </div> : null}
     <div className="duo">
       {channels.map(channel => <ChatPane key={channel} script={script} channel={channel} state={state} dispatch={dispatch} completedAt={completedAt}
-        active={Boolean(state.pending[channel])} focused={focused === channel} selected={selected(channel)}
+        active={Boolean(state.pending[channel])} focused={focused === channel} selected={selected(channel)} outcome={running ? outcome : undefined}
         skipRefs={skipRefs} running={running} speeds={tuning ? speeds : undefined}
         onMove={index => moveTo(channel, index)} onPick={index => pick(channel, index)} now={now} reduced={reduced} />)}
       <TerminalArchive script={script} state={state} now={now} reduced={reduced} />

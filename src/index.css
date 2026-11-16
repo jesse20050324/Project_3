@@ -71,6 +71,15 @@ p { margin: 0; }
 .pane-head-right { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .pane-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-entry { flex: none; padding: 0 2px; color: var(--memory); font-size: 13px; }
+.ending-recap {
+  margin-block: 16px 6px;
+  padding: 12px;
+  border-top: 1px dashed var(--rule);
+  color: var(--accent);
+}
+.ending-recap p { margin: 0; }
+.ending-choice { margin-bottom: 10px; color: var(--memory); }
+.ending-recap > p { text-align: center; font-size: 1.06em; color: var(--memory); }
 .pane-memory { flex: none; }
 .pane-memory-list {
   position: absolute; z-index: 2; inset: 100% 0 auto auto; width: min(100%, 380px);

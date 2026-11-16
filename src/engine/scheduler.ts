@@ -278,6 +278,8 @@ export function storyOutcome(state: EngineState) {
   return state.endings.find(id => id === "未交换微信" || id === "和好" || id === "分手");
 }
 
+export const finalChoiceBeatId = { left: "8m.M201", right: "8f.F201" } as const;
+
 export function openChannel(
   state: EngineState,
   channel: Channel,
@@ -385,10 +387,14 @@ export function choose(
   const gate = choiceMemoryGate(state, channel, choice);
   if (gate) throw new Error(`节拍 ${beat.id} 的选项「${choice.thought}」需要记忆「${gate}」，本窗还没存`);
   const memoryNext = matchingMemoryRoute(state, channel, choice)?.next;
-  return withPending(state, channel, {
+  const next = withPending(state, channel, {
     kind: "reply", beatId: beat.id, choiceIndex: index,
     ...(memoryNext ? { memoryNext } : {}),
   });
+  if (beat.id !== finalChoiceBeatId[channel]) return next;
+  const reflection = beat.choices?.find(option => option.记忆后继);
+  const memoryLabels = reflection ? matchingMemoryRoute(state, channel, reflection)?.all ?? [] : [];
+  return { ...next, finalChoices: { ...state.finalChoices, [channel]: { index, memoryLabels } } };
 }
 
 export function commitReply(state: EngineState, channel: Channel, beats: Beat[]): EngineState {

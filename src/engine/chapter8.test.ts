@@ -65,6 +65,8 @@ it("第七幕旧存档继续进入第八幕，验证144种准备与矩阵组合�
             if (matrix) {
               saveProgress(state);
               state = loadProgress(beats)!;
+              const branch = beat.choices![1].记忆后继?.find(item => item.next.endsWith("202" + route[channel].route));
+              expect(state.finalChoices?.[channel]).toEqual({ index, memoryLabels: branch?.all ?? [] });
             }
           }
           continue;
@@ -92,4 +94,18 @@ it("第七幕旧存档继续进入第八幕，验证144种准备与矩阵组合�
       }
     }
   }
+});
+
+it("结局记录保留选择普通回应时可用的记忆，并且不随之后舍弃而变", () => {
+  const { beats } = loadBundledScript().script!;
+  const beatId = "8m.M201";
+  const source = beats.find(beat => beat.channel === "left" && beat.记忆候选?.some(item => item.缩略标签 === "要求看私聊"))!;
+  const candidate = source.记忆候选!.find(item => item.缩略标签 === "要求看私聊")!;
+  const state = choose({
+    ...createInitial(beats),
+    pending: { left: { kind: "choices", beatId }, right: null },
+    memories: { left: [{ label: candidate.缩略标签, text: candidate.短句, beatId: source.id }], right: [] },
+  }, "left", 0, beats);
+  saveProgress({ ...state, memories: { left: [], right: [] } });
+  expect(loadProgress(beats)?.finalChoices).toEqual({ left: { index: 0, memoryLabels: ["要求看私聊"] } });
 });

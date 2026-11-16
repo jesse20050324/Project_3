@@ -175,6 +175,7 @@ export type EngineState = {
   pending: Record<Channel, Pending | null>;
   /** 记忆池：按窗分放，互不共享（对话隔离）。 */
   memories: Record<Channel, MemoryEntry[]>;
+  finalChoices?: Partial<Record<Channel, { index: number; memoryLabels: string[] }>>;
   /** 每窗当前章号，显式维护，不再从消息历史反推。 */
   chapter: Record<Channel, number>;
   /** 持久化清屏仪式。 */

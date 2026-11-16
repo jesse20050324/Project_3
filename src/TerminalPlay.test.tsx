@@ -112,7 +112,9 @@ it.each([false, true])("使用真实章节从标题到第八幕结局，键鼠�
   const final = stored();
   expect(final.error).toBeNull();
   expect(final.endings).toContain("分手");
-  expect(screen.getByText("结局 · 分手")).toBeInTheDocument();
+  expect(screen.getAllByTestId("ending-result").map(node => node.textContent)).toEqual(
+    Array(2).fill("争吵中，两人主要在指出对方的问题，也都认为自己的做法有理由。两人最终分手。"),
+  );
   expect([...seen].sort()).toEqual([1, 3, 4, 5, 6, 7, 8]);
   for (const channel of ["left", "right"] as const) {
     expect(final.archive?.[channel].map(entry => entry.section)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -143,6 +145,9 @@ it("桌游聚会内各窗按各自时机清理聊天，未交换微信时仍只�
   }
   const state = stored();
   expect(state.endings).toContain("未交换微信");
+  expect(screen.getAllByTestId("ending-recap").map(node => node.textContent)).toEqual(
+    Array(2).fill("两人都没有提出加微信，聚会后也没有继续联系。"),
+  );
   for (const channel of ["left", "right"] as const) {
     expect(state.archive?.[channel].map(entry => entry.section)).toEqual([1]);
     expect(state.archive?.[channel][0].beatIds.some(id => id.startsWith(channel === "left" ? "L" : "R"))).toBe(true);
